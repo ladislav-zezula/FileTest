@@ -1,0 +1,172 @@
+
+  FileTest history
+  ================
+
+ Version 2.5.0.458
+ 
+ - Bugfixes in the data editor
+
+ Version 2.5.0.455
+
+ - Data viewer is now editable (Nt)WriteFile
+ - Added tab page for file mappings
+ - Possibility to edit mapped data
+ - Combo boxes with info class names are now searchable by typing text into the edit field
+ - Several read-only fields are now editable. ShareAccess = 0xDEADBABE? No problem.
+
+ Version 2.1.0.441
+
+ - Added custom data viewer for (Nt)WriteFile
+
+ Version 2.1.0.417
+
+ - Improved auto-conversion between Win32 and NT names
+
+ Version 1.9.0.214
+
+ - Fixed showing data loaded from file
+ - When user makes a mistake in entering date/time, list of supported date/time formats is displayed
+
+ Version 1.9.0.208
+
+ - Support for NtReadFile and NtWriteFile
+ - Support for asynchronour file readn and write
+ - Support for Symbolic Links
+ - Support for Hardlinks
+ - Support for reparse points
+ - Data view after ReadFile
+ - WriteFile can reuse data loaded by ReadFile, even if the data are from another file
+
+ Version 1.9.0.188
+
+ - Removed most of the error popups, operation result is now shown
+   in a non-invasive way in the bottom part of tabs.
+ - Date/Time is now displayed and possible to enter in human-readable form
+ - Fixed a few bugs from prev release
+ - Unified look of results on tabs
+
+ Version 1.9.0.186
+
+ - Added tab page for file security
+ - Added dialog for setting/clearing FileTest's privileges and integrity level
+ - FileTest dialog is now resizeable
+ - Subdialogs are now centered to parent, rather than to screen
+
+ Version 1.8.2.171
+
+ - Possibility to turn file virtualization on/on on Vista and under restricted accounts
+
+ Version 1.8.2.170
+
+ - Possibility to specify extended attributes on call to NtCreateFile
+
+ Version 1.8.1.168
+
+ - Possibility to stop on breakpoint right before call
+   to CreateFile/CreateFileTransacted/NtCreateFile
+
+ Version 1.8.1.166
+
+ - Improved file mapping functions
+
+ Version 1.8.0.164
+
+ - Added support for FileLinkInformation
+ - Added support for Vista file info classes
+ - Added support for NtQueryVolumeInformationFile
+ - Added support for NtSetVolumeInformationFile
+
+ Version 1.7.0.157
+
+ - Added support for FileHardLinkInformation
+
+ Version 1.7.0.153
+
+ - When mapping a file, it is now possible to control access to the pages
+
+ Version 1.7.0.150
+
+ - Fixed issue with file mapping when starting offset was nonzero
+ - Spin controls in "File operations" tab work now :-)
+
+ Version 1.7.0.148
+
+ - Support for FileRenameInformation
+
+
+ Version 1.7.0.145
+
+ - In Vista, FileTest shows if running under elevated or restricted user.
+
+ Version 1.7.0.137
+
+ - Changed "Directory" in page for NtCreateFile to "Relative File"
+
+ Version 1.7.0.128
+
+ - Support for CreateFileTransacted and NtCreateFile under active transaction
+
+ Version 1.7.0.94
+
+ - Status/Last error controls are now edit boxes instead or static texts
+
+ Version 1.7.0.92
+
+ - Added support for transactions in Vista
+ - Browse for file dialog now accepts not existing files
+
+
+ Version 1.5.0.78
+
+ - Full support for NtSetInformationFile and NtQueryDirectoryFile
+ - Command line arguments have been changed to [file1] [file2] [dir]
+ - Default flags for NtCreateFile have been changed to be able
+   to call ReadFile/WriteFile on the opened file
+
+ Version 1.5.0.72
+
+ - Added the "SetInfo" page, supporting "NtSetInformationFile".
+   (Only FILE_DISPOSITION_INFORMATION supported yet, more to come)
+
+ Version 1.4.0.71
+
+ - Added the "FlushFileBuffers" support. Thank you, Rod Widdowson !
+
+ Version 1.2.0.69
+
+ - Added Extended Attributes editor
+
+ Version 1.2.0.66
+
+ - FileTest no longer statically links Ntdll.lib
+ - Support for AMD64 target
+ - If a not-existing file has been deleted, FileTest reported no error
+
+ Version 1.1.1.37
+
+ - Removed the check if a handle is a Win32 or not.
+ - Changed the font to "MS Shell Dlg", so now the GUI shows correct UNICODE
+   file names.
+ - Added GetFileAttributes 
+ - The "File operations" contains "Use CopyFile() API" instead of "Don't use CopyFile"
+ - Added the "NtQueryInfo" page with possibility to call NtQueryInformationFile
+ 
+
+ Version 1.1.1.24
+ 
+ - Completed open flags for the CreateFile "Flags & attributes" 
+ - Reworked the DlgFlags dialog
+
+
+ Version 1.1.1.20
+ 
+ - Added possibility to get file name using NtQueryInformationFile
+ - Added possibility to set the file size using Win32 API
+ - Added possibility to get file ID using native API 
+ - Added possibility to open the file by ID using NtCreateFile
+ - Various create parameters are now better carried between
+   CreateFile and NtCreateFile pages when changed
+ - Fixed bug when converting lowercase hexa numbers to Int32 or Int64
+ - The MSVC7 solution configuration has been updated
+ - Several minor changes, like added version info, removed
+   some commented code junk etc.
