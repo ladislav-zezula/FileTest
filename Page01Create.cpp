@@ -36,6 +36,7 @@ static TFlagInfo DesiredAccessValues[] =
     FLAG_INFO_ENTRY(GENERIC_WRITE,          TRUE),
     FLAG_INFO_ENTRY(GENERIC_EXECUTE,        TRUE),
     FLAG_INFO_ENTRY(GENERIC_ALL,            TRUE),
+    FLAG_INFO_ENTRY(MAXIMUM_ALLOWED,        TRUE),
     FLAG_INFO_END
 };
 
