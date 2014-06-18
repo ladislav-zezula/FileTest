@@ -266,6 +266,96 @@ static void RefreshScreenSize(HWND hDlg)
 }
 
 //-----------------------------------------------------------------------------
+// Original dialog size
+
+#pragma pack(1)
+typedef struct _DLGTEMPLATEEX_BEGIN
+{
+    WORD  dlgVer;
+    WORD  signature;
+    DWORD helpID;
+    DWORD exStyle;
+    DWORD style;
+    WORD  cDlgItems;
+    short x;
+    short y;
+    short cx;
+    short cy;
+} DLGTEMPLATEEX_BEGIN, *PDLGTEMPLATEEX_BEGIN;
+#pragma pack()
+
+int GetDialogRectFromTemplate(HWND hDlg, UINT DlgResID, RECT & DlgRect)
+{
+    PDLGTEMPLATEEX_BEGIN pDlgTemplate;
+    HGLOBAL hDlgRes;
+    HRSRC hResource;
+
+    hResource = FindResource(g_hInst, MAKEINTRESOURCE(DlgResID), RT_DIALOG);
+    if(hResource != NULL)
+    {
+        hDlgRes = LoadResource(g_hInst, hResource);
+        if(hDlgRes != NULL)
+        {
+            pDlgTemplate = (DLGTEMPLATEEX_BEGIN *)LockResource(hDlgRes);
+            if(pDlgTemplate != NULL)
+            {
+                // Check the dialog template
+                assert(pDlgTemplate->signature == (WORD)-1);
+                assert(pDlgTemplate->dlgVer == 1);
+
+                // Calculate the dialog size in pixels
+                DlgRect.top = 0;
+                DlgRect.left = 0;
+                DlgRect.right = pDlgTemplate->cx;
+                DlgRect.bottom = pDlgTemplate->cy;
+                MapDialogRect(hDlg, &DlgRect);
+
+                // Append the borders and the caption
+                DlgRect.right += (GetSystemMetrics(SM_CXSIZEFRAME) * 2);
+                DlgRect.bottom += GetSystemMetrics(SM_CYCAPTION) + (GetSystemMetrics(SM_CYSIZEFRAME) * 2);
+                return ERROR_SUCCESS;
+            }
+        }
+    }
+
+    return ERROR_RESOURCE_NOT_FOUND;
+}
+
+static void FixDialogToOriginalSize(HWND hDlg, UINT DlgResID)
+{
+    RECT OriginalRect;
+    RECT CurrentRect;
+    RECT ScreenRect;
+    int x;
+
+    // Get the work area of the screen
+    SystemParametersInfo(SPI_GETWORKAREA, 0, &ScreenRect, 0);
+    ScreenRect.bottom = (ScreenRect.bottom - ScreenRect.top);
+    ScreenRect.right = (ScreenRect.right - ScreenRect.left);
+
+    // Get the current dialog size
+    GetWindowRect(hDlg, &CurrentRect);
+    CurrentRect.bottom = (CurrentRect.bottom - CurrentRect.top);
+    CurrentRect.right = (CurrentRect.right - CurrentRect.left);
+    CurrentRect.left = CurrentRect.top = 0;
+
+    // If the current height is greater than height
+    // of the worker area, we need to fix it
+    if(CurrentRect.bottom > ScreenRect.bottom)
+    {
+        // Get the dialog expected size
+        GetDialogRectFromTemplate(hDlg, DlgResID, OriginalRect);
+
+        // If the dialog has been shrunk, fix its size
+        if(OriginalRect.bottom > CurrentRect.bottom)
+        {
+            x = (ScreenRect.right - OriginalRect.right) / 2;
+            SetWindowPos(hDlg, NULL, x, 0, OriginalRect.right, OriginalRect.bottom, SWP_NOZORDER | SWP_NOACTIVATE);
+        }
+    }
+}
+
+//-----------------------------------------------------------------------------
 // Dialog handlers
 
 static int OnInitDialog(HWND hDlg, LPARAM lParam)
@@ -279,14 +369,15 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
     g_hDlg = hDlg;
     SetDialogData(hDlg, pData);
 
+    //
+    // Note: If the screen size is too low at this point (like 800x600),
+    // the dialog gets shrinked. We need to fis the dialog to the original size
+    //
+
+    FixDialogToOriginalSize(hDlg, IDD_FILE_TEST);
+
     // Create the tooltip window
     g_Tooltip.Initialize(g_hInst, hDlg);
-
-    //
-    // Note: If the screen size is too low at this point,
-    // we GetClientRect gets improper dialog size.
-    // We have to wait for the first WM_SIZE
-    //
 
     // Initialize Tab Control
     InitializeTabControl(hDlg, pftd);
