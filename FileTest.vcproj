@@ -525,10 +525,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\doc\History.txt"
-				>
-			</File>
-			<File
 				RelativePath=".\res\IconError.ico"
 				>
 			</File>
@@ -546,6 +542,14 @@
 			</File>
 			<File
 				RelativePath=".\Res\URLWait.cur"
+				>
+			</File>
+		</Filter>
+		<Filter
+			Name="Doc Files"
+			>
+			<File
+				RelativePath=".\doc\History.txt"
 				>
 			</File>
 		</Filter>

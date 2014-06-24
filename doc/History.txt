@@ -2,6 +2,11 @@
   FileTest history
   ================
 
+ Version 2.5.0.466
+
+ - Fixed displaying on low screen resolutions
+ - Fixed background color of the "Relative File" link button on the "NtCreate" page
+
  Version 2.5.0.458
  
  - Bugfixes in the data editor
