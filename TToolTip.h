@@ -45,5 +45,4 @@ class TToolTip
     HWND hWndToolTip;           // Handle to the tooltip window
 };
 
-
 #endif // __TTOOLTIP_H__

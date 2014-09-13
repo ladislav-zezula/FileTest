@@ -607,6 +607,20 @@ static void CreateBlinkingIcon(HWND hDlg, HWND hWndChild, int nSeverity)
     pData->hWndBlink = hWndBlink;
 }
 
+void SetWindowEnumText(HWND hWndChild, LPCTSTR TextArray[], size_t nArraySize, size_t nIndex)
+{
+    LPCTSTR szTextToSet = _T("");
+
+    // Sanity check
+    assert(hWndChild != NULL);
+
+    // Get the proper text message
+    if(nIndex < nArraySize)
+        szTextToSet = TextArray[nIndex];
+
+    // Set the text message
+    SetWindowText(hWndChild, szTextToSet);
+}
 
 void SetResultInfo(HWND hDlg, NTSTATUS Status, HANDLE hHandle, UINT_PTR ResultLength, PLARGE_INTEGER pResultLength)
 {
@@ -624,7 +638,11 @@ void SetResultInfo(HWND hDlg, NTSTATUS Status, HANDLE hHandle, UINT_PTR ResultLe
         _T("FILE_CREATED"),
         _T("FILE_OVERWRITTEN"),
         _T("FILE_EXISTS"),
-        _T("FILE_DOES_NOT_EXIST")
+        _T("FILE_DOES_NOT_EXIST"),
+        _T("0x00000006"),
+        _T("FILE_OPLOCK_BROKEN_TO_LEVEL_2"),
+        _T("FILE_OPLOCK_BROKEN_TO_NONE"),
+        _T("FILE_OPBATCH_BREAK_UNDERWAY")
     };
 
     // Set the text for NTSTATUS
@@ -652,7 +670,7 @@ void SetResultInfo(HWND hDlg, NTSTATUS Status, HANDLE hHandle, UINT_PTR ResultLe
                 szStatus = _T("Item value copied to clipboard.");
                 nSeverity = SEVERITY_SUCCESS;
                 break;
-            
+
             default:
                 szStatus = NtStatus2Text(Status);
                 nSeverity = NT_SUCCESS(Status) ? SEVERITY_SUCCESS : SEVERITY_ERROR;
@@ -710,7 +728,7 @@ void SetResultInfo(HWND hDlg, NTSTATUS Status, HANDLE hHandle, UINT_PTR ResultLe
     }
 
     // Set the extra length, if present
-    hWndChild = GetDlgItem(hDlg, IDC_RESULT_LENGTH);
+    hWndChild = GetDlgItem(hDlg, IDC_IOSTATUS_INFO);
     if(hWndChild != NULL)
     {
         if(pResultLength != NULL)
@@ -727,14 +745,8 @@ void SetResultInfo(HWND hDlg, NTSTATUS Status, HANDLE hHandle, UINT_PTR ResultLe
 
     // Set the result of NtCreate, if present
     hWndChild = GetDlgItem(hDlg, IDC_NTCREATE_RESULT);
-    if(hWndChild != NULL)
-    {
-        // Set the IO status
-        if(Status == STATUS_SUCCESS && ResultLength <= FILE_DOES_NOT_EXIST)
-            SetDlgItemText(hDlg, IDC_NTCREATE_RESULT, szNtCreateResult[ResultLength]);
-        else
-            SetDlgItemText(hDlg, IDC_NTCREATE_RESULT, _T(""));
-    }
+    if(hWndChild != NULL && NT_SUCCESS(Status))
+        SetWindowEnumText(hWndChild, szNtCreateResult, _countof(szNtCreateResult), (size_t)ResultLength);
 
     // Blink the icon on LastError, if any
     hWndChild = GetDlgItem(hDlg, IDC_LAST_ERROR);
@@ -1391,3 +1403,32 @@ int StringToFileID(
     return nError;
 }
 
+int ExecuteContextMenu(HWND hWndParent, UINT nIDMenu, LPARAM lParam)
+{
+    HMENU hMainMenu = LoadMenu(g_hInst, MAKEINTRESOURCE(nIDMenu));
+    HMENU hSubMenu = GetSubMenu(hMainMenu, 0);
+    POINT pt;
+
+    if(hSubMenu != NULL)
+    {
+        // If activated by a key, get the left-top window position
+        if(lParam == 0xFFFFFFFF)
+        {
+            pt.x = pt.y = 5;
+            ClientToScreen(hWndParent, &pt);
+        }
+        else
+        {
+            pt.x = GET_X_LPARAM(lParam);
+            pt.y = GET_Y_LPARAM(lParam);
+        }
+
+        // Set the window to foreground due to capture mouse events
+        SetForegroundWindow(hWndParent);
+        TrackPopupMenu(hSubMenu, (TPM_LEFTBUTTON | TPM_RIGHTBUTTON), pt.x, pt.y, 0, hWndParent, NULL);
+        PostMessage(hWndParent, WM_NULL, 0, 0);
+        DestroyMenu(hMainMenu);
+    }
+
+    return TRUE;
+}

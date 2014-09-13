@@ -21,12 +21,16 @@ TToolTip g_Tooltip;
 HANDLE g_hHeap;
 DWORD g_dwWinVer;
 TCHAR g_szInitialDirectory[MAX_PATH];
-HWND g_hDlg = NULL;
 
 #define INITIAL_FILEINFO_BUFFER_SIZE 0x10000
 
 //-----------------------------------------------------------------------------
 // Local functions
+
+inline bool IsCommandSwitch(LPCTSTR szArg)
+{
+    return (szArg[0] == _T('/') || szArg[0] == _T('-'));
+}
 
 static void SetTokenObjectIntegrityLevel(DWORD dwIntegrityLevel)
 {
@@ -86,6 +90,10 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
 {
     OSVERSIONINFO osvi;
     TFileTestData * pData;
+    DWORD dwDesiredAccess = GENERIC_READ;
+    DWORD dwShareAccess = FILE_SHARE_READ;
+    bool bAsynchronousOpen = false;
+    int nFileNameIndex = 0;
 
     // Save the instance
     g_hInst = hInstance;
@@ -102,12 +110,48 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
     pData = (TFileTestData *)HeapAlloc(g_hHeap, HEAP_ZERO_MEMORY, sizeof(TFileTestData));
 
     // Parse command line arguments
-    if(__argc > 1)
-        _tcscpy(pData->szFileName1, __targv[1]);
-    if(__argc > 2)
-        _tcscpy(pData->szFileName2, __targv[2]);
-    if(__argc > 3)
-        _tcscpy(pData->szDirName, __targv[3]);
+    for(int i = 1; i < __argc; i++)
+    {
+        // If the argument a file name?
+        if(!IsCommandSwitch(__targv[i]))
+        {
+            switch(nFileNameIndex)
+            {
+                case 0: // The first file name argument
+                    _tcscpy(pData->szFileName1, __targv[i]);
+                    nFileNameIndex++;
+                    break;
+
+                case 1: // The second file name argument
+                    _tcscpy(pData->szFileName2, __targv[i]);
+                    nFileNameIndex++;
+                    break;
+
+                case 2: // The directory file name argument
+                    _tcscpy(pData->szDirName, __targv[i]);
+                    nFileNameIndex++;
+                    break;
+            }
+        }
+        else
+        {
+            LPCTSTR szArg = __targv[i] + 1;
+
+            // Check for default read+write access
+            if(!_tcsicmp(szArg, _T("rdwr")))
+                dwDesiredAccess = GENERIC_READ | GENERIC_WRITE;
+            
+            // Check for default share read+write
+            if(!_tcsicmp(szArg, _T("shrw")))
+                dwShareAccess = FILE_SHARE_READ | FILE_SHARE_WRITE;
+            
+            // Check for asynchronous open
+            if(!_tcsicmp(szArg, _T("async")))
+                bAsynchronousOpen = true;
+        }
+    }
+
+    // Set default file name
     if(pData->szFileName1[0] == 0)
         _tcscpy(pData->szFileName1, _T("C:\\TestFile.bin"));
 
@@ -154,7 +198,7 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
     pData->pbNtInfoBuff = (LPBYTE)HeapAlloc(g_hHeap, HEAP_ZERO_MEMORY, INITIAL_FILEINFO_BUFFER_SIZE);
     pData->cbNtInfoBuff = INITIAL_FILEINFO_BUFFER_SIZE;
 
-    // Set default values for opening relaive file by NtOpenFile
+    // Set default values for opening relative file by NtOpenFile
     pData->dwDesiredAccessRF     = FILE_READ_DATA;
     pData->dwOpenOptionsRF       = 0;
     pData->dwShareAccessRF       = FILE_SHARE_READ | FILE_SHARE_WRITE;
@@ -162,12 +206,20 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
     // Set default values for CreateFile and NtCreateFile
     pData->dwCreateDisposition1  = OPEN_ALWAYS;
     pData->dwCreateDisposition2  = FILE_OPEN_IF;
-    pData->dwDesiredAccess       = GENERIC_READ | SYNCHRONIZE;
+    pData->dwDesiredAccess       = dwDesiredAccess;
     pData->dwFileAttributes      = FILE_ATTRIBUTE_NORMAL;
-    pData->dwShareAccess         = FILE_SHARE_READ;               
-    pData->dwCreateOptions       = FILE_SYNCHRONOUS_IO_NONALERT;
+    pData->dwShareAccess         = dwShareAccess;
+    pData->dwCreateOptions       = 0;
     pData->dwObjAttrFlags        = OBJ_CASE_INSENSITIVE;
     pData->dwMoveFileFlags       = MOVEFILE_COPY_ALLOWED;
+    pData->dwOplockLevel         = OPLOCK_LEVEL_CACHE_READ | OPLOCK_LEVEL_CACHE_WRITE;
+
+    // Modify for synchronous open, if required
+    if(bAsynchronousOpen == false)
+    {
+        pData->dwCreateOptions |= FILE_SYNCHRONOUS_IO_NONALERT;
+        pData->dwDesiredAccess |= SYNCHRONIZE;
+    }
 
     // Set default values for NtCreateSection/NtOpenSection
     pData->dwSectDesiredAccess   = SECTION_MAP_READ;
@@ -178,13 +230,13 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
     // Call the dialog
     FileTestDialog(NULL, pData);
 
-    UnloadDynamicLoadedAPIs();
-
     // Cleanup the TFileTestData structure and exit
     if(pData->pFileEa != NULL)
         delete [] pData->pFileEa;
     if(pData->pbNtInfoBuff != NULL)
         HeapFree(g_hHeap, 0, pData->pbNtInfoBuff);
     HeapFree(g_hHeap, 0, pData);
+
+    UnloadDynamicLoadedAPIs();
     return 0;
 }

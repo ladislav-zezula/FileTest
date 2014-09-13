@@ -158,8 +158,8 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
         pAnchors->AddAnchor(hDlg, IDC_RESULT_FRAME, akLeft | akRight | akBottom);
         pAnchors->AddAnchor(hDlg, IDC_LAST_ERROR_TITLE, akLeft | akBottom);
         pAnchors->AddAnchor(hDlg, IDC_LAST_ERROR, akLeft | akRight | akBottom);
-        pAnchors->AddAnchor(hDlg, IDC_RESULT_LENGTH_TITLE, akLeft | akBottom);
-        pAnchors->AddAnchor(hDlg, IDC_RESULT_LENGTH, akLeft | akRight | akBottom);
+        pAnchors->AddAnchor(hDlg, IDC_IOSTATUS_INFO_TITLE, akLeft | akBottom);
+        pAnchors->AddAnchor(hDlg, IDC_IOSTATUS_INFO, akLeft | akRight | akBottom);
     }
 
     // Allocate the initial data
@@ -234,7 +234,7 @@ static int OnDeltaPos(HWND hDlg, NMUPDOWN * pNMUpDown)
 static int OnDataPaste(HWND hDlg, PDTE_PASTE_DATA pPasteData)
 {
     // Ask the user whether to cut the data or not
-    if(DataPasteOperationDialog(hDlg) == IDC_ADJUST_DATA_LENGTH)
+    if(MessageBoxRc(hDlg, IDS_QUESTION, IDS_WANT_TRIM_DATA) == IDYES)
     {
         // Paste the data to the view
         UpdateFileData(hDlg, pPasteData->szPasteText, pPasteData->PasteOffset, 0);
@@ -270,7 +270,7 @@ static int OnReadWriteFile(HWND hDlg, int nReadWriteType)
     Overlapped.hEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
     if(Overlapped.hEvent == NULL)
     {
-        SetResultInfo(hDlg, GetLastError(), NULL, 0);
+        SetResultInfo(hDlg, GetLastError());
         return TRUE;
     }
 
@@ -396,7 +396,7 @@ static int OnLockUnlockFile(HWND hDlg, int nReadWriteType)
     EventHandle = CreateEvent(NULL, TRUE, FALSE, NULL);
     if(EventHandle == NULL)
     {
-        SetResultInfo(hDlg, GetLastError(), NULL, 0);
+        SetResultInfo(hDlg, GetLastError());
         return TRUE;
     }
 
@@ -455,7 +455,7 @@ static int OnLockUnlockFile(HWND hDlg, int nReadWriteType)
     }
 
     // Set the information about the operation
-    SetResultInfo(hDlg, nError, NULL, 0);
+    SetResultInfo(hDlg, nError);
     CloseHandle(EventHandle);
     return TRUE;
 }
@@ -463,18 +463,15 @@ static int OnLockUnlockFile(HWND hDlg, int nReadWriteType)
 
 static int OnFillData(HWND hDlg)
 {
-    HMENU hMenu = LoadMenu(g_hInst, MAKEINTRESOURCE(IDR_DATA_PATTERN));
-    HMENU hSubMenu = GetSubMenu(hMenu, 0);
+    LPARAM lParam;
     RECT rect;
 
-    // Calculate position of the menu and run it
+    // Calculate position of the menu
     GetWindowRect(GetDlgItem(hDlg, IDC_FILL_DATA), &rect);
+    lParam = MAKELPARAM(rect.left, rect.bottom);
 
     // Execute the context menu
-    SetForegroundWindow(hDlg);
-    TrackPopupMenu(hSubMenu, (TPM_LEFTBUTTON | TPM_RIGHTBUTTON), rect.left, rect.bottom, 0, hDlg, NULL);
-    PostMessage(hDlg, WM_NULL, 0, 0);
-    DestroyMenu(hMenu);
+    ExecuteContextMenu(hDlg, IDR_DATA_PATTERN, lParam);
     return TRUE;
 }
 

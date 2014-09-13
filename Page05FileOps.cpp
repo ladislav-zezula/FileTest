@@ -16,13 +16,21 @@
 
 static TFlagInfo MoveFileFlags[] =
 {
-    {_T("MOVEFILE_REPLACE_EXISTING"),      MOVEFILE_REPLACE_EXISTING,   TRUE},
-    {_T("MOVEFILE_COPY_ALLOWED"),          MOVEFILE_COPY_ALLOWED,       TRUE},
-    {_T("MOVEFILE_DELAY_UNTIL_REBOOT"),    MOVEFILE_DELAY_UNTIL_REBOOT, TRUE},
-    {_T("MOVEFILE_WRITE_THROUGH"),         MOVEFILE_WRITE_THROUGH,      TRUE},
-    {_T("MOVEFILE_CREATE_HARDLINK"),       MOVEFILE_CREATE_HARDLINK,    TRUE},
-    {_T("MOVEFILE_FAIL_IF_NOT_TRACKABLE"), MOVEFILE_WRITE_THROUGH,      TRUE},
-    {NULL, 0, 0}
+    FLAG_INFO_ENTRY(MOVEFILE_REPLACE_EXISTING,      TRUE),
+    FLAG_INFO_ENTRY(MOVEFILE_COPY_ALLOWED,          TRUE),
+    FLAG_INFO_ENTRY(MOVEFILE_DELAY_UNTIL_REBOOT,    TRUE),
+    FLAG_INFO_ENTRY(MOVEFILE_WRITE_THROUGH,         TRUE),
+    FLAG_INFO_ENTRY(MOVEFILE_CREATE_HARDLINK,       TRUE),
+    FLAG_INFO_ENTRY(MOVEFILE_FAIL_IF_NOT_TRACKABLE, TRUE),
+    FLAG_INFO_END
+};
+
+static TFlagInfo Win7OplockFlags[] =
+{
+    FLAG_INFO_ENTRY(OPLOCK_LEVEL_CACHE_READ,        TRUE),
+    FLAG_INFO_ENTRY(OPLOCK_LEVEL_CACHE_HANDLE,      TRUE),
+    FLAG_INFO_ENTRY(OPLOCK_LEVEL_CACHE_WRITE,       TRUE),
+    FLAG_INFO_END
 };
 
 //-----------------------------------------------------------------------------
@@ -171,9 +179,17 @@ static int SaveDialog(HWND hDlg)
 static int UpdateDialogButtons(HWND hDlg)
 {
     TFileTestData * pData = GetDialogData(hDlg);
+    BOOL bEnable = IsHandleValid(pData->hFile) ? TRUE : FALSE;
 
-    EnableWindow(GetDlgItem(hDlg, IDC_FLUSH_FILE_BUFFERS), IsHandleValid(pData->hFile));
-    EnableWindow(GetDlgItem(hDlg, IDC_SET_SPARSE), IsHandleValid(pData->hFile));
+    EnableDlgItems(hDlg, bEnable, 
+                         IDC_FLUSH_FILE_BUFFERS,
+                         IDC_SET_SPARSE,
+                         IDC_REQUEST_OPLOCK_1,
+                         IDC_REQUEST_OPLOCK_2,
+                         IDC_REQUEST_BATCH_OPLOCK,
+                         IDC_REQUEST_FILTER_OPLOCK,
+                         IDC_REQUEST_OPLOCK,
+                         0);
     return TRUE;
 }
 
@@ -214,6 +230,13 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
         pAnchors->AddAnchor(hDlg, IDC_GET_FILE_ATTRIBUTES, akRight | akTop);
         pAnchors->AddAnchor(hDlg, IDC_FLUSH_FILE_BUFFERS, akLeft | akTop);
         pAnchors->AddAnchor(hDlg, IDC_SET_SPARSE, akRight | akTop);
+
+        pAnchors->AddAnchor(hDlg, IDC_OPLOCKS_FRAME, akAll);
+        pAnchors->AddAnchor(hDlg, IDC_REQUEST_OPLOCK_1, akLeft | akTop);
+        pAnchors->AddAnchor(hDlg, IDC_REQUEST_OPLOCK_2, akRight | akTop);
+        pAnchors->AddAnchor(hDlg, IDC_REQUEST_BATCH_OPLOCK, akLeft | akTop);
+        pAnchors->AddAnchor(hDlg, IDC_REQUEST_FILTER_OPLOCK, akRight | akTop);
+        pAnchors->AddAnchor(hDlg, IDC_REQUEST_OPLOCK, akLeft | akTop);
 
         pAnchors->AddAnchor(hDlg, IDC_RESULT_FRAME, akLeft | akRight | akBottom);
         pAnchors->AddAnchor(hDlg, IDC_LAST_ERROR_TITLE, akLeft | akBottom);
@@ -729,6 +752,98 @@ static int OnSetSparse(HWND hDlg)
     return TRUE;
 }
 
+static int OnRequestOplock(HWND hDlg, ULONG IoctlCode)
+{
+    TFileTestData * pData = GetDialogData(hDlg);
+    TApcOplock * pApc;
+    NTSTATUS Status = STATUS_INSUFFICIENT_RESOURCES;
+
+    // Create new APC entry 
+    pApc = (TApcOplock *)CreateApcEntry(pData, APC_TYPE_OPLOCK, sizeof(TApcOplock));
+    if(pApc != NULL)
+    {
+        // Request the oplock
+        Status = NtFsControlFile(pData->hFile,
+                                 pApc->hEvent,
+                                 NULL,
+                                 NULL,
+                                &pApc->IoStatus,
+                                 IoctlCode,
+                                 NULL,
+                                 0,
+                                 NULL,
+                                 0);
+
+        // If the IOCTL returned STATUS_PENDING, it means that the oplock is active.
+        // If the oplock breaks, the event becomes signalled, and we get the APC message
+        if(Status == STATUS_PENDING)
+        {
+            pApc->dwIoctlCode = IoctlCode;
+            InsertApcEntry(pData, pApc);
+        }
+        else
+        {
+            FreeApcEntry(pApc);
+        }
+    }
+
+    SetResultInfo(hDlg, RtlNtStatusToDosError(Status));
+    return TRUE;
+}
+
+static int OnRequestOplockWin7(HWND hDlg)
+{
+    TFileTestData * pData = GetDialogData(hDlg);
+    TApcOplock * pApc;
+    NTSTATUS Status = STATUS_SUCCESS;
+
+    // Ask the user for flags
+    if(FlagsDialog(hDlg, &pData->dwOplockLevel, IDS_OPLOCK_FLAGS, Win7OplockFlags) != IDOK)
+        return TRUE;
+
+    // Create a new APC entry to hold all information
+    pApc = (TApcOplock *)CreateApcEntry(pData, APC_TYPE_OPLOCK, sizeof(TApcOplock));
+    if(pApc != NULL)
+    {
+        // Prepare the input buffer
+        pApc->In.StructureLength = sizeof(REQUEST_OPLOCK_INPUT_BUFFER);
+        pApc->In.StructureVersion = REQUEST_OPLOCK_CURRENT_VERSION;
+        pApc->In.RequestedOplockLevel = pData->dwOplockLevel;
+        pApc->In.Flags = REQUEST_OPLOCK_INPUT_FLAG_REQUEST;
+
+        // Prepare the output buffer
+        pApc->Out.StructureLength = sizeof(REQUEST_OPLOCK_OUTPUT_BUFFER);
+        pApc->Out.StructureVersion = REQUEST_OPLOCK_CURRENT_VERSION;
+
+        // Request the oplock
+        Status = NtFsControlFile(pData->hFile,
+                                 pApc->hEvent,
+                                 NULL,
+                                 NULL,
+                                &pApc->IoStatus,
+                                 FSCTL_REQUEST_OPLOCK,
+                                &pApc->In,
+                                 sizeof(REQUEST_OPLOCK_INPUT_BUFFER),
+                                &pApc->Out,
+                                 sizeof(REQUEST_OPLOCK_OUTPUT_BUFFER));
+
+        // If the IOCTL returned STATUS_PENDING, it means that the oplock is active.
+        // If the oplock breaks, the event becomes signalled, and we get the APC message
+        if(Status == STATUS_PENDING)
+        {
+            pApc->dwIoctlCode = FSCTL_REQUEST_OPLOCK;
+            InsertApcEntry(pData, pApc);
+        }
+        else
+        {
+            FreeApcEntry(pApc);
+        }
+    }
+
+    SetResultInfo(hDlg, RtlNtStatusToDosError(Status));
+    return TRUE;
+}
+
 static int OnCommand(HWND hDlg, UINT nNotify, UINT nIDCtrl)
 {
     OPENFILENAME ofn;
@@ -792,6 +907,21 @@ static int OnCommand(HWND hDlg, UINT nNotify, UINT nIDCtrl)
 
             case IDC_SET_SPARSE:
                 return OnSetSparse(hDlg);
+
+            case IDC_REQUEST_OPLOCK_1:
+                return OnRequestOplock(hDlg, FSCTL_REQUEST_OPLOCK_LEVEL_1);
+
+            case IDC_REQUEST_OPLOCK_2:
+                return OnRequestOplock(hDlg, FSCTL_REQUEST_OPLOCK_LEVEL_2);
+
+            case IDC_REQUEST_BATCH_OPLOCK:
+                return OnRequestOplock(hDlg, FSCTL_REQUEST_BATCH_OPLOCK);
+
+            case IDC_REQUEST_FILTER_OPLOCK:
+                return OnRequestOplock(hDlg, FSCTL_REQUEST_FILTER_OPLOCK);
+
+            case IDC_REQUEST_OPLOCK:
+                return OnRequestOplockWin7(hDlg);
         }
     }
 

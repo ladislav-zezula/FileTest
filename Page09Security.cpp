@@ -1520,8 +1520,8 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
         pAnchors->AddAnchor(hDlg, IDC_RESULT_FRAME, akLeft | akRight | akBottom);
         pAnchors->AddAnchor(hDlg, IDC_RESULT_STATUS_TITLE, akLeft | akBottom);
         pAnchors->AddAnchor(hDlg, IDC_RESULT_STATUS, akLeft | akRight | akBottom);
-        pAnchors->AddAnchor(hDlg, IDC_RESULT_LENGTH_TITLE, akLeft | akBottom);
-        pAnchors->AddAnchor(hDlg, IDC_RESULT_LENGTH, akLeft | akRight | akBottom);
+        pAnchors->AddAnchor(hDlg, IDC_IOSTATUS_INFO_TITLE, akLeft | akBottom);
+        pAnchors->AddAnchor(hDlg, IDC_IOSTATUS_INFO, akLeft | akRight | akBottom);
     }
 
     // Set the default security information to query
@@ -1831,7 +1831,7 @@ static int OnSetSecurity(HWND hDlg)
     {
         // Set the result to the dialog controls
         Status = NtSetSecurityObject(pData->hFile, AppliedSecInfo, &sd);
-        SetResultInfo(hDlg, Status, NULL, 0);
+        SetResultInfo(hDlg, Status);
     }
 
     // Free all 4 parts of the security information

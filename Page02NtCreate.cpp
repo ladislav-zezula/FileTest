@@ -153,6 +153,32 @@ static NTSTATUS MyCreateDirectory(TFileTestData * pData, POBJECT_ATTRIBUTES pObj
     return Status;
 }
 
+static int QuickAccessSelection(HWND hDlg, DWORD dwDesiredAccess, DWORD dwShareAccess, bool bSynchronous)
+{
+    DWORD dwCreateOptions;
+
+    // Retrieve the create options from the dialog
+    DlgText2Hex32(hDlg, IDC_CREATE_OPTIONS, &dwCreateOptions);
+
+    // Fix desired access according to bAsynchronous
+    if(bSynchronous)
+    {
+        dwCreateOptions |= FILE_SYNCHRONOUS_IO_NONALERT;
+        dwDesiredAccess |= SYNCHRONIZE;
+    }
+    else
+    {
+        dwCreateOptions &= ~(FILE_SYNCHRONOUS_IO_ALERT | FILE_SYNCHRONOUS_IO_NONALERT);
+        dwDesiredAccess &= ~SYNCHRONIZE;
+    }
+
+    // Apply the create options to the dialog controls
+    Hex2DlgText32(hDlg, IDC_DESIRED_ACCESS, dwDesiredAccess);
+    Hex2DlgText32(hDlg, IDC_SHARE_ACCESS, dwShareAccess);
+    Hex2DlgText32(hDlg, IDC_CREATE_OPTIONS, dwCreateOptions);
+    return TRUE;
+}
+
 static int SaveDialog(HWND hDlg)
 {
     TFileTestData * pData = GetDialogData(hDlg);
@@ -698,6 +724,24 @@ static int OnCommand(HWND hDlg, UINT nNotify, UINT nIDCtrl)
             case IDC_MAKE_DIRECTORY:
                 return OnMakeDirectoryClick(hDlg);
 
+            case IDC_RDWR_ASYNC:
+                return QuickAccessSelection(hDlg, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, false);
+
+            case IDC_RDWR_SYNC:
+                return QuickAccessSelection(hDlg, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, true);
+
+            case IDC_READ_ASYNC:
+                return QuickAccessSelection(hDlg, GENERIC_READ, FILE_SHARE_READ, false);
+
+            case IDC_READ_SYNC:
+                return QuickAccessSelection(hDlg, GENERIC_READ, FILE_SHARE_READ, true);
+
+            case IDC_QUERY_INFO_ASYNC:
+                return QuickAccessSelection(hDlg, FILE_READ_ATTRIBUTES, 0, false);
+
+            case IDC_QUERY_INFO_SYNC:
+                return QuickAccessSelection(hDlg, FILE_READ_ATTRIBUTES, 0, true);
+
             case IDC_CREATE_FILE:
                 return OnCreateFileClick(hDlg);
 
@@ -760,6 +804,9 @@ INT_PTR CALLBACK PageProc02(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
             if(wParam == IDC_RELATIVE_FILE_HELP)
                 DrawURLButton(hDlg, (LPDRAWITEMSTRUCT)lParam, FALSE);
             return TRUE;
+
+        case WM_CONTEXTMENU:
+            return ExecuteContextMenu(hDlg, IDR_QUICK_ACCESS_SELECTION, lParam);
 
         case WM_COMMAND:
             return OnCommand(hDlg, HIWORD(wParam), LOWORD(wParam));

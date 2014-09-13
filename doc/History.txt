@@ -2,6 +2,13 @@
   FileTest history
   ================
 
+ Version 2.6.0.468
+
+ - Added support for oplocks
+ - Added context menu to NtCreate page for quick selection of create options
+ - Added "About" dialog
+ - Added generic support for asynchronous, long-to-complete requests
+
  Version 2.5.0.466
 
  - Fixed displaying on low screen resolutions
@@ -35,7 +42,7 @@
  Version 1.9.0.208
 
  - Support for NtReadFile and NtWriteFile
- - Support for asynchronour file readn and write
+ - Support for asynchronour file read and write
  - Support for Symbolic Links
  - Support for Hardlinks
  - Support for reparse points
@@ -97,7 +104,6 @@
  Version 1.7.0.148
 
  - Support for FileRenameInformation
-
 
  Version 1.7.0.145
 

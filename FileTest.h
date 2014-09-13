@@ -54,9 +54,10 @@
 #define OSVER_WINDOWS_VISTA         0x0600
 
 #define WM_SHOW_HARDLINKS           (WM_USER + 0x1000)
-#define WM_TIMER_BLINK              0x1234
-#define WM_TIMER_TOOLTIP            0x1235
-#define WM_TIMER_CHECK_MOUSE        0x1236
+#define WM_TIMER_BLINK              (WM_USER + 0x1001)
+#define WM_TIMER_TOOLTIP            (WM_USER + 0x1002)
+#define WM_TIMER_CHECK_MOUSE        (WM_USER + 0x1003)
+#define WM_APC                      (WM_USER + 0x1004)
 
 #define STATUS_INVALID_DATA_FORMAT  0xC1110001
 #define STATUS_CANNOT_EDIT_THIS     0xC1110002
@@ -150,6 +151,98 @@ typedef struct _TOKEN_MANDATORY_LABEL
 #define FILE_ATTRIBUTE_VIRTUAL              0x00010000  
 #endif
 
+#ifndef FSCTL_REQUEST_OPLOCK
+#define FSCTL_REQUEST_OPLOCK                CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 144, METHOD_BUFFERED, FILE_ANY_ACCESS)
+#endif
+
+#ifndef FILE_OPLOCK_BROKEN_TO_LEVEL_2
+#define FILE_OPLOCK_BROKEN_TO_LEVEL_2   0x00000007
+#define FILE_OPLOCK_BROKEN_TO_NONE      0x00000008
+#define FILE_OPBATCH_BREAK_UNDERWAY     0x00000009
+#endif
+
+#ifndef OPLOCK_LEVEL_CACHE_READ
+#define OPLOCK_LEVEL_CACHE_READ         (0x00000001)
+#define OPLOCK_LEVEL_CACHE_HANDLE       (0x00000002)
+#define OPLOCK_LEVEL_CACHE_WRITE        (0x00000004)
+
+#define REQUEST_OPLOCK_INPUT_FLAG_REQUEST               (0x00000001)
+#define REQUEST_OPLOCK_INPUT_FLAG_ACK                   (0x00000002)
+#define REQUEST_OPLOCK_INPUT_FLAG_COMPLETE_ACK_ON_CLOSE (0x00000004)
+
+#define REQUEST_OPLOCK_CURRENT_VERSION          1
+
+typedef struct _REQUEST_OPLOCK_INPUT_BUFFER {
+
+    //
+    //  This should be set to REQUEST_OPLOCK_CURRENT_VERSION.
+    //
+
+    WORD   StructureVersion;
+
+    WORD   StructureLength;
+
+    //
+    //  One or more OPLOCK_LEVEL_CACHE_* values to indicate the desired level of the oplock.
+    //
+
+    DWORD RequestedOplockLevel;
+
+    //
+    //  REQUEST_OPLOCK_INPUT_FLAG_* flags.
+    //
+
+    DWORD Flags;
+
+} REQUEST_OPLOCK_INPUT_BUFFER, *PREQUEST_OPLOCK_INPUT_BUFFER;
+
+#define REQUEST_OPLOCK_OUTPUT_FLAG_ACK_REQUIRED     (0x00000001)
+#define REQUEST_OPLOCK_OUTPUT_FLAG_MODES_PROVIDED   (0x00000002)
+
+typedef struct _REQUEST_OPLOCK_OUTPUT_BUFFER {
+
+    //
+    //  This should be set to REQUEST_OPLOCK_CURRENT_VERSION.
+    //
+
+    WORD   StructureVersion;
+
+    WORD   StructureLength;
+
+    //
+    //  One or more OPLOCK_LEVEL_CACHE_* values indicating the level of the oplock that
+    //  was just broken.
+    //
+
+    DWORD OriginalOplockLevel;
+
+    //
+    //  One or more OPLOCK_LEVEL_CACHE_* values indicating the level to which an oplock
+    //  is being broken, or an oplock level that may be available for granting, depending
+    //  on the operation returning this buffer.
+    //
+
+    DWORD NewOplockLevel;
+
+    //
+    //  REQUEST_OPLOCK_OUTPUT_FLAG_* flags.
+    //
+
+    DWORD Flags;
+
+    //
+    //  When REQUEST_OPLOCK_OUTPUT_FLAG_MODES_PROVIDED is set, and when the
+    //  OPLOCK_LEVEL_CACHE_HANDLE level is being lost in an oplock break, these fields
+    //  contain the access mode and share mode of the request that is causing the break.
+    //
+
+    ACCESS_MASK AccessMode;
+
+    WORD   ShareMode;
+
+} REQUEST_OPLOCK_OUTPUT_BUFFER, *PREQUEST_OPLOCK_OUTPUT_BUFFER;
+#endif
+
 typedef BOOL (WINAPI * ADDMANDATORYACE)(PACL pAcl,
                                         DWORD dwAceRevision,
                                         DWORD AceFlags,
@@ -162,15 +255,67 @@ typedef BOOL (WINAPI * ADDMANDATORYACE)(PACL pAcl,
 #define FLAG_INFO_ENTRY(flag, enabled)  {_T(#flag), flag, enabled}
 #define FLAG_INFO_END                   {NULL, 0, 0}
 
+#define APC_TYPE_OPLOCK     0
+
 struct TFlagInfo
 {
     LPCTSTR szFlagText;
     DWORD   dwFlag;
     BOOL    bEnabled;
-
 };
 
-struct TFileTestData
+// Common structure for APCs
+struct TApcEntry
+{
+    // Common APC entry members
+    IO_STATUS_BLOCK IoStatus;               // IO_STATUS_BLOCK for the entry
+    LIST_ENTRY Entry;                       // Pointer to the APC entry
+    UINT_PTR ApcType;                       // Common member for determining type of the APC
+    HANDLE hEvent;                          // When signalled, triggers this APC
+};
+
+// Extended structure for oplock APCs
+struct TApcOplock : public TApcEntry
+{
+    REQUEST_OPLOCK_OUTPUT_BUFFER Out;       // Output structure for Win7 oplock
+    REQUEST_OPLOCK_INPUT_BUFFER In;         // Input structure for Win7 oplock
+    DWORD dwIoctlCode;                      // Ioctl code that has been sent
+};
+
+// Structure used by main dialog to hold all its data
+struct TWindowData
+{
+    HWND hDlg;                              // Handle to ourself
+    HWND hWndPage;                          // HWND of the current page
+
+    CRITICAL_SECTION ApcLock;               // A critical section protecting APC data
+    LIST_ENTRY ApcList;                     // List of queued APC calls
+    HANDLE hApcThread;                      // Handle to a thread sending messages
+    HANDLE hAlertEvent;                     // Handle to a watcher event
+    DWORD dwAlertReason;                    // A reason why the watcher was stopped
+    int nApcCount;                          // Number of queued APCs
+
+    int  nTabInnerLeft;                     // Inner space tab control <==> dialog client edge
+    int  nTabInnerTop;
+    int  nTabInnerRight;
+    int  nTabInnerBottom;
+    int  nButtonInnerRight;                 // Button distance from right-bottom corner
+    int  nButtonInnerBottom;
+
+    UINT_PTR CheckMouseTimer;               // Timer for checking mouse
+    RECT ScreenRect;                        // Size of the screen
+    RECT DialogRect;                        // Size of the dialog
+    bool bInitialResizeDone;                // If TRUE, the first resize has already completed
+    bool bDialogBiggerThanScreen;           // true = the main dialog is bigger than the screen
+
+    HANDLE hThread;                         // Thread that moves the dialog
+    int nStartX;                            // The dialog's starting X position
+    int nStartY;                            // The dialog's starting Y position
+    int nEndY;                              // The dialog's final Y position
+    int nAddY;                              // The dialog's movement direction
+};
+
+struct TFileTestData : public TWindowData
 {
     TCHAR         szDirName[MAX_NT_PATH];   // Directory name
     TCHAR         szFileName1[MAX_NT_PATH]; // First file name
@@ -210,6 +355,7 @@ struct TFileTestData
     ULONG         dwSectWin32Protect;       // Win32Protect for NtMapViewOfSection
 
     ULONG         dwMoveFileFlags;          // For MoveFileEx
+    ULONG         dwOplockLevel;            // For requesting Win7 oplock
     BOOL          bTransactionActive;
     BOOL          bUseTransaction;
     BOOL          bSectionViewMapped;
@@ -355,7 +501,6 @@ extern TToolTip g_Tooltip;
 extern HANDLE g_hHeap;
 extern DWORD g_dwWinVer;
 extern TCHAR g_szInitialDirectory[MAX_PATH];
-extern HWND g_hDlg;
 
 extern RTLGETCURRENTTRANSACTION pfnRtlGetCurrentTransaction;
 extern RTLSETCURRENTTRANSACTION pfnRtlSetCurrentTransaction;
@@ -427,6 +572,8 @@ void FileIDToString(TFileTestData * pData, ULONGLONG FileId, LPTSTR szBuffer);
 void ObjectIDToString(PBYTE pbObjId, LPCTSTR szFileName, LPTSTR szObjectID);
 int  StringToFileID(LPCTSTR szFileOrObjId, LPTSTR szVolume, PVOID pvFileObjId, PDWORD pLength);
 
+int ExecuteContextMenu(HWND hWndParent, UINT nIDMenu, LPARAM lParam);
+
 //-----------------------------------------------------------------------------
 // Conversion of FILETIME to text and back
 
@@ -449,6 +596,7 @@ BOOL GetSupportedDateTimeFormats(
 //-----------------------------------------------------------------------------
 // Dialogs
 
+INT_PTR HelpAboutDialog(HWND hParent);
 INT_PTR ValuesDialog(HWND hWndParent, PDWORD pdwValue, UINT nIDTitle, TFlagInfo * pFlags);
 INT_PTR FlagsDialog(HWND hWndParent, LPDWORD pdwFlags, UINT nIDTitle, TFlagInfo * pFlags);
 INT_PTR FlagsDialog(HWND hWndParent, UINT nIDValue, UINT nIDTitle, TFlagInfo * pFlags);
@@ -456,7 +604,10 @@ INT_PTR EaEditorDialog(HWND hParent, PFILE_FULL_EA_INFORMATION * pEaInfo);
 INT_PTR PrivilegesDialog(HWND hParent);
 INT_PTR ObjectIDActionDialog(HWND hParent);
 INT_PTR DirectoryActionDialog(HWND hParent);
-INT_PTR DataPasteOperationDialog(HWND hParent);
+
+TApcEntry * CreateApcEntry(TWindowData * pData, size_t ApcType, size_t cbApcSize);
+bool InsertApcEntry(TWindowData * pData, TApcEntry * pApc);
+void FreeApcEntry(TApcEntry * pApc);
 
 int NtUseFileId(HWND hDlg, LPCTSTR szFileId);
 void DisableDialogMessages(HWND hDlg, BOOL bDisable);

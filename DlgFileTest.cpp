@@ -12,44 +12,18 @@
 #include "resource.h"
 
 //-----------------------------------------------------------------------------
-// Local structures
-
-struct TDialogData
-{
-    HWND hWndPage;                          // HWND of the current page
-    HWND hDlg;                              // Handle to ourself
-    bool bInitialResizeDone;                // If TRUE, the first resize has already completed
-
-    int  nTabInnerLeft;                     // Inner space tab control <==> dialog client edge
-    int  nTabInnerTop;
-    int  nTabInnerRight;
-    int  nTabInnerBottom;
-    int  nButtonInnerRight;                 // Button distance from right-bottom corner
-    int  nButtonInnerBottom;
-
-    UINT_PTR CheckMouseTimer;               // Timer for checking mouse
-    RECT ScreenRect;                        // Size of the screen
-    RECT DialogRect;                        // Size of the dialog
-    bool bDialogBiggerThanScreen;           // true = the main dialog is bigger than the screen
-
-    HANDLE hThread;                         // Thread that moves the dialog
-    int nStartX;                            // The dialog's starting X position
-    int nStartY;                            // The dialog's starting Y position
-    int nEndY;                              // The dialog's final Y position
-    int nAddY;                              // The dialog's movement direction
-};
-
-//-----------------------------------------------------------------------------
 // Local variables
+
+#define SC_HELP_ABOUT (SC_CLOSE + 0x800)
 
 static BOOL bDisableDialogMessages = FALSE;
 
 //-----------------------------------------------------------------------------
-// Local functions
+// Thread moving the dialog
 
 static DWORD WINAPI MoveDialogThread(PVOID pParam)
 {
-    TDialogData * pData = (TDialogData *)pParam;
+    TWindowData * pData = (TWindowData *)pParam;
     int nCurrentY = pData->nStartY;
     int nAddY;
 
@@ -78,7 +52,111 @@ static DWORD WINAPI MoveDialogThread(PVOID pParam)
     return 0;
 }
 
-static void InitializeTabControl(HWND hDlg, TFileTestData * pftd)
+//-----------------------------------------------------------------------------
+// "APC" thread - performing wait on all queued APCs and sends message
+// when an APC is awaken
+
+#define ALERT_REASON_STOP_WORKER    0               // The worker needs to stop
+#define ALERT_REASON_UPDATE_WAIT    1               // The wait list needs to be updated
+
+static DWORD WINAPI ApcThread(LPVOID pvParameter)
+{
+    TWindowData * pData = (TWindowData *)pvParameter;
+    PLIST_ENTRY pHeadEntry;
+    PLIST_ENTRY pListEntry;
+    TApcEntry * ApcList[MAXIMUM_WAIT_OBJECTS];
+    HANDLE WaitHandles[MAXIMUM_WAIT_OBJECTS];
+    TApcEntry * pApc;
+
+    // The first event is always the alert event
+    WaitHandles[0] = pData->hAlertEvent;
+    assert(pData->hAlertEvent != NULL);
+
+    // Perform a loop until the process does not end
+    while(pData->hAlertEvent != NULL)
+    {
+        DWORD dwWaitCount = 1;
+        DWORD dwWaitResult;
+
+        // Prepare the list of handles to wait
+        EnterCriticalSection(&pData->ApcLock);
+        pHeadEntry = &pData->ApcList;
+        for(pListEntry = pHeadEntry->Flink; pListEntry != pHeadEntry; pListEntry = pListEntry->Flink)
+        {
+            // Retrieve the APC entry
+            pApc = CONTAINING_RECORD(pListEntry, TApcEntry, Entry);
+
+            // Insert the APC entry to the wait list
+            WaitHandles[dwWaitCount] = pApc->hEvent;
+            ApcList[dwWaitCount++] = pApc;
+        }
+        LeaveCriticalSection(&pData->ApcLock);
+
+        // Now when the list if prepared, we can perform wait on all
+        assert(dwWaitCount < MAXIMUM_WAIT_OBJECTS);
+        dwWaitResult = WaitForMultipleObjects(dwWaitCount, WaitHandles, FALSE, INFINITE);
+
+        // If the first wait broke, it means that we need to exit
+        if(dwWaitResult == WAIT_OBJECT_0 || dwWaitResult == WAIT_ABANDONED_0)
+        {
+            // If we need just to update wait list, do it
+            if(pData->dwAlertReason == ALERT_REASON_UPDATE_WAIT)
+                continue;                        
+            break;
+        }
+
+        // Check if any of the APCs has broken
+        if(WAIT_OBJECT_0 < dwWaitResult && dwWaitResult < (WAIT_OBJECT_0 + dwWaitCount))
+        {
+            // Get the pointer to the triggered APC
+            pApc = ApcList[dwWaitResult - WAIT_OBJECT_0];
+            assert(pApc != NULL);
+
+            // Lock the list and remove the APC from the list
+            EnterCriticalSection(&pData->ApcLock);
+            RemoveEntryList(&pApc->Entry);
+            pData->nApcCount--;
+            LeaveCriticalSection(&pData->ApcLock);
+
+            // Send the APC to the main dialog
+            // Note that the main dialog is responsible for freeing the APC
+            PostMessage(pData->hDlg, WM_APC, 0, (LPARAM)pApc);
+        }
+    }
+
+    // Now we need to free all the APCs
+    EnterCriticalSection(&pData->ApcLock);
+    pHeadEntry = &pData->ApcList;
+    for(pListEntry = pHeadEntry->Flink; pListEntry != pHeadEntry; )
+    {
+        // Retrieve the APC entry
+        pApc = CONTAINING_RECORD(pListEntry, TApcEntry, Entry);
+        pListEntry = pListEntry->Flink;
+
+        // Remove the APC from the list and free it
+        RemoveEntryList(&pApc->Entry);
+        FreeApcEntry(pApc);
+    }
+    pData->nApcCount = 0;;
+    LeaveCriticalSection(&pData->ApcLock);
+    
+    return 0;
+}
+
+static void AlertApcThread(TWindowData * pData, DWORD dwAlertReason)
+{
+    // Signal the event handle and close it
+    if(pData->hApcThread && pData->hAlertEvent)
+    {
+        pData->dwAlertReason = dwAlertReason;
+        SetEvent(pData->hAlertEvent);
+    }
+}
+
+//-----------------------------------------------------------------------------
+// Local functions
+
+static void InitializeTabControl(HWND hDlg, TWindowData * pData)
 {
     PROPSHEETHEADER psh;
     PROPSHEETPAGE psp[13];
@@ -109,7 +187,7 @@ static void InitializeTabControl(HWND hDlg, TFileTestData * pftd)
         psp[nPages].hInstance   = g_hInst;
         psp[nPages].pszTemplate = MAKEINTRESOURCE(IDD_PAGE00_TRANSACTION);
         psp[nPages].pfnDlgProc  = PageProc00;
-        psp[nPages].lParam      = (LPARAM)pftd;
+        psp[nPages].lParam      = (LPARAM)pData;
         nPages++;
     }
 
@@ -120,7 +198,7 @@ static void InitializeTabControl(HWND hDlg, TFileTestData * pftd)
     psp[nPages].hInstance   = g_hInst;
     psp[nPages].pszTemplate = MAKEINTRESOURCE(IDD_PAGE01_CREATE);
     psp[nPages].pfnDlgProc  = PageProc01;
-    psp[nPages].lParam      = (LPARAM)pftd;
+    psp[nPages].lParam      = (LPARAM)pData;
     psh.nStartPage = nPages;
     nPages++;
 
@@ -132,8 +210,8 @@ static void InitializeTabControl(HWND hDlg, TFileTestData * pftd)
     psp[nPages].hInstance   = g_hInst;
     psp[nPages].pszTemplate = MAKEINTRESOURCE(IDD_PAGE02_NTCREATE);
     psp[nPages].pfnDlgProc  = PageProc02;
-    psp[nPages].lParam      = (LPARAM)pftd;
-    if(IsNativeName(pftd->szFileName1))
+    psp[nPages].lParam      = (LPARAM)pData;
+    if(IsNativeName(((TFileTestData *)pData)->szFileName1))
         psh.nStartPage = nPages;
     nPages++;
 
@@ -144,7 +222,7 @@ static void InitializeTabControl(HWND hDlg, TFileTestData * pftd)
     psp[nPages].hInstance   = g_hInst;
     psp[nPages].pszTemplate = MAKEINTRESOURCE(IDD_PAGE03_READWRITE);
     psp[nPages].pfnDlgProc  = PageProc03;
-    psp[nPages].lParam      = (LPARAM)pftd;
+    psp[nPages].lParam      = (LPARAM)pData;
     nPages++;
 
     // Fill the "Mapping"
@@ -154,7 +232,7 @@ static void InitializeTabControl(HWND hDlg, TFileTestData * pftd)
     psp[nPages].hInstance   = g_hInst;
     psp[nPages].pszTemplate = MAKEINTRESOURCE(IDD_PAGE04_MAPPING);
     psp[nPages].pfnDlgProc  = PageProc04;
-    psp[nPages].lParam      = (LPARAM)pftd;
+    psp[nPages].lParam      = (LPARAM)pData;
     nPages++;
 
     // Fill the "File Ops".
@@ -164,7 +242,7 @@ static void InitializeTabControl(HWND hDlg, TFileTestData * pftd)
     psp[nPages].hInstance   = g_hInst;
     psp[nPages].pszTemplate = MAKEINTRESOURCE(IDD_PAGE05_FILEOPS);
     psp[nPages].pfnDlgProc  = PageProc05;
-    psp[nPages].lParam      = (LPARAM)pftd;
+    psp[nPages].lParam      = (LPARAM)pData;
     nPages++;
 
     // Fill the "NtFileInfo" page
@@ -174,7 +252,7 @@ static void InitializeTabControl(HWND hDlg, TFileTestData * pftd)
     psp[nPages].hInstance   = g_hInst;
     psp[nPages].pszTemplate = MAKEINTRESOURCE(IDD_PAGE06_NTFILEINFO);
     psp[nPages].pfnDlgProc  = PageProc06;
-    psp[nPages].lParam      = (LPARAM)pftd;
+    psp[nPages].lParam      = (LPARAM)pData;
     nPages++;
 
     // Fill the "NtFsInfo" page.
@@ -184,7 +262,7 @@ static void InitializeTabControl(HWND hDlg, TFileTestData * pftd)
     psp[nPages].hInstance   = g_hInst;
     psp[nPages].pszTemplate = MAKEINTRESOURCE(IDD_PAGE07_NTVOLINFO);
     psp[nPages].pfnDlgProc  = PageProc06;
-    psp[nPages].lParam      = (LPARAM)pftd;
+    psp[nPages].lParam      = (LPARAM)pData;
     nPages++;
 
     // Fill the "EA" page.
@@ -194,7 +272,7 @@ static void InitializeTabControl(HWND hDlg, TFileTestData * pftd)
     psp[nPages].hInstance   = g_hInst;
     psp[nPages].pszTemplate = MAKEINTRESOURCE(IDD_PAGE08_EA);
     psp[nPages].pfnDlgProc  = PageProc08;       // The same like NtFileInfo
-    psp[nPages].lParam      = (LPARAM)pftd;
+    psp[nPages].lParam      = (LPARAM)pData;
     nPages++;
 
     // Fill the "Security".
@@ -204,7 +282,7 @@ static void InitializeTabControl(HWND hDlg, TFileTestData * pftd)
     psp[nPages].hInstance   = g_hInst;
     psp[nPages].pszTemplate = MAKEINTRESOURCE(IDD_PAGE09_SECURITY);
     psp[nPages].pfnDlgProc  = PageProc09;
-    psp[nPages].lParam      = (LPARAM)pftd;
+    psp[nPages].lParam      = (LPARAM)pData;
     nPages++;
 
     // Fill the "Links".
@@ -214,7 +292,7 @@ static void InitializeTabControl(HWND hDlg, TFileTestData * pftd)
     psp[nPages].hInstance   = g_hInst;
     psp[nPages].pszTemplate = MAKEINTRESOURCE(IDD_PAGE10_LINKS);
     psp[nPages].pfnDlgProc  = PageProc10;
-    psp[nPages].lParam      = (LPARAM)pftd;
+    psp[nPages].lParam      = (LPARAM)pData;
     nPages++;
 
     // Fill the "Streams".
@@ -224,7 +302,7 @@ static void InitializeTabControl(HWND hDlg, TFileTestData * pftd)
     psp[nPages].hInstance   = g_hInst;
     psp[nPages].pszTemplate = MAKEINTRESOURCE(IDD_PAGE11_STREAMS);
     psp[nPages].pfnDlgProc  = PageProc11;
-    psp[nPages].lParam      = (LPARAM)pftd;
+    psp[nPages].lParam      = (LPARAM)pData;
     nPages++;
     psh.nPages = nPages;
 
@@ -234,7 +312,7 @@ static void InitializeTabControl(HWND hDlg, TFileTestData * pftd)
 
 static void RefreshScreenSize(HWND hDlg)
 {
-    TDialogData * pData = (TDialogData *)GetWindowLongPtr(hDlg, DWLP_USER);
+    TWindowData * pData = GetDialogData(hDlg);
     int nScreenHeight;
     int nDialogHeight;
 
@@ -355,23 +433,142 @@ static void FixDialogToOriginalSize(HWND hDlg, UINT DlgResID)
     }
 }
 
+static LPTSTR FormatOplockTypeWindows7(LPTSTR szBuffer, DWORD dwOplockFlags)
+{
+    // Print the base information
+    int nIndex = _stprintf(szBuffer, _T("windows7:"));
+
+    if(dwOplockFlags & OPLOCK_LEVEL_CACHE_READ)
+        szBuffer[nIndex++] = _T('R');
+    if(dwOplockFlags & OPLOCK_LEVEL_CACHE_WRITE)
+        szBuffer[nIndex++] = _T('W');
+    if(dwOplockFlags & OPLOCK_LEVEL_CACHE_HANDLE)
+        szBuffer[nIndex++] = _T('H');
+    szBuffer[nIndex] = 0;
+
+    return szBuffer;
+}
+
+static void ProcessOplockApc(TWindowData * pData, TApcOplock * pApc)
+{
+    LPCTSTR szOplockType = _T("unknown");
+    LPCTSTR szBrokenTo = _T("unknown");
+    TCHAR szBuffer1[0x40];
+    TCHAR szBuffer2[0x40];
+
+    // Sanity check
+    assert(pApc->ApcType == APC_TYPE_OPLOCK);
+
+    // Get the type of oplock
+    switch(pApc->dwIoctlCode)
+    {
+        case FSCTL_REQUEST_OPLOCK_LEVEL_1:
+            szOplockType = _T("level 1/exclusive");
+            break;
+
+        case FSCTL_REQUEST_OPLOCK_LEVEL_2:
+            szOplockType = _T("level 2/shared");
+            break;
+
+        case FSCTL_REQUEST_BATCH_OPLOCK:
+            szOplockType = _T("batch");
+            break;
+
+        case FSCTL_REQUEST_FILTER_OPLOCK:
+            szOplockType = _T("filter");
+            break;
+
+        case FSCTL_REQUEST_OPLOCK:
+            szOplockType = FormatOplockTypeWindows7(szBuffer1, pApc->In.RequestedOplockLevel);
+            break;
+    }
+
+    // Get the type of oplock that the old has been broken to
+    if(pApc->dwIoctlCode != FSCTL_REQUEST_OPLOCK)
+    {
+        switch(pApc->IoStatus.Information)
+        {
+            case FILE_OPLOCK_BROKEN_TO_LEVEL_2:
+                szBrokenTo = _T("level 2/shared");
+                break;
+
+            case FILE_OPLOCK_BROKEN_TO_NONE:
+                szBrokenTo = _T("none");
+                break;
+        }
+    }
+    else
+    {
+        // Note: Even if the new oplock is non-zero,
+        // the event will not trigger again even if we requeue it to the APC thread
+        szBrokenTo = FormatOplockTypeWindows7(szBuffer2, pApc->Out.NewOplockLevel);
+    }
+
+    // Show the message box that the oplock broke
+    MessageBoxRc(pData->hDlg, IDS_INFO, IDS_OPLOCK_BROKE, szOplockType, szBrokenTo);
+}
+
+static void AddAboutToSystemMenu(HWND hDlg)
+{
+    MENUITEMINFO mii;
+    HMENU hSysMenu;
+    TCHAR szItemText[256];
+    int nSeparatorIndex = -1;
+    int nMenuCount;
+
+    // Retrieve system menu
+    hSysMenu = GetSystemMenu(hDlg, FALSE);
+    if(hSysMenu != NULL)
+    {
+        // Find the separator
+        nMenuCount = GetMenuItemCount(hSysMenu);
+        for(int i = 0; i < nMenuCount; i++)
+        {
+            // Retrieve the item type
+            ZeroMemory(&mii, sizeof(MENUITEMINFO));
+            mii.cbSize = sizeof(MENUITEMINFO);
+            mii.fMask = MIIM_FTYPE;
+            GetMenuItemInfo(hSysMenu, i, TRUE, &mii);
+
+            // Separator?
+            if(mii.fType == MFT_SEPARATOR)
+            {
+                nSeparatorIndex = i;
+                break;
+            }
+        }
+
+        // If we found a separator, we need to add two more items
+        if(nSeparatorIndex != -1)
+        {
+            LoadString(g_hInst, IDS_HELP_ABOUT, szItemText, _tsize(szItemText));
+            InsertMenu(hSysMenu, nSeparatorIndex, MF_BYPOSITION | MF_SEPARATOR, 0, NULL);
+            InsertMenu(hSysMenu, nSeparatorIndex+1, MF_BYPOSITION | MF_STRING, SC_HELP_ABOUT, szItemText);
+        }
+    }
+}
+
 //-----------------------------------------------------------------------------
 // Dialog handlers
 
 static int OnInitDialog(HWND hDlg, LPARAM lParam)
 {
-    TFileTestData * pftd = (TFileTestData *)lParam;
-    TDialogData * pData = new TDialogData;
+    TWindowData * pData = (TWindowData *)lParam;
+    DWORD dwThreadId;
 
     // Initialize dialog data
-    ZeroMemory(pData, sizeof(TDialogData));
+    ZeroMemory(pData, sizeof(TWindowData));
+    InitializeCriticalSection(&pData->ApcLock);
+    InitializeListHead(&pData->ApcList);
     pData->hDlg = hDlg;
-    g_hDlg = hDlg;
     SetDialogData(hDlg, pData);
+
+    // Add "About" in the system menu
+    AddAboutToSystemMenu(hDlg);
 
     //
     // Note: If the screen size is too low at this point (like 800x600),
-    // the dialog gets shrinked. We need to fis the dialog to the original size
+    // the dialog gets shrinked. We need to resize the dialog to the original size
     //
 
     FixDialogToOriginalSize(hDlg, IDD_FILE_TEST);
@@ -380,16 +577,20 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
     g_Tooltip.Initialize(g_hInst, hDlg);
 
     // Initialize Tab Control
-    InitializeTabControl(hDlg, pftd);
+    InitializeTabControl(hDlg, pData);
 
     // Refresh information about screen rect and dialog rect
     RefreshScreenSize(hDlg);
+
+    // Create the so called "APC" thread that will monitor our list of APC entries
+    pData->hAlertEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
+    pData->hApcThread = CreateThread(NULL, 0, ApcThread, pData, 0, &dwThreadId);
     return TRUE;
 }
 
 static void OnSize(HWND hDlg, LPARAM lParam)
 {
-    TDialogData * pData = (TDialogData *)GetWindowLongPtr(hDlg, DWLP_USER);
+    TWindowData * pData = GetDialogData(hDlg);
     HWND hTabCtrl = GetDlgItem(hDlg, IDC_TAB);
     HWND hButton = GetDlgItem(hDlg, IDC_EXIT);
     RECT rect;
@@ -445,7 +646,7 @@ static void OnGetMinMaxInfo(HWND /* hDlg */, LPARAM lParam)
 
 static void OnTimerCheckMouse(HWND hDlg)
 {
-    TDialogData * pData = (TDialogData *)GetWindowLongPtr(hDlg, DWLP_USER);
+    TWindowData * pData = GetDialogData(hDlg);
     POINT pt;
     DWORD ThreadID;
     int nTresholdX = 40;
@@ -489,6 +690,27 @@ static void OnTimerCheckMouse(HWND hDlg)
     }
 }
 
+static void OnApc(HWND hDlg, LPARAM lParam)
+{
+    TWindowData * pData = GetDialogData(hDlg);
+    TApcEntry * pApc = (TApcEntry *)lParam;
+
+    // Perform APC-specific action
+    switch(pApc->ApcType)
+    {
+        case APC_TYPE_OPLOCK:
+            ProcessOplockApc(pData, (TApcOplock *)pApc);
+            break;
+
+        default:    // The only currently used APC type is the oplock APC
+            assert(false);
+            break;
+    }
+
+    // Free the APC
+    FreeApcEntry(pApc);
+}
+
 static BOOL OnCommand(HWND hDlg, UINT nNotify, UINT nIDCtrl)
 {
     // IDC_EXIT or IDCANCEL pressed
@@ -503,6 +725,34 @@ static BOOL OnCommand(HWND hDlg, UINT nNotify, UINT nIDCtrl)
     }
 
     return FALSE;
+}
+
+static void OnHelpAbout(HWND hDlg)
+{
+    HelpAboutDialog(hDlg);
+}
+
+static void OnClose(HWND hDlg)
+{
+    TWindowData * pData = GetDialogData(hDlg);
+
+    if(pData->hApcThread != NULL)
+    {
+        // Stop the watcher thread, if any
+        AlertApcThread(pData, ALERT_REASON_STOP_WORKER);
+
+        // Wait for the thread to exit. Not more than 5 second
+        WaitForSingleObject(pData->hApcThread, 5000);
+        CloseHandle(pData->hApcThread);
+
+        // Close the alert event handle
+        if(pData->hAlertEvent != NULL)
+            CloseHandle(pData->hAlertEvent);
+        pData->hAlertEvent = NULL;
+
+        // Delete the APC critical section
+        DeleteCriticalSection(&pData->ApcLock);
+    }
 }
 
 static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
@@ -541,8 +791,21 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM l
                 OnTimerCheckMouse(hDlg);
             break;
 
+        case WM_APC:
+            OnApc(hDlg, lParam);
+            return TRUE;
+
         case WM_COMMAND:
             return OnCommand(hDlg, HIWORD(wParam), LOWORD(wParam));
+
+        case WM_SYSCOMMAND:
+            if(wParam == SC_HELP_ABOUT)
+                OnHelpAbout(hDlg);
+            break;
+
+        case WM_CLOSE:
+            OnClose(hDlg);
+            break;
     }
 
     return FALSE;
@@ -608,6 +871,70 @@ static BOOL IsMyDialogMessage(HWND hDlg, HWND hTabCtrl, LPMSG pMsg)
 
 __KeyNotSupported:
     return IsDialogMessage(hDlg, pMsg);
+}
+
+//-----------------------------------------------------------------------------
+// Public functions - APC support
+
+TApcEntry * CreateApcEntry(TWindowData * pData, size_t ApcType, size_t cbApcSize)
+{
+    TApcEntry * pApc = NULL;
+
+    // If there is too many APCs queued, do nothing
+    if(pData->nApcCount < MAXIMUM_WAIT_OBJECTS - 1)
+    {
+        // Allocate space for the APC structure
+        pApc = (TApcEntry *)HeapAlloc(g_hHeap, HEAP_ZERO_MEMORY, cbApcSize);
+        if(pApc != NULL)
+        {
+            // Create new event object for the APC entry
+            pApc->ApcType = ApcType;
+            pApc->hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+            if(pApc->hEvent != NULL)
+                return pApc;
+
+            // Free the (now useless) APC entry
+            HeapFree(g_hHeap, 0, pApc);
+        }
+    }
+
+    // Failed
+    return NULL;
+}
+
+bool InsertApcEntry(TWindowData * pData, TApcEntry * pApc)
+{
+    // Only if the APC is valid
+    if(pApc != NULL && pApc->hEvent != NULL)
+    {
+        // If there is too many APCs queued, do nothing
+        if(pData->nApcCount < MAXIMUM_WAIT_OBJECTS - 1)
+        {
+            // Insert the APC to the APC list.
+            // The APC thread does not know about it yet
+            EnterCriticalSection(&pData->ApcLock);
+            InsertTailList(&pData->ApcList, &pApc->Entry);
+            pData->nApcCount++;
+            LeaveCriticalSection(&pData->ApcLock);
+
+            // Alert the APC thread so it knows that it needs to update the APC list
+            AlertApcThread(pData, ALERT_REASON_UPDATE_WAIT);
+            return true;
+        }
+    }
+
+    // TODO: Memory leak when failed!!!
+    return false;
+}
+
+void FreeApcEntry(TApcEntry * pApc)
+{
+    if(pApc != NULL)
+    {
+        if(pApc->hEvent != NULL)
+            CloseHandle(pApc->hEvent);
+        HeapFree(g_hHeap, 0, pApc);
+    }
 }
 
 //-----------------------------------------------------------------------------
@@ -677,8 +1004,21 @@ INT_PTR FileTestDialog(HWND hParent, TFileTestData * pData)
         ShowWindow(hDlg, SW_SHOW);
         hTabCtrl = GetDlgItem(hDlg, IDC_TAB);
 
-        while(IsWindow(hDlg) && GetMessage(&msg, NULL, 0, 0))
+        while(IsWindow(hDlg))
         {
+            // We need an alertable sleep to make APCs to work.
+            // Uncomment this if you want to use the asynchronous "ApcRoutine"
+            // parameter(s) in some native API
+//          MsgWaitForMultipleObjectsEx(0,
+//                                      NULL,
+//                                      INFINITE,
+//                                      QS_ALLEVENTS | QS_ALLINPUT | QS_ALLPOSTMESSAGE,
+//                                      MWMO_WAITALL | MWMO_ALERTABLE | MWMO_INPUTAVAILABLE);
+
+            // Get the message. Stop processing if WM_QUIT has arrived
+            if(!GetMessage(&msg, NULL, 0, 0))
+                break;
+
             // Process the accelerator table
             if(!TranslateAccelerator(hDlg, hAccelTable, &msg))
             {

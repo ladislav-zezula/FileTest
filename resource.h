@@ -2,7 +2,7 @@
 // Microsoft Visual C++ generated include file.
 // Used by FileTest.rc
 //
-#define IDD_TEST_FILE                   101
+#define IDI_FILE_TEST                   101
 #define IDD_PAGE00_TRANSACTION          102
 #define IDD_PAGE01_CREATE               103
 #define IDD_PAGE02_NTCREATE             104
@@ -15,7 +15,6 @@
 #define IDD_PAGE09_SECURITY             111
 #define IDD_PAGE10_LINKS                112
 #define IDD_PAGE11_STREAMS              113
-#define IDI_FILE_TEST                   114
 #define IDD_CREATE_DISPOSITION          115
 #define IDD_DESIRED_ACCESS              116
 #define IDD_SHARE_MODE                  117
@@ -23,7 +22,6 @@
 #define IDD_FLAGS_DIALOG                119
 #define IDD_TEST_DIALOG                 120
 #define IDR_ACCELERATORS                121
-#define IDR_RT_MANIFEST1                122
 #define IDR_ACE_MENU                    123
 #define IDD_EA_EDITOR                   124
 #define IDI_ICON_ERROR                  125
@@ -36,9 +34,9 @@
 #define IDD_FILE_TEST                   132
 #define IDD_OBJECT_ID_MORE              133
 #define IDD_DIRECTORY_ACTION            134
-#define IDD_DATA_PASTE_OPERATION        136
-#define IDD_SECTION_EDITOR              137
 #define IDD_DATA_EDITOR                 137
+#define IDD_HELP_ABOUT                  138
+#define IDR_QUICK_ACCESS_SELECTION      139
 #define IDC_DESIRED_ACCESS_BROWSE       1002
 #define IDC_FILE_ATTRIBUTES_BROWSE      1003
 #define IDC_SHARE_ACCESS_BROWSE         1004
@@ -47,6 +45,7 @@
 #define IDC_ALLOCATION_TYPE_BROWSE      1006
 #define IDC_EXTENDED_ATTRIBUTES_EDIT    1007
 #define IDC_LAST_ERROR                  1008
+#define IDC_VERSION                     1009
 #define IDC_READ_FILE                   1032
 #define IDC_QUERY_INFO                  1032
 #define IDC_MOVE_UP                     1032
@@ -65,7 +64,6 @@
 #define IDC_COMMIT_TRANSACTION          1034
 #define IDC_ACCESS_DATA_READ            1034
 #define IDC_SET_BLANK                   1034
-#define IDC_NTREAD_FILE2                1034
 #define IDC_NTWRITE_FILE                1034
 #define IDC_FILE_ATTRIBUTES             1035
 #define IDC_EDIT                        1035
@@ -80,7 +78,6 @@
 #define IDC_MAP_VIEW_OF_FILE            1037
 #define IDC_NTLOCK_FILE                 1037
 #define IDC_RADIO2                      1038
-#define IDC_UNLOCK_FILE2                1038
 #define IDC_NTUNLOCK_FILE               1038
 #define IDC_CHECKBOX                    1042
 #define IDC_PAGE_READONLY               1043
@@ -131,7 +128,7 @@
 #define IDC_DELETE_DIRECTORY            1090
 #define IDC_NT_QUERY_ATTRIBUTES_FILE    1091
 #define IDC_FILE_INFO_CLASS             1093
-#define IDC_RESULT_LENGTH               1096
+#define IDC_IOSTATUS_INFO               1096
 #define IDC_FILE_INFO                   1097
 #define IDC_QUERY_EA                    1098
 #define IDC_SET_EA                      1099
@@ -143,15 +140,17 @@
 #define IDC_DATA_VALUE_BIN              1103
 #define IDC_IMPORT_STREAMS              1103
 #define IDC_FLUSH_FILE_BUFFERS          1104
-#define IDS_FLUSH_FILE_BUFFERS_TIP      1104
 #define IDC_INPUT_LENGTH                1105
-#define IDC_FLUSH_FILE_BUFFERS2         1105
 #define IDC_SET_SPARSE                  1105
-#define IDS_SET_SPARSE_TIP              1105
 #define IDC_SET_INFO                    1106
+#define IDC_REQUEST_OPLOCK_1            1106
 #define IDC_INPUT_LENGTH_TITLE          1107
+#define IDC_REQUEST_OPLOCK_2            1107
 #define IDC_COMMENT                     1108
+#define IDC_REQUEST_BATCH_OPLOCK        1108
 #define IDC_MAXIMUM_LENGTH              1109
+#define IDC_REQUEST_FILTER_OPLOCK       1109
+#define IDC_REQUEST_OPLOCK              1110
 #define IDC_CREATE_TRANSACTION_HINT     1111
 #define IDC_COMMIT_TRANSACTION_HINT     1113
 #define IDC_ROLLBACK_TRANSACTION_HINT   1114
@@ -176,7 +175,6 @@
 #define IDC_VALUES                      1130
 #define IDC_MANAGE_VOLUME_NAME          1130
 #define IDC_PRIVILEGES                  1131
-#define IDC_BACKUP_NAME2                1131
 #define IDC_TCB_NAME                    1131
 #define IDC_CREATE_FILE                 1132
 #define IDC_SACL_INFORMATION            1133
@@ -201,16 +199,18 @@
 #define IDC_OTHERS_FRAME                1152
 #define IDC_FILE_INFO_CLASS_TITLE       1153
 #define IDC_VOL_INFO_CLASS_TITLE        1154
-#define IDC_RESULT_LENGTH_TITLE         1155
+#define IDC_OPEN_OPS_FRAME              1154
+#define IDC_OPLOCKS_FRAME               1154
+#define IDC_IOSTATUS_INFO_TITLE         1155
 #define IDC_EA_TITLE                    1158
 #define IDC_GET_FILE_SIZE               1160
 #define IDC_SET_FILE_POINTER            1161
-#define IDC_BUTTON1                     1161
 #define IDC_MOVEFILE_OPTIONS            1161
 #define IDC_MOVE_OPTIONS                1161
 #define IDC_SYMLINK_CREATE              1161
 #define IDC_CREATE_OR_GET               1161
 #define IDC_ENTIRE_PATH                 1161
+#define IDC_FILETEST_WEB                1161
 #define IDC_SYMLINK                     1162
 #define IDC_GET_OBJECT_ID               1162
 #define IDC_SINGLE_DIRECTORY            1162
@@ -220,9 +220,7 @@
 #define IDC_SYMLINK_DELETE              1165
 #define IDC_SYMLINK_FRAME               1166
 #define IDC_HARDLINK_FRAME              1167
-#define IDC_HARDLINK                    1168
 #define IDC_HARDLINK_LIST               1168
-#define IDC_HARDLINK_TARGET             1169
 #define IDC_NEW_HARDLINK                1169
 #define IDC_HARDLINK_CREATE             1170
 #define IDC_HARDLINK_QUERY              1171
@@ -236,7 +234,6 @@
 #define IDC_LENGTH                      1176
 #define IDC_REPARSE_QUERY               1177
 #define IDC_LENGTH_TITLE                1177
-#define IDC_HARDLINK_DELETE2            1178
 #define IDC_REPARSE_DELETE              1178
 #define IDC_BYTE_OFFSET_SPIN            1178
 #define IDC_LENGTH_SPIN                 1179
@@ -256,11 +253,8 @@
 #define IDC_NTCREATE_SECTION            1192
 #define IDC_NTOPEN_SECTION              1193
 #define IDC_NTCLOSE                     1194
-#define IDC_ALLOCATION_ATTRIBUTES2      1195
 #define IDC_FILE_HANDLE                 1195
-#define IDC_SECTION_GROUP               1196
 #define IDC_SECTION_FRAME               1196
-#define IDC_SECTION_VIEW_GROUP          1197
 #define IDC_SECTION_VIEW_FRAME          1197
 #define IDC_WIN32_PROTECTION            1198
 #define IDC_BASE_ADDRESS_UPDOWN         1199
@@ -279,11 +273,17 @@
 #define IDC_SECTION_NAME                1210
 #define IDC_SECTION_OFFSET              1211
 #define IDC_SECTION_OFFSET_UPDOWN       1212
-#define IDC_CUSTOM1                     1212
 #define IDC_ADJUST_LENGTH               1213
-#define IDC_ADJUST_DATA_LENGTH          1213
-#define IDC_KEEP_DATA_LENGTH            1214
 #define IDC_INFORMATION                 1215
+#define IDC_QUERY_INFO_SYNC             1216
+#define IDC_QUERY_INFO_ASYNC            1217
+#define IDC_READ_SYNC                   1218
+#define IDC_READ_ASYNC                  1219
+#define IDC_RDWR_SYNC                   1220
+#define IDC_RDWR_ASYNC                  1221
+#define IDS_FLUSH_FILE_BUFFERS_TIP      4000
+#define IDS_SET_SPARSE_TIP              4001
+#define IDS_OPLOCK_BROKE                4002
 #define IDS_NOFILESELECTED              4010
 #define IDS_INVALIDACCESS               4011
 #define IDS_OPERATIONCOMPLETE           4012
@@ -358,6 +358,9 @@
 #define IDS_E_CONVERT_VALUE             4079
 #define IDS_DATA_EXCEPTION              4080
 #define IDS_E_CONVERT_TO_UINT32         4081
+#define IDS_OPLOCK_FLAGS                4082
+#define IDS_HELP_ABOUT                  4083
+#define IDS_WANT_TRIM_DATA              4084
 #define ID_EDIT_LABEL                   40001
 #define ID_NEW_ACE_BEFORE               40008
 #define ID_NEW_ACE_AFTER                40009
@@ -375,15 +378,14 @@
 #define IDC_FILL_DATA_PATTERN           40029
 #define IDC_FILL_DATA_RANDOM            40030
 #define IDC_FILL_DATA_CUSTOM            40031
-#define ID_SELECT_ALL                   40032
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        137
-#define _APS_NEXT_COMMAND_VALUE         40033
-#define _APS_NEXT_CONTROL_VALUE         1216
+#define _APS_NEXT_RESOURCE_VALUE        140
+#define _APS_NEXT_COMMAND_VALUE         40039
+#define _APS_NEXT_CONTROL_VALUE         1218
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

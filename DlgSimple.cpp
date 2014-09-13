@@ -12,26 +12,88 @@
 #include "resource.h"
 
 //-----------------------------------------------------------------------------
+// Local functions
+
+static void SetWindowModuleVersion(HWND hWndChild, LPCTSTR szModuleName)
+{
+    LARGE_INTEGER Version;
+    TCHAR szFormat[255];
+    TCHAR szText[255];
+
+    // Is such window really there ?
+    if(hWndChild != NULL)
+    {
+        GetWindowText(hWndChild, szFormat, _tsize(szFormat));
+        GetModuleVersion(szModuleName, &Version);
+        _stprintf(szText, szFormat, HIWORD(Version.HighPart), LOWORD(Version.HighPart),
+                                    HIWORD(Version.LowPart),  LOWORD(Version.LowPart));
+        SetWindowText(hWndChild, szText);
+    }
+}
+
+//-----------------------------------------------------------------------------
+// Event handlers
+
+static int OnInitDialog(HWND hDlg, LPARAM /* lParam */)
+{
+    TCHAR szMyName[MAX_PATH + 1];
+    HWND hWndChild;
+
+#ifdef IDI_MAIN_ICON
+    SetDialogIcon(hDlg, IDI_MAIN_ICON);
+#endif
+
+    // Parse all child windows
+    // If there is IDC_VERSION static text, supply the 4-digit version from resources
+    hWndChild = GetDlgItem(hDlg, IDC_FILETEST_WEB);
+    if(hWndChild != NULL)
+        InitURLButton(hDlg, IDC_FILETEST_WEB, FALSE);
+
+    // If there is IDC_VERSION static text, supply the 4-digit version from resources
+    hWndChild = GetDlgItem(hDlg, IDC_VERSION);
+    if(hWndChild != NULL)
+    {
+        GetModuleFileName(NULL, szMyName, MAX_PATH);
+        SetWindowModuleVersion(hWndChild, szMyName);
+    }
+
+    return TRUE;
+}
+
+static BOOL OnCommand(HWND hDlg, HWND hWndFrom, UINT nNotifyCode, UINT nCtrlID)
+{
+    if(nNotifyCode == BN_CLICKED)
+    {
+        // An URL button leads to opening its WWW page
+        if(IsURLButton(hWndFrom))
+        {
+            ClickURLButton(hWndFrom);
+            return TRUE;
+        }
+
+        // Any other button closes the dialog
+        EndDialog(hDlg, nCtrlID);
+        return TRUE;
+    }
+    return FALSE;
+}
+
+//-----------------------------------------------------------------------------
 // Message handler
 
-static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM /* lParam */)
+static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
-    UINT nIDCtrl;
-    UINT nIDNotify;
-
-    // Dialog initialization
     switch(uMsg)
     {
         case WM_INITDIALOG:
-            return TRUE;
+            return OnInitDialog(hDlg, lParam);
+
+        case WM_DRAWITEM:
+            DrawURLButton(hDlg, (LPDRAWITEMSTRUCT)lParam);
+            return FALSE;
 
         case WM_COMMAND:
-            nIDNotify = HIWORD(wParam);
-            nIDCtrl = LOWORD(wParam);
-
-            if(nIDNotify == BN_CLICKED)
-                EndDialog(hDlg, nIDCtrl);
-            break;
+            return OnCommand(hDlg, (HWND)lParam, HIWORD(wParam), LOWORD(wParam));
     }
 
     return FALSE;
@@ -39,6 +101,11 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM /
 
 //-----------------------------------------------------------------------------
 // Dialog functions
+
+INT_PTR HelpAboutDialog(HWND hParent)
+{
+    return DialogBox(g_hInst, MAKEINTRESOURCE(IDD_HELP_ABOUT), hParent, DialogProc);
+}
 
 INT_PTR ObjectIDActionDialog(HWND hParent)
 {
@@ -48,14 +115,4 @@ INT_PTR ObjectIDActionDialog(HWND hParent)
 INT_PTR DirectoryActionDialog(HWND hParent)
 {
     return DialogBox(g_hInst, MAKEINTRESOURCE(IDD_DIRECTORY_ACTION), hParent, DialogProc);
-}
-
-INT_PTR DataPasteOperationDialog(HWND hParent)
-{
-    return DialogBox(g_hInst, MAKEINTRESOURCE(IDD_DATA_PASTE_OPERATION), hParent, DialogProc);
-}
-
-INT_PTR SectionEditorDialog(HWND hParent)
-{
-    return DialogBox(g_hInst, MAKEINTRESOURCE(IDD_DATA_PASTE_OPERATION), hParent, DialogProc);
 }

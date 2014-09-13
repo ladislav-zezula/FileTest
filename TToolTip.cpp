@@ -11,7 +11,7 @@
 #include "FileTest.h"
 
 //-----------------------------------------------------------------------------
-// Constructor and destructor
+// Tooltip implementation
 
 TToolTip::TToolTip()
 {
@@ -24,9 +24,6 @@ TToolTip::~TToolTip()
 {
     Destroy();
 }
-
-//-----------------------------------------------------------------------------
-// Creation and destruction
 
 BOOL TToolTip::Initialize(HINSTANCE hInst, HWND hWndParent)
 {
@@ -224,3 +221,4 @@ void TToolTip::OnGetTooltipText(LPNMTTDISPINFO pTTDispInfo)
         }
     }
 }
+
