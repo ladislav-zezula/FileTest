@@ -2,6 +2,10 @@
   FileTest history
   ================
 
+ Version 2.6.0.469
+
+ - Added support for oplocks break acknowledgement
+
  Version 2.6.0.468
 
  - Added support for oplocks

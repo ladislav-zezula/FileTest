@@ -100,8 +100,8 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 2,6,0,469
- PRODUCTVERSION 2,6,0,469
+ FILEVERSION 2,6,0,470
+ PRODUCTVERSION 2,6,0,470
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -118,13 +118,13 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Ladislav Zezula"
             VALUE "FileDescription", "Interactive File System API Test"
-            VALUE "FileVersion", "2, 6, 0, 469\0"
+            VALUE "FileVersion", "2, 6, 0, 470\0"
             VALUE "InternalName", "FileTest"
             VALUE "LegalCopyright", "Copyright © 2004 - 2014 Ladislav Zezula"
             VALUE "LegalTrademarks", "http://www.zezula.net"
             VALUE "OriginalFilename", "FileTest.exe"
             VALUE "ProductName", "FileTest"
-            VALUE "ProductVersion", "2, 6, 0, 469\0"
+            VALUE "ProductVersion", "2, 6, 0, 470\0"
         END
     END
     BLOCK "VarFileInfo"
@@ -375,6 +375,7 @@ BEGIN
     PUSHBUTTON      "FSCTL_REQUEST_BATCH_OPLOCK",IDC_REQUEST_BATCH_OPLOCK,11,236,123,14
     PUSHBUTTON      "FSCTL_REQUEST_FILTER_OPLOCK",IDC_REQUEST_FILTER_OPLOCK,170,236,123,14
     PUSHBUTTON      "FSCTL_REQUEST_OPLOCK",IDC_REQUEST_OPLOCK,11,255,123,14
+    PUSHBUTTON      "FSCTL_OPLOCK_BREAK_ACKNWLDG",IDC_BREAK_ACK,170,255,123,14
     PUSHBUTTON      "NtQueryAttributesFile",IDC_NT_QUERY_ATTRIBUTES_FILE,11,161,123,14
     GROUPBOX        " Result ",IDC_RESULT_FRAME,7,304,293,28
     LTEXT           "GetLastError:",IDC_LAST_ERROR_TITLE,13,313,43,14,SS_CENTERIMAGE
@@ -979,6 +980,10 @@ END
 
 STRINGTABLE 
 BEGIN
+    IDS_FLUSH_FILE_BUFFERS_TIP 
+                            "Flushes all file buffers to disk using FlushFileBuffers API"
+    IDS_SET_SPARSE_TIP      "Changes the file to sparse file using FSCTL_SET_SPARSE"
+    IDS_OPLOCK_BROKE        "The oplock originally granted to the caller (%s) has been broken to %s."
     IDS_NOFILESELECTED      "No file selected."
     IDS_INVALIDACCESS       "Invalid access. Please, choose ANSI or Unicode access."
     IDS_OPERATIONCOMPLETE   "Operation complete, no errors."
@@ -1070,14 +1075,6 @@ BEGIN
     IDS_ALLOCATION_ATTRIBUTES "Allocation Attributes"
     IDS_ALLOCATION_TYPE     "Allocation Type"
     IDS_E_CONVERT_VALUE     "Failed to convert the value to an integer.\nPlease, enter a valid hexadecimal value with a proper maximum size."
-END
-
-STRINGTABLE 
-BEGIN
-    IDS_FLUSH_FILE_BUFFERS_TIP 
-                            "Flushes all file buffers to disk using FlushFileBuffers API"
-    IDS_SET_SPARSE_TIP      "Changes the file to sparse file using FSCTL_SET_SPARSE"
-    IDS_OPLOCK_BROKE        "The oplock originally granted to the caller (%s) has been broken to %s."
 END
 
 STRINGTABLE 

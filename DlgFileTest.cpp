@@ -702,6 +702,9 @@ static void OnApc(HWND hDlg, LPARAM lParam)
             ProcessOplockApc(pData, (TApcOplock *)pApc);
             break;
 
+        case APC_TYPE_OPLOCK_BREAK:
+            break;          // Do not report this
+
         default:    // The only currently used APC type is the oplock APC
             assert(false);
             break;

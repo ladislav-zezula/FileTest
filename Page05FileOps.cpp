@@ -189,6 +189,7 @@ static int UpdateDialogButtons(HWND hDlg)
                          IDC_REQUEST_BATCH_OPLOCK,
                          IDC_REQUEST_FILTER_OPLOCK,
                          IDC_REQUEST_OPLOCK,
+                         IDC_BREAK_ACK,
                          0);
     return TRUE;
 }
@@ -237,6 +238,8 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
         pAnchors->AddAnchor(hDlg, IDC_REQUEST_BATCH_OPLOCK, akLeft | akTop);
         pAnchors->AddAnchor(hDlg, IDC_REQUEST_FILTER_OPLOCK, akRight | akTop);
         pAnchors->AddAnchor(hDlg, IDC_REQUEST_OPLOCK, akLeft | akTop);
+        pAnchors->AddAnchor(hDlg, IDC_BREAK_ACK, akRight | akTop);
+        
 
         pAnchors->AddAnchor(hDlg, IDC_RESULT_FRAME, akLeft | akRight | akBottom);
         pAnchors->AddAnchor(hDlg, IDC_LAST_ERROR_TITLE, akLeft | akBottom);
@@ -752,14 +755,14 @@ static int OnSetSparse(HWND hDlg)
     return TRUE;
 }
 
-static int OnRequestOplock(HWND hDlg, ULONG IoctlCode)
+static int OnSendOplockIoctl(HWND hDlg, size_t ApcType, ULONG IoctlCode)
 {
     TFileTestData * pData = GetDialogData(hDlg);
     TApcOplock * pApc;
     NTSTATUS Status = STATUS_INSUFFICIENT_RESOURCES;
 
     // Create new APC entry 
-    pApc = (TApcOplock *)CreateApcEntry(pData, APC_TYPE_OPLOCK, sizeof(TApcOplock));
+    pApc = (TApcOplock *)CreateApcEntry(pData, ApcType, sizeof(TApcOplock));
     if(pApc != NULL)
     {
         // Request the oplock
@@ -909,19 +912,22 @@ static int OnCommand(HWND hDlg, UINT nNotify, UINT nIDCtrl)
                 return OnSetSparse(hDlg);
 
             case IDC_REQUEST_OPLOCK_1:
-                return OnRequestOplock(hDlg, FSCTL_REQUEST_OPLOCK_LEVEL_1);
+                return OnSendOplockIoctl(hDlg, APC_TYPE_OPLOCK, FSCTL_REQUEST_OPLOCK_LEVEL_1);
 
             case IDC_REQUEST_OPLOCK_2:
-                return OnRequestOplock(hDlg, FSCTL_REQUEST_OPLOCK_LEVEL_2);
+                return OnSendOplockIoctl(hDlg, APC_TYPE_OPLOCK, FSCTL_REQUEST_OPLOCK_LEVEL_2);
 
             case IDC_REQUEST_BATCH_OPLOCK:
-                return OnRequestOplock(hDlg, FSCTL_REQUEST_BATCH_OPLOCK);
+                return OnSendOplockIoctl(hDlg, APC_TYPE_OPLOCK, FSCTL_REQUEST_BATCH_OPLOCK);
 
             case IDC_REQUEST_FILTER_OPLOCK:
-                return OnRequestOplock(hDlg, FSCTL_REQUEST_FILTER_OPLOCK);
+                return OnSendOplockIoctl(hDlg, APC_TYPE_OPLOCK, FSCTL_REQUEST_FILTER_OPLOCK);
 
             case IDC_REQUEST_OPLOCK:
                 return OnRequestOplockWin7(hDlg);
+
+            case IDC_BREAK_ACK:
+                return OnSendOplockIoctl(hDlg, APC_TYPE_OPLOCK_BREAK, FSCTL_OPLOCK_BREAK_ACKNOWLEDGE);
         }
     }
 

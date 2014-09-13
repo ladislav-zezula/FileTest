@@ -255,7 +255,8 @@ typedef BOOL (WINAPI * ADDMANDATORYACE)(PACL pAcl,
 #define FLAG_INFO_ENTRY(flag, enabled)  {_T(#flag), flag, enabled}
 #define FLAG_INFO_END                   {NULL, 0, 0}
 
-#define APC_TYPE_OPLOCK     0
+#define APC_TYPE_OPLOCK         0
+#define APC_TYPE_OPLOCK_BREAK   1
 
 struct TFlagInfo
 {
