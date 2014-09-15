@@ -38,6 +38,24 @@ static TFlagInfo Win7OplockFlags[] =
 
 extern TFlagInfo FileAttributesValues[];
 
+static LPTSTR FormatOplockTypeWindows7(LPTSTR szBuffer, DWORD dwOplockFlags)
+{
+    // Print the base information
+    int nIndex = _stprintf(szBuffer, _T("windows7:"));
+
+    if(dwOplockFlags & OPLOCK_LEVEL_CACHE_READ)
+        szBuffer[nIndex++] = _T('R');
+    if(dwOplockFlags & OPLOCK_LEVEL_CACHE_WRITE)
+        szBuffer[nIndex++] = _T('W');
+    if(dwOplockFlags & OPLOCK_LEVEL_CACHE_HANDLE)
+        szBuffer[nIndex++] = _T('H');
+    if(dwOplockFlags == 0)
+        szBuffer[nIndex++] = _T('0');
+    szBuffer[nIndex] = 0;
+
+    return szBuffer;
+}
+
 static BOOL CopyFileByHand(const TCHAR * szOrigFile, const TCHAR * szNewFile)
 {
     FILETIME ft1;
@@ -184,12 +202,10 @@ static int UpdateDialogButtons(HWND hDlg)
     EnableDlgItems(hDlg, bEnable, 
                          IDC_FLUSH_FILE_BUFFERS,
                          IDC_SET_SPARSE,
-                         IDC_REQUEST_OPLOCK_1,
-                         IDC_REQUEST_OPLOCK_2,
-                         IDC_REQUEST_BATCH_OPLOCK,
-                         IDC_REQUEST_FILTER_OPLOCK,
-                         IDC_REQUEST_OPLOCK,
-                         IDC_BREAK_ACK,
+                         IDC_REQUEST_OPLOCK_MENU,
+                         IDC_BREAK_ACKNOWLEDGE_1,
+                         IDC_REQUEST_OPLOCK_WIN7,
+                         IDC_BREAK_ACKNOWLEDGE_2,
                          0);
     return TRUE;
 }
@@ -233,13 +249,11 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
         pAnchors->AddAnchor(hDlg, IDC_SET_SPARSE, akRight | akTop);
 
         pAnchors->AddAnchor(hDlg, IDC_OPLOCKS_FRAME, akAll);
-        pAnchors->AddAnchor(hDlg, IDC_REQUEST_OPLOCK_1, akLeft | akTop);
-        pAnchors->AddAnchor(hDlg, IDC_REQUEST_OPLOCK_2, akRight | akTop);
-        pAnchors->AddAnchor(hDlg, IDC_REQUEST_BATCH_OPLOCK, akLeft | akTop);
-        pAnchors->AddAnchor(hDlg, IDC_REQUEST_FILTER_OPLOCK, akRight | akTop);
-        pAnchors->AddAnchor(hDlg, IDC_REQUEST_OPLOCK, akLeft | akTop);
-        pAnchors->AddAnchor(hDlg, IDC_BREAK_ACK, akRight | akTop);
-        
+        pAnchors->AddAnchor(hDlg, IDC_REQUEST_OPLOCK_MENU, akLeft | akTop);
+        pAnchors->AddAnchor(hDlg, IDC_BREAK_ACKNOWLEDGE_1, akRight | akTop);
+        pAnchors->AddAnchor(hDlg, IDC_REQUEST_OPLOCK_WIN7, akLeft | akTop);
+        pAnchors->AddAnchor(hDlg, IDC_BREAK_ACKNOWLEDGE_2, akRight | akTop);
+
 
         pAnchors->AddAnchor(hDlg, IDC_RESULT_FRAME, akLeft | akRight | akBottom);
         pAnchors->AddAnchor(hDlg, IDC_LAST_ERROR_TITLE, akLeft | akBottom);
@@ -732,56 +746,46 @@ static int OnFlushFile(HWND hDlg)
     return TRUE;
 }
 
-static int OnSetSparse(HWND hDlg)
-{
-    FILE_SET_SPARSE_BUFFER Buff;
-    TFileTestData * pData = GetDialogData(hDlg);
-    DWORD dwBytesReturned = 0;
-    int nError = ERROR_SUCCESS;
-
-    Buff.SetSparse = TRUE;
-    if(!DeviceIoControl(pData->hFile, FSCTL_SET_SPARSE,
-                                     &Buff,
-                                      sizeof(FILE_SET_SPARSE_BUFFER),
-                                      NULL,
-                                      0,
-                                     &dwBytesReturned,
-                                      NULL))
-    {
-        nError = GetLastError();
-    }
-
-    SetResultInfo(hDlg, nError);
-    return TRUE;
-}
-
-static int OnSendOplockIoctl(HWND hDlg, size_t ApcType, ULONG IoctlCode)
+static int OnSendAsynchronousFsctl(
+    HWND hDlg,
+    ULONG IoctlCode,
+    PVOID InputBuffer = NULL,
+    ULONG InputBufferSize = 0,
+    PVOID OutputBuffer = NULL,
+    ULONG OutputBufferSize = 0)
 {
     TFileTestData * pData = GetDialogData(hDlg);
-    TApcOplock * pApc;
+    TApcEntry * pApc;
     NTSTATUS Status = STATUS_INSUFFICIENT_RESOURCES;
 
     // Create new APC entry 
-    pApc = (TApcOplock *)CreateApcEntry(pData, ApcType, sizeof(TApcOplock));
+    pApc = (TApcEntry *)CreateApcEntry(pData, APC_TYPE_FSCTL, sizeof(TApcEntry) + OutputBufferSize);
     if(pApc != NULL)
     {
-        // Request the oplock
+        // If there's an output buffer, move it to the APC structure
+        if(OutputBuffer && OutputBufferSize)
+        {
+            memcpy(pApc + 1, OutputBuffer, OutputBufferSize);
+            OutputBuffer = (pApc + 1);
+        }
+
+        // Send the FSCTL
         Status = NtFsControlFile(pData->hFile,
                                  pApc->hEvent,
                                  NULL,
                                  NULL,
                                 &pApc->IoStatus,
                                  IoctlCode,
-                                 NULL,
-                                 0,
-                                 NULL,
-                                 0);
+                                 InputBuffer,
+                                 InputBufferSize,
+                                 OutputBuffer,
+                                 OutputBufferSize);
 
         // If the IOCTL returned STATUS_PENDING, it means that the oplock is active.
         // If the oplock breaks, the event becomes signalled, and we get the APC message
         if(Status == STATUS_PENDING)
         {
-            pApc->dwIoctlCode = IoctlCode;
+            pApc->UserParam = IoctlCode;
             InsertApcEntry(pData, pApc);
         }
         else
@@ -794,56 +798,148 @@ static int OnSendOplockIoctl(HWND hDlg, size_t ApcType, ULONG IoctlCode)
     return TRUE;
 }
 
-static int OnRequestOplockWin7(HWND hDlg)
+static int OnSendRequestOplock(HWND hDlg, bool bRequestOplock)
 {
+    REQUEST_OPLOCK_OUTPUT_BUFFER Out;
+    REQUEST_OPLOCK_INPUT_BUFFER In;
     TFileTestData * pData = GetDialogData(hDlg);
-    TApcOplock * pApc;
-    NTSTATUS Status = STATUS_SUCCESS;
+    DWORD RequestedOplockLevel = 0;
+    DWORD InputFlags = REQUEST_OPLOCK_INPUT_FLAG_ACK;
 
-    // Ask the user for flags
-    if(FlagsDialog(hDlg, &pData->dwOplockLevel, IDS_OPLOCK_FLAGS, Win7OplockFlags) != IDOK)
-        return TRUE;
-
-    // Create a new APC entry to hold all information
-    pApc = (TApcOplock *)CreateApcEntry(pData, APC_TYPE_OPLOCK, sizeof(TApcOplock));
-    if(pApc != NULL)
+    // If the caller is requesting oplock, ask the user which one he wants
+    if(bRequestOplock)
     {
-        // Prepare the input buffer
-        pApc->In.StructureLength = sizeof(REQUEST_OPLOCK_INPUT_BUFFER);
-        pApc->In.StructureVersion = REQUEST_OPLOCK_CURRENT_VERSION;
-        pApc->In.RequestedOplockLevel = pData->dwOplockLevel;
-        pApc->In.Flags = REQUEST_OPLOCK_INPUT_FLAG_REQUEST;
+        // Ask the user for flags
+        if(FlagsDialog(hDlg, &pData->dwOplockLevel, IDS_OPLOCK_FLAGS, Win7OplockFlags) != IDOK)
+            return TRUE;
+        RequestedOplockLevel = pData->dwOplockLevel;
+        InputFlags = REQUEST_OPLOCK_INPUT_FLAG_REQUEST;
+    }
 
-        // Prepare the output buffer
-        pApc->Out.StructureLength = sizeof(REQUEST_OPLOCK_OUTPUT_BUFFER);
-        pApc->Out.StructureVersion = REQUEST_OPLOCK_CURRENT_VERSION;
+    // Prepare the input buffer
+    // Note that value of 0 in In.Flags causes BSOD in FastFat.sys
+    // 
+    memset(&In, 0, sizeof(REQUEST_OPLOCK_INPUT_BUFFER));
+    In.StructureLength = sizeof(REQUEST_OPLOCK_INPUT_BUFFER);
+    In.StructureVersion = REQUEST_OPLOCK_CURRENT_VERSION;
+    In.RequestedOplockLevel = RequestedOplockLevel;
+    In.Flags = InputFlags;
 
-        // Request the oplock
-        Status = NtFsControlFile(pData->hFile,
-                                 pApc->hEvent,
-                                 NULL,
-                                 NULL,
-                                &pApc->IoStatus,
-                                 FSCTL_REQUEST_OPLOCK,
-                                &pApc->In,
-                                 sizeof(REQUEST_OPLOCK_INPUT_BUFFER),
-                                &pApc->Out,
-                                 sizeof(REQUEST_OPLOCK_OUTPUT_BUFFER));
+    // Prepare the output buffer
+    memset(&Out, 0, sizeof(REQUEST_OPLOCK_OUTPUT_BUFFER));
+    Out.StructureLength = sizeof(REQUEST_OPLOCK_OUTPUT_BUFFER);
+    Out.StructureVersion = REQUEST_OPLOCK_CURRENT_VERSION;
 
-        // If the IOCTL returned STATUS_PENDING, it means that the oplock is active.
-        // If the oplock breaks, the event becomes signalled, and we get the APC message
-        if(Status == STATUS_PENDING)
+    // Send the FSCTL to the file system
+    return OnSendAsynchronousFsctl(hDlg,
+                                   FSCTL_REQUEST_OPLOCK,
+                                  &In,
+                                   sizeof(REQUEST_OPLOCK_INPUT_BUFFER),
+                                  &Out,
+                                   sizeof(REQUEST_OPLOCK_OUTPUT_BUFFER));
+}
+
+static void OnCompleteOplockApc(TWindowData * pData, TApcEntry * pApc)
+{
+    LPCTSTR szOplockType = _T("unknown");
+    LPCTSTR szBrokenTo = _T("unknown");
+
+    // Sanity check
+    assert(pApc->ApcType == APC_TYPE_FSCTL);
+
+    // Get the type of oplock
+    switch(pApc->UserParam)
+    {
+        case FSCTL_REQUEST_OPLOCK_LEVEL_1:
+            szOplockType = _T("level 1/exclusive");
+            break;
+
+        case FSCTL_REQUEST_OPLOCK_LEVEL_2:
+            szOplockType = _T("level 2/shared");
+            break;
+
+        case FSCTL_REQUEST_BATCH_OPLOCK:
+            szOplockType = _T("batch");
+            break;
+
+        case FSCTL_REQUEST_FILTER_OPLOCK:
+            szOplockType = _T("filter");
+            break;
+
+        default:
+            assert(false);
+            break;
+    }
+
+    // Get the type of oplock that the old has been broken to
+    switch(pApc->IoStatus.Information)
+    {
+        case FILE_OPLOCK_BROKEN_TO_LEVEL_2:
+            szBrokenTo = _T("level 2/shared");
+            break;
+
+        case FILE_OPLOCK_BROKEN_TO_NONE:
+            szBrokenTo = _T("none");
+            break;
+
+        default:
+            assert(false);
+            break;
+    }
+
+    // Show the message box that the oplock broke
+    MessageBoxRc(pData->hDlg, IDS_INFO, IDS_OPLOCK_BROKE, szOplockType, szBrokenTo);
+}
+
+static void OnCompleteOplockApc_Win7(TWindowData * pData, TApcEntry * pApc)
+{
+    PREQUEST_OPLOCK_OUTPUT_BUFFER pOut;
+    LPCTSTR szOplockType;
+    LPCTSTR szBrokenTo;
+    TCHAR szBuffer1[0x40];
+    TCHAR szBuffer2[0x40];
+
+    // Sanity check
+    assert(pApc->UserParam == FSCTL_REQUEST_OPLOCK);
+    pOut = (PREQUEST_OPLOCK_OUTPUT_BUFFER)(pApc + 1);
+
+    // Get the original and new type of oplock
+    // Note: Even if the new oplock is non-zero,
+    // the event will not trigger again even if we requeue it to the APC thread
+    szOplockType = FormatOplockTypeWindows7(szBuffer1, pOut->OriginalOplockLevel);
+    szBrokenTo = FormatOplockTypeWindows7(szBuffer2, pOut->NewOplockLevel);
+
+    // Show the message box that the oplock broke
+    MessageBoxRc(pData->hDlg, IDS_INFO, IDS_OPLOCK_BROKE, szOplockType, szBrokenTo);
+}
+
+static int OnApc(HWND hDlg, LPARAM lParam)
+{
+    TWindowData * pData = GetDialogData(hDlg);
+    TApcEntry * pApc = (TApcEntry *)lParam;
+
+    // Perform APC-specific action
+    if(pApc->ApcType == APC_TYPE_FSCTL)
+    {
+        // Show the result in the result UI
+        SetResultInfo(hDlg, pApc->IoStatus.Status);
+       
+        // If the APC was an oplock APC, also show the result
+        switch(pApc->UserParam)
         {
-            pApc->dwIoctlCode = FSCTL_REQUEST_OPLOCK;
-            InsertApcEntry(pData, pApc);
-        }
-        else
-        {
-            FreeApcEntry(pApc);
+            case FSCTL_REQUEST_OPLOCK_LEVEL_1:
+            case FSCTL_REQUEST_OPLOCK_LEVEL_2:
+            case FSCTL_REQUEST_BATCH_OPLOCK:
+            case FSCTL_REQUEST_FILTER_OPLOCK:
+                OnCompleteOplockApc(pData, pApc);
+                break;
+
+            case FSCTL_REQUEST_OPLOCK:
+                OnCompleteOplockApc_Win7(pData, pApc);
+                break;
         }
     }
 
-    SetResultInfo(hDlg, RtlNtStatusToDosError(Status));
     return TRUE;
 }
 
@@ -909,25 +1005,31 @@ static int OnCommand(HWND hDlg, UINT nNotify, UINT nIDCtrl)
                 return OnFlushFile(hDlg);
 
             case IDC_SET_SPARSE:
-                return OnSetSparse(hDlg);
+                return OnSendAsynchronousFsctl(hDlg, FSCTL_SET_SPARSE);
+
+            case IDC_REQUEST_OPLOCK_MENU:
+                return ExecuteContextMenuForDlgItem(hDlg, IDC_REQUEST_OPLOCK_MENU, IDR_OPLOCK_PRE_WIN7);
 
             case IDC_REQUEST_OPLOCK_1:
-                return OnSendOplockIoctl(hDlg, APC_TYPE_OPLOCK, FSCTL_REQUEST_OPLOCK_LEVEL_1);
+                return OnSendAsynchronousFsctl(hDlg, FSCTL_REQUEST_OPLOCK_LEVEL_1);
 
             case IDC_REQUEST_OPLOCK_2:
-                return OnSendOplockIoctl(hDlg, APC_TYPE_OPLOCK, FSCTL_REQUEST_OPLOCK_LEVEL_2);
+                return OnSendAsynchronousFsctl(hDlg, FSCTL_REQUEST_OPLOCK_LEVEL_2);
 
             case IDC_REQUEST_BATCH_OPLOCK:
-                return OnSendOplockIoctl(hDlg, APC_TYPE_OPLOCK, FSCTL_REQUEST_BATCH_OPLOCK);
+                return OnSendAsynchronousFsctl(hDlg, FSCTL_REQUEST_BATCH_OPLOCK);
 
             case IDC_REQUEST_FILTER_OPLOCK:
-                return OnSendOplockIoctl(hDlg, APC_TYPE_OPLOCK, FSCTL_REQUEST_FILTER_OPLOCK);
+                return OnSendAsynchronousFsctl(hDlg, FSCTL_REQUEST_FILTER_OPLOCK);
 
-            case IDC_REQUEST_OPLOCK:
-                return OnRequestOplockWin7(hDlg);
+            case IDC_BREAK_ACKNOWLEDGE_1:
+                return OnSendAsynchronousFsctl(hDlg, FSCTL_OPLOCK_BREAK_ACKNOWLEDGE);
 
-            case IDC_BREAK_ACK:
-                return OnSendOplockIoctl(hDlg, APC_TYPE_OPLOCK_BREAK, FSCTL_OPLOCK_BREAK_ACKNOWLEDGE);
+            case IDC_REQUEST_OPLOCK_WIN7:
+                return OnSendRequestOplock(hDlg, true);
+
+            case IDC_BREAK_ACKNOWLEDGE_2:
+                return OnSendRequestOplock(hDlg, false);
         }
     }
 
@@ -972,6 +1074,9 @@ INT_PTR CALLBACK PageProc05(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
             if(pAnchors != NULL)
                 pAnchors->OnSize();
             return FALSE;
+
+        case WM_APC:
+            return OnApc(hDlg, lParam);
 
         case WM_COMMAND:
             return OnCommand(hDlg, HIWORD(wParam), LOWORD(wParam));

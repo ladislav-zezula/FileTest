@@ -308,6 +308,9 @@ static void InitializeTabControl(HWND hDlg, TWindowData * pData)
 
     // Create Tab Control
     TabCtrl_Create(hTabCtrl, &psh);
+
+    // Get the currently selected page HWND
+    pData->hWndPage = TabCtrl_GetSelectedPage(hTabCtrl);
 }
 
 static void RefreshScreenSize(HWND hDlg)
@@ -431,81 +434,6 @@ static void FixDialogToOriginalSize(HWND hDlg, UINT DlgResID)
             SetWindowPos(hDlg, NULL, x, 0, OriginalRect.right, OriginalRect.bottom, SWP_NOZORDER | SWP_NOACTIVATE);
         }
     }
-}
-
-static LPTSTR FormatOplockTypeWindows7(LPTSTR szBuffer, DWORD dwOplockFlags)
-{
-    // Print the base information
-    int nIndex = _stprintf(szBuffer, _T("windows7:"));
-
-    if(dwOplockFlags & OPLOCK_LEVEL_CACHE_READ)
-        szBuffer[nIndex++] = _T('R');
-    if(dwOplockFlags & OPLOCK_LEVEL_CACHE_WRITE)
-        szBuffer[nIndex++] = _T('W');
-    if(dwOplockFlags & OPLOCK_LEVEL_CACHE_HANDLE)
-        szBuffer[nIndex++] = _T('H');
-    szBuffer[nIndex] = 0;
-
-    return szBuffer;
-}
-
-static void ProcessOplockApc(TWindowData * pData, TApcOplock * pApc)
-{
-    LPCTSTR szOplockType = _T("unknown");
-    LPCTSTR szBrokenTo = _T("unknown");
-    TCHAR szBuffer1[0x40];
-    TCHAR szBuffer2[0x40];
-
-    // Sanity check
-    assert(pApc->ApcType == APC_TYPE_OPLOCK);
-
-    // Get the type of oplock
-    switch(pApc->dwIoctlCode)
-    {
-        case FSCTL_REQUEST_OPLOCK_LEVEL_1:
-            szOplockType = _T("level 1/exclusive");
-            break;
-
-        case FSCTL_REQUEST_OPLOCK_LEVEL_2:
-            szOplockType = _T("level 2/shared");
-            break;
-
-        case FSCTL_REQUEST_BATCH_OPLOCK:
-            szOplockType = _T("batch");
-            break;
-
-        case FSCTL_REQUEST_FILTER_OPLOCK:
-            szOplockType = _T("filter");
-            break;
-
-        case FSCTL_REQUEST_OPLOCK:
-            szOplockType = FormatOplockTypeWindows7(szBuffer1, pApc->In.RequestedOplockLevel);
-            break;
-    }
-
-    // Get the type of oplock that the old has been broken to
-    if(pApc->dwIoctlCode != FSCTL_REQUEST_OPLOCK)
-    {
-        switch(pApc->IoStatus.Information)
-        {
-            case FILE_OPLOCK_BROKEN_TO_LEVEL_2:
-                szBrokenTo = _T("level 2/shared");
-                break;
-
-            case FILE_OPLOCK_BROKEN_TO_NONE:
-                szBrokenTo = _T("none");
-                break;
-        }
-    }
-    else
-    {
-        // Note: Even if the new oplock is non-zero,
-        // the event will not trigger again even if we requeue it to the APC thread
-        szBrokenTo = FormatOplockTypeWindows7(szBuffer2, pApc->Out.NewOplockLevel);
-    }
-
-    // Show the message box that the oplock broke
-    MessageBoxRc(pData->hDlg, IDS_INFO, IDS_OPLOCK_BROKE, szOplockType, szBrokenTo);
 }
 
 static void AddAboutToSystemMenu(HWND hDlg)
@@ -690,28 +618,27 @@ static void OnTimerCheckMouse(HWND hDlg)
     }
 }
 
-static void OnApc(HWND hDlg, LPARAM lParam)
+static void OnApc(HWND /* hDlg */, LPARAM lParam)
 {
-    TWindowData * pData = GetDialogData(hDlg);
     TApcEntry * pApc = (TApcEntry *)lParam;
 
-    // Perform APC-specific action
-    switch(pApc->ApcType)
+    // Only if the APC is valid
+    if(pApc != NULL)
     {
-        case APC_TYPE_OPLOCK:
-            ProcessOplockApc(pData, (TApcOplock *)pApc);
-            break;
+        // Let the same page to handle the APC operation.
+        // The page may be invisible (switched away from) at the moment,
+        // but it must exist
+        if(IsWindow(pApc->hWndPage))
+            SendMessage(pApc->hWndPage, WM_APC, 0, lParam);
 
-        case APC_TYPE_OPLOCK_BREAK:
-            break;          // Do not report this
-
-        default:    // The only currently used APC type is the oplock APC
-            assert(false);
-            break;
+        // Delete the APC after the page has handled it.
+        FreeApcEntry(pApc);
     }
+}
 
-    // Free the APC
-    FreeApcEntry(pApc);
+static void OnHelpAbout(HWND hDlg)
+{
+    HelpAboutDialog(hDlg);
 }
 
 static BOOL OnCommand(HWND hDlg, UINT nNotify, UINT nIDCtrl)
@@ -730,9 +657,15 @@ static BOOL OnCommand(HWND hDlg, UINT nNotify, UINT nIDCtrl)
     return FALSE;
 }
 
-static void OnHelpAbout(HWND hDlg)
+static void OnNotify(HWND hDlg, NMHDR * pNMHDR)
 {
-    HelpAboutDialog(hDlg);
+    TWindowData * pData;
+
+    if(pNMHDR->code == TCN_SELCHANGE)
+    {
+        pData = GetDialogData(hDlg);
+        pData->hWndPage = TabCtrl_GetSelectedPage(pNMHDR->hwndFrom);
+    }
 }
 
 static void OnClose(HWND hDlg)
@@ -804,6 +737,10 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM l
         case WM_SYSCOMMAND:
             if(wParam == SC_HELP_ABOUT)
                 OnHelpAbout(hDlg);
+            break;
+
+        case WM_NOTIFY:
+            OnNotify(hDlg, (NMHDR *)lParam);
             break;
 
         case WM_CLOSE:
@@ -879,7 +816,7 @@ __KeyNotSupported:
 //-----------------------------------------------------------------------------
 // Public functions - APC support
 
-TApcEntry * CreateApcEntry(TWindowData * pData, size_t ApcType, size_t cbApcSize)
+TApcEntry * CreateApcEntry(TWindowData * pData, UINT ApcType, size_t cbApcSize)
 {
     TApcEntry * pApc = NULL;
 
@@ -891,8 +828,10 @@ TApcEntry * CreateApcEntry(TWindowData * pData, size_t ApcType, size_t cbApcSize
         if(pApc != NULL)
         {
             // Create new event object for the APC entry
-            pApc->ApcType = ApcType;
+            pApc->Overlapped.hEvent =
             pApc->hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
+            pApc->ApcType = ApcType;
+            pApc->hWndPage = pData->hWndPage;
             if(pApc->hEvent != NULL)
                 return pApc;
 
@@ -908,8 +847,11 @@ TApcEntry * CreateApcEntry(TWindowData * pData, size_t ApcType, size_t cbApcSize
 bool InsertApcEntry(TWindowData * pData, TApcEntry * pApc)
 {
     // Only if the APC is valid
-    if(pApc != NULL && pApc->hEvent != NULL)
+    if(pApc != NULL)
     {
+        // Sanity check
+        assert(pApc->hEvent != NULL);
+
         // If there is too many APCs queued, do nothing
         if(pData->nApcCount < MAXIMUM_WAIT_OBJECTS - 1)
         {

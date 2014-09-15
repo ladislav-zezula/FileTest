@@ -138,7 +138,7 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
             LPCTSTR szArg = __targv[i] + 1;
 
             // Check for default read+write access
-            if(!_tcsicmp(szArg, _T("rdwr")))
+            if(!_tcsicmp(szArg, _T("rw")))
                 dwDesiredAccess = GENERIC_READ | GENERIC_WRITE;
             
             // Check for default share read+write

@@ -52,6 +52,9 @@
 #define OSVER_WINDOWS_XP            0x0501
 #define OSVER_WINDOWS_2003          0x0502
 #define OSVER_WINDOWS_VISTA         0x0600
+#define OSVER_WINDOWS_SEVEN         0x0601
+#define OSVER_WINDOWS_8             0x0602
+#define OSVER_WINDOWS_8_1           0x0603          // Make sure you have proper manifest to see this
 
 #define WM_SHOW_HARDLINKS           (WM_USER + 0x1000)
 #define WM_TIMER_BLINK              (WM_USER + 0x1001)
@@ -63,6 +66,8 @@
 #define STATUS_CANNOT_EDIT_THIS     0xC1110002
 #define STATUS_FILE_ID_CONVERSION   0xC1110003
 #define STATUS_COPIED_TO_CLIPBOARD  0xC1110004
+
+#define SEVERITY_PENDING            2
 
 //-----------------------------------------------------------------------------
 // Defines for the mandatory label ACEs.
@@ -255,8 +260,9 @@ typedef BOOL (WINAPI * ADDMANDATORYACE)(PACL pAcl,
 #define FLAG_INFO_ENTRY(flag, enabled)  {_T(#flag), flag, enabled}
 #define FLAG_INFO_END                   {NULL, 0, 0}
 
-#define APC_TYPE_OPLOCK         0
-#define APC_TYPE_OPLOCK_BREAK   1
+#define APC_TYPE_NONE                   1
+#define APC_TYPE_READ_WRITE             1
+#define APC_TYPE_FSCTL                  2
 
 struct TFlagInfo
 {
@@ -265,22 +271,26 @@ struct TFlagInfo
     BOOL    bEnabled;
 };
 
-// Common structure for APCs
+// Common structure for APCs. Keep its size 8-byte aligned
 struct TApcEntry
 {
     // Common APC entry members
     IO_STATUS_BLOCK IoStatus;               // IO_STATUS_BLOCK for the entry
-    LIST_ENTRY Entry;                       // Pointer to the APC entry
-    UINT_PTR ApcType;                       // Common member for determining type of the APC
+    OVERLAPPED Overlapped;                  // Overlapped structure for the Win32 APIs
+    LIST_ENTRY Entry;                       // Links to other APC entries
     HANDLE hEvent;                          // When signalled, triggers this APC
+    HWND hWndPage;                          // Page that initiated the APC
+    UINT ApcType;                           // Common member for determining type of the APC
+    UINT UserParam;                         // Any user-defined 32-bit value (e.g. FSCTL code)
 };
 
-// Extended structure for oplock APCs
-struct TApcOplock : public TApcEntry
+// Extended structure for read/write APCs
+struct TApcReadWrite : public TApcEntry
 {
-    REQUEST_OPLOCK_OUTPUT_BUFFER Out;       // Output structure for Win7 oplock
-    REQUEST_OPLOCK_INPUT_BUFFER In;         // Input structure for Win7 oplock
-    DWORD dwIoctlCode;                      // Ioctl code that has been sent
+    LARGE_INTEGER ByteOffset;               // Starting offset of the operation
+    bool bIncrementPosition;                // If true, the file position will be incremented when complete
+    bool bNativeCall;                       // If true, the native function has been called (NtReadFile / NtWriteFile)
+    bool bUpdateData;                       // If true, data need to be updated after operation is complete
 };
 
 // Structure used by main dialog to hold all its data
@@ -444,6 +454,29 @@ struct TInfoData
 
 
 //-----------------------------------------------------------------------------
+// Prototypes for read/write APIs
+
+typedef BOOL (WINAPI * READWRITE)(
+    IN HANDLE hFile,
+    IN LPVOID lpBuffer,
+    IN DWORD nNumberOfBytesToRead,
+    OUT LPDWORD lpNumberOfBytesRead,
+    IN LPOVERLAPPED lpOverlapped
+    );
+
+typedef NTSTATUS (NTAPI * NTREADWRITE)(
+    IN HANDLE FileHandle,
+    IN HANDLE Event OPTIONAL,
+    IN PIO_APC_ROUTINE ApcRoutine OPTIONAL,
+    IN PVOID ApcContext OPTIONAL,
+    OUT PIO_STATUS_BLOCK IoStatusBlock,
+    OUT PVOID Buffer,
+    IN ULONG Length,
+    IN PLARGE_INTEGER ByteOffset OPTIONAL,
+    IN PULONG Key OPTIONAL
+    );
+
+//-----------------------------------------------------------------------------
 // Prototypes for transaction APIs
 
 typedef HANDLE (WINAPI * CREATETRANSACTION)(
@@ -574,6 +607,7 @@ void ObjectIDToString(PBYTE pbObjId, LPCTSTR szFileName, LPTSTR szObjectID);
 int  StringToFileID(LPCTSTR szFileOrObjId, LPTSTR szVolume, PVOID pvFileObjId, PDWORD pLength);
 
 int ExecuteContextMenu(HWND hWndParent, UINT nIDMenu, LPARAM lParam);
+int ExecuteContextMenuForDlgItem(HWND hDlg, UINT nIDCtrl, UINT nIDMenu);
 
 //-----------------------------------------------------------------------------
 // Conversion of FILETIME to text and back
@@ -606,7 +640,7 @@ INT_PTR PrivilegesDialog(HWND hParent);
 INT_PTR ObjectIDActionDialog(HWND hParent);
 INT_PTR DirectoryActionDialog(HWND hParent);
 
-TApcEntry * CreateApcEntry(TWindowData * pData, size_t ApcType, size_t cbApcSize);
+TApcEntry * CreateApcEntry(TWindowData * pData, UINT ApcType, size_t cbApcSize);
 bool InsertApcEntry(TWindowData * pData, TApcEntry * pApc);
 void FreeApcEntry(TApcEntry * pApc);
 

@@ -11,16 +11,6 @@
 #include "FileTest.h"
 #include "resource.h"
 
-#define RDWR_READ_FILE     0
-#define RDWR_WRITE_FILE    1
-#define RDWR_NTREAD_FILE   2
-#define RDWR_NTWRITE_FILE  3
-
-#define RDWR_LOCK_FILE     0
-#define RDWR_UNLOCK_FILE   1
-#define RDWR_NTLOCK_FILE   2
-#define RDWR_NTUNLOCK_FILE 3
-
 #define INITIAL_DATA_BUFFER_SIZE 0x10000
 
 //-----------------------------------------------------------------------------
@@ -116,6 +106,32 @@ static int UpdateFileData(
     // Apply the new file data
     DataEditor_SetData(hWndChild, ByteOffset, pData->pbFileData, pData->cbFileData);
     return ERROR_SUCCESS;
+}
+
+static void CompleteReadWriteOperation(HWND hDlg, TApcReadWrite * pApc, int nError, DWORD dwTransferred)
+{
+    HWND hWndEditor;
+
+    // Set the information about the operation
+    SetResultInfo(hDlg, nError, NULL, dwTransferred);
+
+    // If the operation has succeeded, update few UI elements
+    if(nError == ERROR_SUCCESS)
+    {
+        // If the "increase position" is checked, increment the byte position
+        if(pApc->bIncrementPosition)
+        {
+            pApc->ByteOffset.QuadPart += dwTransferred;
+            Hex2DlgText64(hDlg, IDC_BYTE_OFFSET, pApc->ByteOffset.QuadPart);
+        }
+
+        // If we shall update the data view, do it
+        if(pApc->bUpdateData)
+        {
+            hWndEditor = GetDlgItem(hDlg, IDC_FILE_DATA);
+            InvalidateRect(hWndEditor, NULL, TRUE);
+        }
+    }
 }
 
 //-----------------------------------------------------------------------------
@@ -246,17 +262,17 @@ static int OnDataPaste(HWND hDlg, PDTE_PASTE_DATA pPasteData)
     return TRUE;
 }
 
-static int OnReadWriteFile(HWND hDlg, int nReadWriteType)
+static int OnReadWriteFile(HWND hDlg, int nIDCtrl)
 {
     IO_STATUS_BLOCK IoStatus = {0};
     TFileTestData * pData = GetDialogData(hDlg);
+    TApcReadWrite * pApc;
     LARGE_INTEGER ByteOffset = {0};
-    OVERLAPPED Overlapped = {0};
+    NTREADWRITE NtReadWrite;
+    READWRITE ReadWrite;
     NTSTATUS Status;
     DWORD dwTransferred = 0;
     DWORD Length = 0;
-    HWND  hWndEditor = GetDlgItem(hDlg, IDC_FILE_DATA);
-    HWND  hCheck = GetDlgItem(hDlg, IDC_INCREASE_FILEPOS);
     int nError = ERROR_SUCCESS;
 
     // Get the start position
@@ -264,214 +280,174 @@ static int OnReadWriteFile(HWND hDlg, int nReadWriteType)
     DlgText2Hex32(hDlg, IDC_LENGTH, &Length);
     assert(pData->cbFileData >= Length);
 
-    // Fill the overlapped structure
-    Overlapped.OffsetHigh = ByteOffset.HighPart;
-    Overlapped.Offset = ByteOffset.LowPart;
-    Overlapped.hEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
-    if(Overlapped.hEvent == NULL)
+    // Create new APC entry
+    pApc = (TApcReadWrite *)CreateApcEntry(pData, APC_TYPE_READ_WRITE, sizeof(TApcReadWrite));
+    if(pApc != NULL)
+    {   
+        // Remember the state of "Increment position"
+        pApc->ByteOffset = ByteOffset;
+        pApc->bIncrementPosition = (IsDlgButtonChecked(hDlg, IDC_INCREASE_FILEPOS) == BST_CHECKED);
+
+        // Perform the appropriate API
+        switch(nIDCtrl)
+        {
+            case IDC_READ_FILE:
+            case IDC_WRITE_FILE:
+
+                // Get the pointer to the appropriate API
+                ReadWrite = (nIDCtrl == IDC_READ_FILE) ? ReadFile : (READWRITE)WriteFile;
+                pApc->bUpdateData = (nIDCtrl == IDC_READ_FILE);
+                pApc->bNativeCall = false;
+
+                // Prepare the OVERLAPPED structure in the APC
+                pApc->Overlapped.OffsetHigh = ByteOffset.HighPart;
+                pApc->Overlapped.Offset = ByteOffset.LowPart;
+
+                // Perform the read operation using ReadFile
+                if(!ReadWrite(pData->hFile, pData->pbFileData, Length, &dwTransferred, &pApc->Overlapped))
+                    nError = GetLastError();
+
+                // If the read operation ended with ERROR_IO_PENDING, queue the APC
+                if(nError == ERROR_IO_PENDING)
+                {
+                    SetResultInfo(hDlg, ERROR_IO_PENDING);
+                    InsertApcEntry(pData, pApc);
+                    return TRUE;
+                }
+                break;
+
+            case IDC_NTREAD_FILE:
+            case IDC_NTWRITE_FILE:
+
+                // Get the pointer to the appropriate API
+                NtReadWrite = (nIDCtrl == IDC_NTREAD_FILE) ? NtReadFile : NtWriteFile;
+                pApc->bUpdateData = (nIDCtrl == IDC_NTREAD_FILE);
+                pApc->bNativeCall = true;
+
+                // Perform the read/write operation
+                Status = NtReadWrite(pData->hFile,
+                                     pApc->hEvent,
+                                     NULL,
+                                     NULL,
+                                    &pApc->IoStatus,
+                                     pData->pbFileData,
+                                     Length,
+                                    &ByteOffset,
+                                     NULL);
+
+                // If the read operation ended with STATUS_PENDING, queue the APC
+                if(Status == STATUS_PENDING)
+                {
+                    SetResultInfo(hDlg, ERROR_IO_PENDING);
+                    InsertApcEntry(pData, pApc);
+                    return TRUE;
+                }
+
+                // Fill the number of bytes transferred
+                dwTransferred = (DWORD)IoStatus.Information;
+                nError = RtlNtStatusToDosError(Status);
+                break;
+        }
+
+        // Complete the read/write operation
+        CompleteReadWriteOperation(hDlg, pApc, nError, dwTransferred);
+        FreeApcEntry(pApc);
+    }
+    else
     {
         SetResultInfo(hDlg, GetLastError());
-        return TRUE;
     }
 
-    // Perform the I/O operation
-    switch(nReadWriteType)
-    {
-        case RDWR_READ_FILE:
-
-            // Perform the read operation using ReadFile
-            if(!ReadFile(pData->hFile, pData->pbFileData, Length, &dwTransferred, &Overlapped))
-            {
-                if((nError = GetLastError()) == ERROR_IO_PENDING)
-                {
-                    WaitForSingleObject(Overlapped.hEvent, INFINITE);
-                    if(!GetOverlappedResult(pData->hFile, &Overlapped, &dwTransferred, FALSE))
-                        nError = GetLastError();
-                }
-            }
-
-            // Redraw the data editor
-            if(nError == ERROR_SUCCESS || nError == ERROR_IO_PENDING)
-                InvalidateRect(hWndEditor, NULL, TRUE);
-            break;
-
-        case RDWR_WRITE_FILE:
-
-            // Perform the write operation using WriteFile
-            if(!WriteFile(pData->hFile, pData->pbFileData, Length, &dwTransferred, &Overlapped))
-            {
-                if((nError = GetLastError()) == ERROR_IO_PENDING)
-                {
-                    WaitForSingleObject(Overlapped.hEvent, INFINITE);
-                    GetOverlappedResult(pData->hFile, &Overlapped, &dwTransferred, FALSE);
-                }
-            }
-            break;
-
-        case RDWR_NTREAD_FILE:
-
-            // Perform the read operation using NtReadFile
-            Status = NtReadFile(pData->hFile,
-                                Overlapped.hEvent,
-                                NULL,
-                                NULL,
-                               &IoStatus,
-                                pData->pbFileData,
-                                Length,
-                               &ByteOffset,
-                                NULL);
-            if(Status == STATUS_PENDING)
-            {
-                // If the operation ends with success, don't change
-                // STATUS_PENDING to STATUS_SUCCESS
-                WaitForSingleObject(Overlapped.hEvent, INFINITE);
-                if(IoStatus.Status != STATUS_SUCCESS)
-                    Status = IoStatus.Status;
-            }
-
-            dwTransferred = (DWORD)IoStatus.Information;
-            nError = RtlNtStatusToDosError(Status);
-
-            // Redraw the loaded data
-            if(nError == ERROR_SUCCESS || nError == ERROR_IO_PENDING)
-                InvalidateRect(hWndEditor, NULL, TRUE);
-            break;
-
-        case RDWR_NTWRITE_FILE:
-
-            // Perform the read operation using NtWriteFile
-            Status = NtWriteFile(pData->hFile,
-                                 Overlapped.hEvent,
-                                 NULL,
-                                 NULL,
-                                &IoStatus,
-                                 pData->pbFileData,
-                                 Length,
-                                &ByteOffset,
-                                 NULL);
-            if(Status == STATUS_PENDING)
-            {
-                // If the operation ends with success, don't change
-                // STATUS_PENDING to STATUS_SUCCESS
-                WaitForSingleObject(Overlapped.hEvent, INFINITE);
-                if(IoStatus.Status != STATUS_SUCCESS)
-                    Status = IoStatus.Status;
-            }
-
-            dwTransferred = (DWORD)IoStatus.Information;
-            nError = RtlNtStatusToDosError(Status);
-            break;
-    }
-
-    // If the "increase position" is checked, increment the byte position
-    if(Button_GetCheck(hCheck) == BST_CHECKED)
-    {
-        ByteOffset.QuadPart += dwTransferred;
-        Hex2DlgText64(hDlg, IDC_BYTE_OFFSET, ByteOffset.QuadPart);
-    }
-
-    // Set the information about the operation
-    SetResultInfo(hDlg, nError, NULL, dwTransferred);
-
-    // Cleanup & return
-    CloseHandle(Overlapped.hEvent);
     return TRUE;
 }
 
 static int OnLockUnlockFile(HWND hDlg, int nReadWriteType)
 {
-    IO_STATUS_BLOCK IoStatus = {0};
     TFileTestData * pData = GetDialogData(hDlg);
+    TApcReadWrite * pApc;
     LARGE_INTEGER ByteOffset = {0};
     LARGE_INTEGER LockLength = {0};
     NTSTATUS Status;
-    HANDLE EventHandle;
     int nError = ERROR_SUCCESS;
 
     // Get the start position
     DlgText2Hex64(hDlg, IDC_BYTE_OFFSET, &ByteOffset.QuadPart);
     DlgText2Hex32(hDlg, IDC_LENGTH, &LockLength.LowPart);
+    assert((LONGLONG)pData->cbFileData >= LockLength.QuadPart);
 
-    // Create event for waiting
-    EventHandle = CreateEvent(NULL, TRUE, FALSE, NULL);
-    if(EventHandle == NULL)
+    // Create new APC entry
+    pApc = (TApcReadWrite *)CreateApcEntry(pData, APC_TYPE_READ_WRITE, sizeof(TApcReadWrite));
+    if(pApc != NULL)
+    {
+        // Perform the I/O operation
+        switch(nReadWriteType)
+        {
+            case IDC_LOCK_FILE:
+
+                // Perform the lock operation using LockFile
+                if(!LockFile(pData->hFile, ByteOffset.LowPart, ByteOffset.HighPart, LockLength.LowPart, LockLength.HighPart))
+                    nError = GetLastError();
+                break;
+
+            case IDC_UNLOCK_FILE:
+
+                // Perform the unlock operation using UnlockFile
+                if(!UnlockFile(pData->hFile, ByteOffset.LowPart, ByteOffset.HighPart, LockLength.LowPart, LockLength.HighPart))
+                    nError = GetLastError();
+                break;
+
+            case IDC_NTLOCK_FILE:
+
+                // Remember that this is a native call
+                pApc->bNativeCall = false;
+
+                // Perform the lock operation using NtLockFile
+                Status = NtLockFile(pData->hFile,
+                                    pApc->hEvent,
+                                    NULL,
+                                    NULL,
+                                   &pApc->IoStatus,
+                                   &ByteOffset,
+                                   &LockLength,
+                                    0,
+                                    TRUE,
+                                    TRUE);
+
+                // If the lock operation ended with STATUS_PENDING, queue the APC
+                if(Status == STATUS_PENDING)
+                {
+                    SetResultInfo(hDlg, ERROR_IO_PENDING);
+                    InsertApcEntry(pData, pApc);
+                    return TRUE;
+                }
+
+                // Save the error
+                nError = RtlNtStatusToDosError(Status);
+                break;
+
+            case IDC_NTUNLOCK_FILE:
+
+                // Perform the unlock operation using NtUnlockFile
+                Status = NtUnlockFile(pData->hFile,
+                                     &pApc->IoStatus,
+                                     &ByteOffset,
+                                     &LockLength,
+                                      0);
+                // Save the error
+                assert(Status != STATUS_PENDING);
+                nError = RtlNtStatusToDosError(Status);
+                break;
+        }
+
+        // Set the information about the operation
+        SetResultInfo(hDlg, nError);
+        FreeApcEntry(pApc);
+    }
+    else
     {
         SetResultInfo(hDlg, GetLastError());
-        return TRUE;
     }
 
-    // Perform the I/O operation
-    switch(nReadWriteType)
-    {
-        case RDWR_LOCK_FILE:
-
-            // Perform the lock operation using LockFile
-            if(!LockFile(pData->hFile, ByteOffset.LowPart, ByteOffset.HighPart, LockLength.LowPart, LockLength.HighPart))
-                nError = GetLastError();
-            break;
-
-        case RDWR_UNLOCK_FILE:
-
-            // Perform the unlock operation using UnlockFile
-            if(!UnlockFile(pData->hFile, ByteOffset.LowPart, ByteOffset.HighPart, LockLength.LowPart, LockLength.HighPart))
-                nError = GetLastError();
-            break;
-
-        case RDWR_NTLOCK_FILE:
-
-            // Perform the lock operation using NtLockFile
-            Status = NtLockFile(pData->hFile,
-                                EventHandle,
-                                NULL,
-                                NULL,
-                               &IoStatus,
-                               &ByteOffset,
-                               &LockLength,
-                                0,
-                                TRUE,
-                                TRUE);
-            if(Status == STATUS_PENDING)
-            {
-                // If the operation ends with success, don't change
-                // STATUS_PENDING to STATUS_SUCCESS
-                WaitForSingleObject(EventHandle, INFINITE);
-                if(IoStatus.Status != STATUS_SUCCESS)
-                    Status = IoStatus.Status;
-            }
-
-            nError = RtlNtStatusToDosError(Status);
-            break;
-
-        case RDWR_NTUNLOCK_FILE:
-
-            // Perform the read operation using NtWriteFile
-            Status = NtUnlockFile(pData->hFile,
-                                 &IoStatus,
-                                 &ByteOffset,
-                                 &LockLength,
-                                  0);
-            nError = RtlNtStatusToDosError(Status);
-            break;
-    }
-
-    // Set the information about the operation
-    SetResultInfo(hDlg, nError);
-    CloseHandle(EventHandle);
-    return TRUE;
-}
-
-
-static int OnFillData(HWND hDlg)
-{
-    LPARAM lParam;
-    RECT rect;
-
-    // Calculate position of the menu
-    GetWindowRect(GetDlgItem(hDlg, IDC_FILL_DATA), &rect);
-    lParam = MAKELPARAM(rect.left, rect.bottom);
-
-    // Execute the context menu
-    ExecuteContextMenu(hDlg, IDR_DATA_PATTERN, lParam);
     return TRUE;
 }
 
@@ -520,6 +496,33 @@ static int OnSetEndOfFileClick(HWND hDlg)
     return TRUE;
 }
 
+static int OnApc(HWND hDlg, LPARAM lParam)
+{
+    TFileTestData * pData = GetDialogData(hDlg);
+    TApcReadWrite * pApc = (TApcReadWrite *)lParam;
+    DWORD dwTransferred = 0;
+    int nError = ERROR_SUCCESS;
+
+    // Sanity check
+    assert(pApc->ApcType == APC_TYPE_READ_WRITE);
+
+    // Get the result of the operation and number of bytes transferred
+    if(pApc->bNativeCall == false)
+    {
+        if(!GetOverlappedResult(pData->hFile, &pApc->Overlapped, &dwTransferred, TRUE))
+            nError = GetLastError();
+    }
+    else
+    {
+        nError = RtlNtStatusToDosError(pApc->IoStatus.Status);
+        dwTransferred = (DWORD)pApc->IoStatus.Information;
+    }
+
+    // Complete the read/write operation
+    CompleteReadWriteOperation(hDlg, pApc, nError, dwTransferred);
+    return TRUE;
+}
+
 static int OnCommand(HWND hDlg, UINT nNotify, UINT nIDCtrl)
 {
     TFileTestData * pData;
@@ -529,31 +532,19 @@ static int OnCommand(HWND hDlg, UINT nNotify, UINT nIDCtrl)
         switch(nIDCtrl)
         {
             case IDC_READ_FILE:
-                return OnReadWriteFile(hDlg, RDWR_READ_FILE);
-
             case IDC_WRITE_FILE:
-                return OnReadWriteFile(hDlg, RDWR_WRITE_FILE);
-
             case IDC_NTREAD_FILE:
-                return OnReadWriteFile(hDlg, RDWR_NTREAD_FILE);
-
             case IDC_NTWRITE_FILE:
-                return OnReadWriteFile(hDlg, RDWR_NTWRITE_FILE);
+                return OnReadWriteFile(hDlg, nIDCtrl);
 
             case IDC_LOCK_FILE:
-                return OnLockUnlockFile(hDlg, RDWR_LOCK_FILE);
-
             case IDC_UNLOCK_FILE:
-                return OnLockUnlockFile(hDlg, RDWR_UNLOCK_FILE);
-
             case IDC_NTLOCK_FILE:
-                return OnLockUnlockFile(hDlg, RDWR_NTLOCK_FILE);
-
             case IDC_NTUNLOCK_FILE:
-                return OnLockUnlockFile(hDlg, RDWR_NTUNLOCK_FILE);
+                return OnLockUnlockFile(hDlg, nIDCtrl);
 
             case IDC_FILL_DATA:
-                return OnFillData(hDlg);
+                return ExecuteContextMenuForDlgItem(hDlg, IDC_FILL_DATA, IDR_DATA_PATTERN);
 
             case IDC_FILL_DATA_ZEROS:
             case IDC_FILL_DATA_PATTERN:
@@ -612,6 +603,9 @@ INT_PTR CALLBACK PageProc03(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
             if(pAnchors != NULL)
                 pAnchors->OnSize();
             return FALSE;
+
+        case WM_APC:
+            return OnApc(hDlg, lParam);
 
         case WM_COMMAND:
             return OnCommand(hDlg, HIWORD(wParam), LOWORD(wParam));

@@ -67,7 +67,7 @@
 				Name="VCLinkerTool"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories="../aaa/lib32"
-				GenerateManifest="true"
+				GenerateManifest="false"
 				GenerateDebugInformation="true"
 				SubSystem="2"
 				RandomizedBaseAddress="1"
@@ -79,6 +79,7 @@
 			/>
 			<Tool
 				Name="VCManifestTool"
+				AdditionalManifestFiles=".\res\FileTest.exe.manifest"
 			/>
 			<Tool
 				Name="VCXDCMakeTool"
@@ -147,7 +148,7 @@
 				Name="VCLinkerTool"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories="../aaa/lib64"
-				GenerateManifest="true"
+				GenerateManifest="false"
 				GenerateDebugInformation="true"
 				SubSystem="2"
 				RandomizedBaseAddress="1"
@@ -159,6 +160,7 @@
 			/>
 			<Tool
 				Name="VCManifestTool"
+				AdditionalManifestFiles=".\res\FileTest.exe.manifest"
 			/>
 			<Tool
 				Name="VCXDCMakeTool"
@@ -223,7 +225,7 @@
 				Name="VCLinkerTool"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="../aaa/lib32"
-				GenerateManifest="true"
+				GenerateManifest="false"
 				GenerateDebugInformation="true"
 				SubSystem="2"
 				OptimizeReferences="2"
@@ -237,6 +239,7 @@
 			/>
 			<Tool
 				Name="VCManifestTool"
+				AdditionalManifestFiles=".\res\FileTest.exe.manifest"
 			/>
 			<Tool
 				Name="VCXDCMakeTool"
@@ -303,7 +306,7 @@
 				Name="VCLinkerTool"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="../aaa/lib64"
-				GenerateManifest="true"
+				GenerateManifest="false"
 				GenerateDebugInformation="true"
 				SubSystem="2"
 				OptimizeReferences="2"
@@ -317,6 +320,7 @@
 			/>
 			<Tool
 				Name="VCManifestTool"
+				AdditionalManifestFiles=".\res\FileTest.exe.manifest"
 			/>
 			<Tool
 				Name="VCXDCMakeTool"
@@ -530,6 +534,10 @@
 			</File>
 			<File
 				RelativePath=".\res\IconInformation.ico"
+				>
+			</File>
+			<File
+				RelativePath=".\res\IconWait.ico"
 				>
 			</File>
 			<File

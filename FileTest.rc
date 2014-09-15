@@ -43,6 +43,7 @@ IDI_FILE_TEST           ICON                    "Res\\FileTest.ico"
 IDI_ICON_ERROR          ICON                    "res\\IconError.ico"
 IDI_ICON_WARNING        ICON                    "res\\IconWarning.ico"
 IDI_ICON_INFORMATION    ICON                    "res\\IconInformation.ico"
+IDI_ICON_WAIT           ICON                    "res\\IconWait.ico"
 #endif    // Neutral resources
 /////////////////////////////////////////////////////////////////////////////
 
@@ -100,8 +101,8 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 2,6,0,470
- PRODUCTVERSION 2,6,0,470
+ FILEVERSION 2,6,0,475
+ PRODUCTVERSION 2,6,0,475
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -118,13 +119,13 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Ladislav Zezula"
             VALUE "FileDescription", "Interactive File System API Test"
-            VALUE "FileVersion", "2, 6, 0, 470\0"
+            VALUE "FileVersion", "2, 6, 0, 475\0"
             VALUE "InternalName", "FileTest"
             VALUE "LegalCopyright", "Copyright © 2004 - 2014 Ladislav Zezula"
             VALUE "LegalTrademarks", "http://www.zezula.net"
             VALUE "OriginalFilename", "FileTest.exe"
             VALUE "ProductName", "FileTest"
-            VALUE "ProductVersion", "2, 6, 0, 470\0"
+            VALUE "ProductVersion", "2, 6, 0, 475\0"
         END
     END
     BLOCK "VarFileInfo"
@@ -153,7 +154,7 @@ END
 
 IDR_DATA_PATTERN MENU 
 BEGIN
-    POPUP "_DATA_PATTERN_"
+    POPUP "__DATA_PATTERN__"
     BEGIN
         MENUITEM "Fill with zeros",             IDC_FILL_DATA_ZEROS
         MENUITEM "Fill with pattern",           IDC_FILL_DATA_PATTERN
@@ -171,6 +172,17 @@ BEGIN
         MENUITEM "&4. Access: Read, Share: Read, Synchronous", IDC_READ_SYNC
         MENUITEM "&5. Access: QueryInfo, Share: None, Asynchronous", IDC_QUERY_INFO_ASYNC
         MENUITEM "&6. Access: QueryInfo, Share: None, Synchronous", IDC_QUERY_INFO_SYNC
+    END
+END
+
+IDR_OPLOCK_PRE_WIN7 MENU 
+BEGIN
+    POPUP "__OPLOCK_TYPE__"
+    BEGIN
+        MENUITEM "&1. FSCTL_REQUEST_OPLOCK_LEVEL_1", IDC_REQUEST_OPLOCK_1
+        MENUITEM "&2. FSCTL_REQUEST_OPLOCK_LEVEL_2", IDC_REQUEST_OPLOCK_2
+        MENUITEM "&3. FSCTL_REQUEST_BATCH_OPLOCK", IDC_REQUEST_BATCH_OPLOCK
+        MENUITEM "&4. FSCTL_REQUEST_FILTER_OPLOCK", IDC_REQUEST_FILTER_OPLOCK
     END
 END
 
@@ -366,17 +378,15 @@ BEGIN
     EDITTEXT        IDC_OBJECT_ID,89,124,170,14,ES_AUTOHSCROLL
     PUSHBUTTON      "Use",IDC_OBJECT_ID_USE,263,124,30,14,WS_DISABLED
     GROUPBOX        "Other operations ",IDC_OTHERS_FRAME,7,148,293,51
-    PUSHBUTTON      "GetFileAttributes",IDC_GET_FILE_ATTRIBUTES,170,161,123,14
+    PUSHBUTTON      "GetFileAttributes",IDC_GET_FILE_ATTRIBUTES,160,161,133,14
     GROUPBOX        "Oplock file operations",IDC_OPLOCKS_FRAME,7,204,293,96
-    PUSHBUTTON      "FlushFileBuffers",IDC_FLUSH_FILE_BUFFERS,11,179,123,14
-    PUSHBUTTON      "FSCTL_SET_SPARSE",IDC_SET_SPARSE,170,179,123,14
-    PUSHBUTTON      "FSCTL_REQUEST_OPLOCK_LEVEL_1",IDC_REQUEST_OPLOCK_1,11,217,123,14
-    PUSHBUTTON      "FSCTL_REQUEST_OPLOCK_LEVEL_2",IDC_REQUEST_OPLOCK_2,170,217,123,14
-    PUSHBUTTON      "FSCTL_REQUEST_BATCH_OPLOCK",IDC_REQUEST_BATCH_OPLOCK,11,236,123,14
-    PUSHBUTTON      "FSCTL_REQUEST_FILTER_OPLOCK",IDC_REQUEST_FILTER_OPLOCK,170,236,123,14
-    PUSHBUTTON      "FSCTL_REQUEST_OPLOCK",IDC_REQUEST_OPLOCK,11,255,123,14
-    PUSHBUTTON      "FSCTL_OPLOCK_BREAK_ACKNWLDG",IDC_BREAK_ACK,170,255,123,14
-    PUSHBUTTON      "NtQueryAttributesFile",IDC_NT_QUERY_ATTRIBUTES_FILE,11,161,123,14
+    PUSHBUTTON      "Request Oplock (pre-Win7) ...",IDC_REQUEST_OPLOCK_MENU,11,217,133,14
+    PUSHBUTTON      "FSCTL_OPLOCK_BREAK_ACKNWLDG",IDC_BREAK_ACKNOWLEDGE_1,160,217,133,14
+    PUSHBUTTON      "FSCTL_REQUEST_OPLOCK (request)",IDC_REQUEST_OPLOCK_WIN7,11,236,133,14
+    PUSHBUTTON      "FSCTL_REQUEST_OPLOCK (brk ack)",IDC_BREAK_ACKNOWLEDGE_2,160,236,133,14
+    PUSHBUTTON      "FlushFileBuffers",IDC_FLUSH_FILE_BUFFERS,11,179,133,14
+    PUSHBUTTON      "FSCTL_SET_SPARSE",IDC_SET_SPARSE,160,179,133,14
+    PUSHBUTTON      "NtQueryAttributesFile",IDC_NT_QUERY_ATTRIBUTES_FILE,11,161,133,14
     GROUPBOX        " Result ",IDC_RESULT_FRAME,7,304,293,28
     LTEXT           "GetLastError:",IDC_LAST_ERROR_TITLE,13,313,43,14,SS_CENTERIMAGE
     EDITTEXT        IDC_LAST_ERROR,73,313,220,14,ES_AUTOHSCROLL | ES_READONLY

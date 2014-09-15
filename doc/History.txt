@@ -2,9 +2,10 @@
   FileTest history
   ================
 
- Version 2.6.0.469
+ Version 2.6.0.474
 
  - Added support for oplocks break acknowledgement
+ - Asynchronous operations that returned pending status no longer block FileTest's UI
 
  Version 2.6.0.468
 

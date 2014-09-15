@@ -566,15 +566,14 @@ static void CreateBlinkingIcon(HWND hDlg, HWND hWndChild, int nSeverity)
     POINT pt;
     HWND hWndBlink;
     RECT rect;
+    UINT IconSet[] = {IDI_ICON_INFORMATION, IDI_ICON_ERROR, IDI_ICON_WAIT};
 
     // If there is already a blinker timer, destroy it
     DeleteBlinkTimer(hDlg);
 
     // Get the appropriate icon
-    if(nSeverity == SEVERITY_SUCCESS)
-        hIcon = (HICON)LoadImage(g_hInst, MAKEINTRESOURCE(IDI_ICON_INFORMATION), IMAGE_ICON, 16, 16, LR_SHARED);
-    if(nSeverity == SEVERITY_ERROR)
-        hIcon = (HICON)LoadImage(g_hInst, MAKEINTRESOURCE(IDI_ICON_ERROR), IMAGE_ICON, 16, 16, LR_SHARED);
+    assert(nSeverity < _countof(IconSet));
+    hIcon = (HICON)LoadImage(g_hInst, MAKEINTRESOURCE(IconSet[nSeverity]), IMAGE_ICON, 16, 16, LR_SHARED);
     if(hIcon == NULL)
         return;
 
@@ -651,6 +650,11 @@ void SetResultInfo(HWND hDlg, NTSTATUS Status, HANDLE hHandle, UINT_PTR ResultLe
     {
         switch(Status)
         {
+            case STATUS_PENDING:
+                szStatus = NtStatus2Text(Status);
+                nSeverity = SEVERITY_PENDING;
+                break;
+
             case STATUS_INVALID_DATA_FORMAT:
                 szStatus = _T("The entered value has bad format.");
                 nSeverity = SEVERITY_ERROR;
@@ -684,8 +688,20 @@ void SetResultInfo(HWND hDlg, NTSTATUS Status, HANDLE hHandle, UINT_PTR ResultLe
     hWndChild = GetDlgItem(hDlg, IDC_LAST_ERROR);
     if(hWndChild != NULL)
     {
-        // Remember severity
-        nSeverity = (Status == ERROR_SUCCESS || Status == ERROR_IO_PENDING) ? SEVERITY_SUCCESS : SEVERITY_ERROR;
+        switch(Status)
+        {
+            case ERROR_SUCCESS:
+                nSeverity = SEVERITY_SUCCESS;
+                break;
+
+            case ERROR_IO_PENDING:
+                nSeverity = SEVERITY_PENDING;
+                break;
+
+            default:
+                nSeverity = SEVERITY_ERROR;
+                break;
+        }
 
         // Format the result string
         szError = GetErrorText(Status);
@@ -1431,4 +1447,18 @@ int ExecuteContextMenu(HWND hWndParent, UINT nIDMenu, LPARAM lParam)
     }
 
     return TRUE;
+}
+
+int ExecuteContextMenuForDlgItem(HWND hDlg, UINT nIDCtrl, UINT nIDMenu)
+{
+    LPARAM lParam;
+    HWND hWndChild = GetDlgItem(hDlg, nIDCtrl);
+    RECT rect;
+
+    // Calculate position of the menu
+    GetWindowRect(hWndChild, &rect);
+    lParam = MAKELPARAM(rect.left, rect.bottom);
+
+    // Execute the context menu
+    return ExecuteContextMenu(hDlg, nIDMenu, lParam);
 }

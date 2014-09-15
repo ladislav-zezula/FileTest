@@ -37,6 +37,9 @@
 #define IDD_DATA_EDITOR                 137
 #define IDD_HELP_ABOUT                  138
 #define IDR_QUICK_ACCESS_SELECTION      139
+#define IDI_ICON1                       140
+#define IDI_ICON_WAIT                   140
+#define IDR_OPLOCK_PRE_WIN7             141
 #define IDC_DESIRED_ACCESS_BROWSE       1002
 #define IDC_FILE_ATTRIBUTES_BROWSE      1003
 #define IDC_SHARE_ACCESS_BROWSE         1004
@@ -143,18 +146,19 @@
 #define IDC_INPUT_LENGTH                1105
 #define IDC_SET_SPARSE                  1105
 #define IDC_SET_INFO                    1106
-#define IDC_REQUEST_OPLOCK_1            1106
+#define IDC_REQUEST_OPLOCK_MENU         1106
 #define IDC_INPUT_LENGTH_TITLE          1107
-#define IDC_REQUEST_OPLOCK_2            1107
+#define IDC_REQUEST_OPLOCK_1            1107
 #define IDC_COMMENT                     1108
-#define IDC_REQUEST_BATCH_OPLOCK        1108
+#define IDC_REQUEST_OPLOCK_2            1108
 #define IDC_MAXIMUM_LENGTH              1109
-#define IDC_REQUEST_FILTER_OPLOCK       1109
-#define IDC_REQUEST_OPLOCK              1110
+#define IDC_REQUEST_BATCH_OPLOCK        1109
+#define IDC_REQUEST_FILTER_OPLOCK       1110
 #define IDC_CREATE_TRANSACTION_HINT     1111
-#define IDC_REQUEST_FILTER_OPLOCK2      1111
-#define IDC_BREAK_ACK                   1111
+#define IDC_REQUEST_OPLOCK_WIN7         1111
+#define IDC_BREAK_ACKNOWLEDGE_1         1112
 #define IDC_COMMIT_TRANSACTION_HINT     1113
+#define IDC_BREAK_ACKNOWLEDGE_2         1113
 #define IDC_ROLLBACK_TRANSACTION_HINT   1114
 #define IDC_CLOSE_HANDLE_HINT           1115
 #define IDC_TRANSACTED                  1117
@@ -380,13 +384,17 @@
 #define IDC_FILL_DATA_PATTERN           40029
 #define IDC_FILL_DATA_RANDOM            40030
 #define IDC_FILL_DATA_CUSTOM            40031
+#define ID__1                           40039
+#define ID__2                           40040
+#define ID__3                           40041
+#define ID__4                           40042
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        140
-#define _APS_NEXT_COMMAND_VALUE         40039
+#define _APS_NEXT_RESOURCE_VALUE        142
+#define _APS_NEXT_COMMAND_VALUE         40043
 #define _APS_NEXT_CONTROL_VALUE         1218
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
