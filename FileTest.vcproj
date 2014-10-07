@@ -79,7 +79,6 @@
 			/>
 			<Tool
 				Name="VCManifestTool"
-				AdditionalManifestFiles=".\res\FileTest.exe.manifest"
 			/>
 			<Tool
 				Name="VCXDCMakeTool"
@@ -160,7 +159,6 @@
 			/>
 			<Tool
 				Name="VCManifestTool"
-				AdditionalManifestFiles=".\res\FileTest.exe.manifest"
 			/>
 			<Tool
 				Name="VCXDCMakeTool"
@@ -239,7 +237,6 @@
 			/>
 			<Tool
 				Name="VCManifestTool"
-				AdditionalManifestFiles=".\res\FileTest.exe.manifest"
 			/>
 			<Tool
 				Name="VCXDCMakeTool"
@@ -320,7 +317,6 @@
 			/>
 			<Tool
 				Name="VCManifestTool"
-				AdditionalManifestFiles=".\res\FileTest.exe.manifest"
 			/>
 			<Tool
 				Name="VCXDCMakeTool"
