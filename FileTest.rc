@@ -34,10 +34,10 @@ END
 
 /////////////////////////////////////////////////////////////////////////////
 //
-// Manifest
+// RT_MANIFEST
 //
 
-1    24     "res\\FileTest.exe.manifest"
+1                       RT_MANIFEST             "res\\FileTest.exe.manifest"
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -108,8 +108,8 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 2,6,0,478
- PRODUCTVERSION 2,6,0,478
+ FILEVERSION 2,6,0,479
+ PRODUCTVERSION 2,6,0,479
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -126,13 +126,13 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Ladislav Zezula"
             VALUE "FileDescription", "Interactive File System API Test"
-            VALUE "FileVersion", "2, 6, 0, 478\0"
+            VALUE "FileVersion", "2, 6, 0, 479\0"
             VALUE "InternalName", "FileTest"
             VALUE "LegalCopyright", "Copyright © 2004 - 2014 Ladislav Zezula"
             VALUE "LegalTrademarks", "http://www.zezula.net"
             VALUE "OriginalFilename", "FileTest.exe"
             VALUE "ProductName", "FileTest"
-            VALUE "ProductVersion", "2, 6, 0, 478\0"
+            VALUE "ProductVersion", "2, 6, 0, 479\0"
         END
     END
     BLOCK "VarFileInfo"
@@ -179,6 +179,7 @@ BEGIN
         MENUITEM "&4. Access: Read, Share: Read, Synchronous", IDC_READ_SYNC
         MENUITEM "&5. Access: QueryInfo, Share: None, Asynchronous", IDC_QUERY_INFO_ASYNC
         MENUITEM "&6. Access: QueryInfo, Share: None, Synchronous", IDC_QUERY_INFO_SYNC
+        MENUITEM "&7. DeleteOnClose",           IDC_DELETE_ON_CLOSE
     END
 END
 
@@ -643,7 +644,7 @@ FONT 8, "MS Shell Dlg", 0, 0, 0x1
 BEGIN
     GROUPBOX        "",IDC_STATIC,7,4,196,90
     PUSHBUTTON      "Just the single directory",IDC_SINGLE_DIRECTORY,22,19,167,14
-    PUSHBUTTON      "The entire directory path",IDC_ENTIRE_PATH,21,44,167,14
+    PUSHBUTTON      "The entire directory tree",IDC_DIRECTORY_TREE,21,44,167,14
     PUSHBUTTON      "Cancel",IDCANCEL,21,69,167,14
 END
 

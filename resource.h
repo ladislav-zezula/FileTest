@@ -215,7 +215,7 @@
 #define IDC_MOVE_OPTIONS                1161
 #define IDC_SYMLINK_CREATE              1161
 #define IDC_CREATE_OR_GET               1161
-#define IDC_ENTIRE_PATH                 1161
+#define IDC_DIRECTORY_TREE              1161
 #define IDC_FILETEST_WEB                1161
 #define IDC_SYMLINK                     1162
 #define IDC_GET_OBJECT_ID               1162
@@ -388,13 +388,15 @@
 #define ID__2                           40040
 #define ID__3                           40041
 #define ID__4                           40042
+#define ID__7                           40043
+#define IDC_DELETE_ON_CLOSE             40044
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        142
-#define _APS_NEXT_COMMAND_VALUE         40043
+#define _APS_NEXT_COMMAND_VALUE         40045
 #define _APS_NEXT_CONTROL_VALUE         1218
 #define _APS_NEXT_SYMED_VALUE           101
 #endif

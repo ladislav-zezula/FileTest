@@ -172,6 +172,12 @@ static int QuickAccessSelection(HWND hDlg, DWORD dwDesiredAccess, DWORD dwShareA
         dwDesiredAccess &= ~SYNCHRONIZE;
     }
 
+    // Set or reset DeleteOnClose flag
+    if(dwDesiredAccess & DELETE)
+        dwCreateOptions |= FILE_DELETE_ON_CLOSE;
+    else
+        dwCreateOptions &= ~FILE_DELETE_ON_CLOSE;
+
     // Apply the create options to the dialog controls
     Hex2DlgText32(hDlg, IDC_DESIRED_ACCESS, dwDesiredAccess);
     Hex2DlgText32(hDlg, IDC_SHARE_ACCESS, dwShareAccess);
@@ -741,6 +747,9 @@ static int OnCommand(HWND hDlg, UINT nNotify, UINT nIDCtrl)
 
             case IDC_QUERY_INFO_SYNC:
                 return QuickAccessSelection(hDlg, FILE_READ_ATTRIBUTES, 0, true);
+
+            case IDC_DELETE_ON_CLOSE:
+                return QuickAccessSelection(hDlg, DELETE, 0, false);
 
             case IDC_CREATE_FILE:
                 return OnCreateFileClick(hDlg);

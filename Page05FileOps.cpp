@@ -126,60 +126,123 @@ static BOOL CopyFileByHand(const TCHAR * szOrigFile, const TCHAR * szNewFile)
     return TRUE;
 }
 
-static int RemoveDirectoryPath(LPCTSTR szDirName)
+static bool IsDotDirectoryName(PFILE_DIRECTORY_INFORMATION pDirInfo)
 {
-    LPTSTR szDirectory;
-    LPTSTR szPathPart;
-    LPTSTR szTemp;
-    int nError = ERROR_SUCCESS;
+    if(pDirInfo->FileNameLength == 2 && pDirInfo->FileName[0] == L'.')
+        return true;
+    if(pDirInfo->FileNameLength == 4 && pDirInfo->FileName[0] == L'.' && pDirInfo->FileName[1] == L'.')
+        return true;
 
-    // Allocate copy of the directory
-    szDirectory = new TCHAR[_tcslen(szDirName) + 1];
-    if(szDirectory != NULL)
+    return false;
+}
+
+static NTSTATUS NtRemoveDirectoryTree(PUNICODE_STRING PathName)
+{
+    PFILE_DIRECTORY_INFORMATION pDirInfo;
+    OBJECT_ATTRIBUTES ObjAttr;
+    IO_STATUS_BLOCK IoStatus;
+    UNICODE_STRING ChildPath;
+    NTSTATUS Status;
+    HANDLE DirHandle = NULL;
+    BYTE DirBuffer[0x300];
+
+    // Open the directory for enumeration
+    InitializeObjectAttributes(&ObjAttr, PathName, OBJ_CASE_INSENSITIVE, NULL, NULL);
+    Status = NtOpenFile(&DirHandle,
+                         FILE_LIST_DIRECTORY | SYNCHRONIZE,
+                        &ObjAttr,
+                        &IoStatus,
+                         FILE_SHARE_READ,
+                         FILE_SYNCHRONOUS_IO_ALERT);
+    if(NT_SUCCESS(Status))
     {
-        // Copy the directory name to the new buffer
-        _tcscpy(szDirectory, szDirName);
-
-        // Find the first part that is actually a directory
-        szPathPart = FindDirectoryPathPart(szDirectory);
-        if(szPathPart != NULL)
+        pDirInfo = (PFILE_DIRECTORY_INFORMATION)DirBuffer;
+        while(Status == STATUS_SUCCESS)
         {
-            // Delete the lowest-level directory
-            if(RemoveDirectory(szDirectory))
+            // Query a single item
+            Status = NtQueryDirectoryFile(DirHandle,
+                                          NULL,
+                                          NULL,
+                                          NULL,
+                                         &IoStatus,
+                                          pDirInfo,
+                                          sizeof(DirBuffer),
+                                          FileDirectoryInformation,
+                                          TRUE,
+                                          NULL,
+                                          FALSE);
+            if(Status == STATUS_SUCCESS && !IsDotDirectoryName(pDirInfo))
             {
-                // Now delete all inner parts
-                while((szTemp = _tcsrchr(szPathPart, _T('\\'))) != NULL)
-                {
-                    // Terminate the path part
-                    *szTemp = 0;
+                // Copy the dir to the child path
+                ChildPath = *PathName;
+                
+                // Append the backslash
+                ChildPath.Buffer[ChildPath.Length / 2] = L'\\';
+                ChildPath.Length += sizeof(WCHAR);
 
-                    // Delete that inner part
-                    if(!RemoveDirectory(szDirectory))
-                    {
-                        nError = GetLastError();
-                        break;
-                    }
+                // Append subdir/file
+                memcpy(ChildPath.Buffer + ChildPath.Length / 2, pDirInfo->FileName, pDirInfo->FileNameLength);
+                ChildPath.Length = (USHORT)(ChildPath.Length + pDirInfo->FileNameLength);
+
+                // If this is a directory, we need to delete the directory
+                if(pDirInfo->FileAttributes & FILE_ATTRIBUTE_DIRECTORY)
+                {
+                    Status = NtRemoveDirectoryTree(&ChildPath);
                 }
+                else
+                {
+                    InitializeObjectAttributes(&ObjAttr, &ChildPath, OBJ_CASE_INSENSITIVE, NULL, 0);
+                    Status = NtDeleteFile(&ObjAttr);
+                }
+
+                // Terminate the substring with zero, just for the sake of readability
+                ChildPath.Buffer[ChildPath.Length / 2] = 0;
             }
-            else
-            {
-                nError = GetLastError();
-            }
+        }
+
+        // Close the directory handle
+        NtClose(DirHandle);
+    }
+
+    // Open the directory for enumeration
+    InitializeObjectAttributes(&ObjAttr, PathName, OBJ_CASE_INSENSITIVE, NULL, NULL);
+    return NtDeleteFile(&ObjAttr);
+}
+
+static int RemoveDirectoryTree(LPCTSTR szDirName)
+{
+    UNICODE_STRING PathName;
+    UNICODE_STRING TempName;
+    NTSTATUS Status;
+
+    // Convert to UNICODE_STRING
+    Status = FileNameToUnicodeString(&TempName, szDirName);
+    if(NT_SUCCESS(Status))
+    {
+        // Reallocate the UNICODE_STRING
+        PathName.MaximumLength = 0xFFFE;
+        PathName.Length = TempName.Length;
+        PathName.Buffer = (PWSTR)RtlAllocateHeap(RtlProcessHeap(),
+                                                 HEAP_ZERO_MEMORY,
+                                                 PathName.MaximumLength);
+        if(PathName.Buffer != NULL)
+        {
+            // Copy the string
+            memcpy(PathName.Buffer, TempName.Buffer, TempName.Length);
+            Status = NtRemoveDirectoryTree(&PathName);
+
+            // Free the path name
+            RtlFreeHeap(RtlProcessHeap(), 0, PathName.Buffer);
         }
         else
         {
-            nError = ERROR_BAD_PATHNAME;
+            Status = STATUS_INSUFFICIENT_RESOURCES;
         }
 
-        // Delete the allocated buffer
-        delete [] szDirectory;
-    }
-    else
-    {
-        nError = ERROR_NOT_ENOUGH_MEMORY;
+        FreeFileNameString(&TempName);
     }
 
-    return nError;
+    return RtlNtStatusToDosError(Status);
 }
 
 static int SaveDialog(HWND hDlg)
@@ -427,10 +490,10 @@ static int OnDeleteDirectoryClick(HWND hDlg)
                 nError = GetLastError();
             break;
 
-        case IDC_ENTIRE_PATH:
+        case IDC_DIRECTORY_TREE:
 
             // Delete the directory recursively
-            nError = RemoveDirectoryPath(pData->szFileName1);
+            nError = RemoveDirectoryTree(pData->szFileName1);
             break;
 
         default:
