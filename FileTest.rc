@@ -108,8 +108,8 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 2,6,0,479
- PRODUCTVERSION 2,6,0,479
+ FILEVERSION 2,6,0,482
+ PRODUCTVERSION 2,6,0,482
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -126,13 +126,13 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Ladislav Zezula"
             VALUE "FileDescription", "Interactive File System API Test"
-            VALUE "FileVersion", "2, 6, 0, 479\0"
+            VALUE "FileVersion", "2, 6, 0, 482\0"
             VALUE "InternalName", "FileTest"
             VALUE "LegalCopyright", "Copyright © 2004 - 2014 Ladislav Zezula"
             VALUE "LegalTrademarks", "http://www.zezula.net"
             VALUE "OriginalFilename", "FileTest.exe"
             VALUE "ProductName", "FileTest"
-            VALUE "ProductVersion", "2, 6, 0, 479\0"
+            VALUE "ProductVersion", "2, 6, 0, 482\0"
         END
     END
     BLOCK "VarFileInfo"
@@ -987,6 +987,17 @@ BEGIN
     IDC_JUNCTION_TYPE, 0x403, 20, 0
 0x4e55, 0x4e4b, 0x574f, 0x5f4e, 0x4552, 0x4150, 0x5352, 0x5f45, 0x4154, 
 0x0047, 
+    0
+END
+
+IDD_PAGE10_LINKS DLGINIT
+BEGIN
+    IDC_JUNCTION_TYPE, 0x403, 27, 0
+0x4f49, 0x525f, 0x5045, 0x5241, 0x4553, 0x545f, 0x4741, 0x4d5f, 0x554f, 
+0x544e, 0x505f, 0x494f, 0x544e, "\000" 
+    IDC_JUNCTION_TYPE, 0x403, 23, 0
+0x4f49, 0x525f, 0x5045, 0x5241, 0x4553, 0x545f, 0x4741, 0x535f, 0x4d59, 
+0x494c, 0x4b4e, "\000" 
     0
 END
 
