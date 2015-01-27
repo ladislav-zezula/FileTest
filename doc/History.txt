@@ -2,6 +2,10 @@
   FileTest history
   ================
 
+ Version 2.6.0.481
+
+ - Fixed missing entries in combobox in "Links" page
+
  Version 2.6.0.474
 
  - Added support for oplocks break acknowledgement
