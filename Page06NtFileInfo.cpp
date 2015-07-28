@@ -2164,7 +2164,7 @@ static int OnBeginLabelEdit(HWND hDlg, NMTVDISPINFO * pTVDispInfo)
         {
             if(pInfoData->bIsChain == TRUE || pInfoData->bIsEditable == FALSE)
                 bEditable = false;
-            if(pMemberInfo->nDataType == TYPE_WNAME_L32B)
+            if(pMemberInfo != NULL && pMemberInfo->nDataType == TYPE_WNAME_L32B)
                 bCopyToClipboard = true;
         }
     }

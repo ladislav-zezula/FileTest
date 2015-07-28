@@ -37,7 +37,7 @@ END
 // RT_MANIFEST
 //
 
-1                       RT_MANIFEST             "res\\FileTest.exe.manifest"
+1                       24                 "res\\FileTest.exe.manifest"
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -108,8 +108,8 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 2,6,0,482
- PRODUCTVERSION 2,6,0,482
+ FILEVERSION 2,6,0,488
+ PRODUCTVERSION 2,6,0,488
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -126,13 +126,13 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Ladislav Zezula"
             VALUE "FileDescription", "Interactive File System API Test"
-            VALUE "FileVersion", "2, 6, 0, 482\0"
+            VALUE "FileVersion", "2, 6, 0, 488\0"
             VALUE "InternalName", "FileTest"
             VALUE "LegalCopyright", "Copyright © 2004 - 2014 Ladislav Zezula"
             VALUE "LegalTrademarks", "http://www.zezula.net"
             VALUE "OriginalFilename", "FileTest.exe"
             VALUE "ProductName", "FileTest"
-            VALUE "ProductVersion", "2, 6, 0, 482\0"
+            VALUE "ProductVersion", "2, 6, 0, 488\0"
         END
     END
     BLOCK "VarFileInfo"
