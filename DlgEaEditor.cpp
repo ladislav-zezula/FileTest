@@ -25,8 +25,8 @@ static DWORD TwoDigitsToBinValue(LPCTSTR szBinValue)
     if(!isxdigit(szBinValue[0]) || !isxdigit(szBinValue[1]))
         return (DWORD)0x100;
 
-    chDigit2 = (TCHAR)CharUpper((LPTSTR)szBinValue[0]);
-    chDigit1 = (TCHAR)CharUpper((LPTSTR)szBinValue[1]);
+    chDigit2 = (TCHAR)(UINT_PTR)CharUpper((LPTSTR)szBinValue[0]);
+    chDigit1 = (TCHAR)(UINT_PTR)CharUpper((LPTSTR)szBinValue[1]);
     if(chDigit1 > '9')
         chDigit1 -= 'A' - '9' - 1;
     if(chDigit2 > '9')

@@ -440,6 +440,45 @@ HTREEITEM InsertTreeItem(HWND hTreeView, HTREEITEM hParentItem, LPCTSTR szText, 
 #define TOKEN_ELEVATION_TYPE_LIMITED_USER   0x00000001
 #define TOKEN_ELEVATION_TYPE_ADMINISTRATOR  0x00000002
 
+static BOOL GetTokenFlags(PDWORD PtrFlags, DWORD TokenInfoType)
+{
+    HANDLE hToken;
+    DWORD dwLength = 0;
+    DWORD dwFlags = 0;
+    BOOL bResult = FALSE;
+
+    if(OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken))
+    {
+        bResult = GetTokenInformation(hToken,
+             (TOKEN_INFORMATION_CLASS)TokenInfoType,
+                                     &dwFlags,
+                                      sizeof(dwFlags),
+                                     &dwLength);
+        CloseHandle(hToken);
+    }
+
+    if(PtrFlags != NULL)
+        PtrFlags[0] = dwFlags;
+    return bResult;
+}
+
+static BOOL SetTokenFlags(DWORD dwFlags, DWORD TokenInfoType)
+{
+    HANDLE hToken;
+    BOOL bResult = FALSE;
+
+    if(OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_DEFAULT, &hToken))
+    {
+        bResult = SetTokenInformation(hToken,
+             (TOKEN_INFORMATION_CLASS)TokenInfoType,
+                                     &dwFlags,
+                                      sizeof(dwFlags));
+        CloseHandle(hToken);
+    }
+
+    return bResult;
+}
+
 BOOL IsLUAEnabled()
 {
     LPCTSTR szKeyName = _T("Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System");
@@ -459,75 +498,41 @@ BOOL IsLUAEnabled()
     return (BOOL)dwLuaEnabled;
 }
 
-
 // Returns TRUE if the program runs as restricted or elevated.
-// Called on Windows Vista only
-BOOL IsRunningAsElevated()
+BOOL GetElevationFlags(PDWORD PtrFlags)
 {
-    HANDLE hToken;
-    DWORD dwElevationType = 0;
-    DWORD dwLength = 0;
-
-    if(OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken))
-    {
-        GetTokenInformation(hToken,
-                           (TOKEN_INFORMATION_CLASS)0x12,  // TokenElevationType, not defined in pre-Vista SDKs
-                           &dwElevationType,
-                            sizeof(dwElevationType),
-                           &dwLength);
-
-        CloseHandle(hToken);
-    }
-
-    return (dwElevationType & TOKEN_ELEVATION_TYPE_LIMITED_USER) ? FALSE : TRUE;
+    // TokenElevationType, not defined in pre-Vista SDKs
+    return GetTokenFlags(PtrFlags, 0x12);   
 }
 
-DWORD TokenVirtualization(DWORD dwFlags, DWORD dwNewValue)
+BOOL GetVirtualizationFlags(PDWORD PtrFlags)
 {
-    HANDLE hToken = NULL;
-    DWORD dwCurrentState = FALSE;
-    DWORD dwLength;
+    // TokenVirtualizationEnabled, not defined in pre-Vista SDKs
+    return GetTokenFlags(PtrFlags, 0x18);
+}
 
-    // Only supported in Vista or newer
-    if(g_dwWinVer >= 0x0600)
-    {
-        if(!OpenThreadToken(GetCurrentThread(), TOKEN_QUERY | TOKEN_ADJUST_DEFAULT, FALSE, &hToken))
-        {
-            OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY | TOKEN_ADJUST_DEFAULT, &hToken);
-        }
-
-        // If succeeded
-        if(hToken != NULL)
-        {
-            if(dwFlags & TOKEN_VIRT_QUERY)
-                GetTokenInformation(hToken, (TOKEN_INFORMATION_CLASS)0x18, &dwCurrentState, sizeof(dwCurrentState), &dwLength);
-            if(dwFlags & TOKEN_VIRT_SET)
-                SetTokenInformation(hToken, (TOKEN_INFORMATION_CLASS)0x18, &dwNewValue, sizeof(dwNewValue));
-
-            CloseHandle(hToken);
-        }
-    }
-
-    return dwCurrentState;
+BOOL SetVirtualizationFlags(DWORD dwFlags)
+{
+    // TokenVirtualizationEnabled, not defined in pre-Vista SDKs
+    return SetTokenFlags(dwFlags, 0x18);
 }
 
 //-----------------------------------------------------------------------------
 // Application title
 
-void GetFileTestAppTitle(LPTSTR szTitle)
+void GetFileTestAppTitle(LPTSTR szTitle, int nMaxChars)
 {
     TCHAR szUserName[256] = _T("");
+    DWORD dwElevationFlags = 0;
     DWORD dwSize = _tsize(szUserName);
     UINT nIDTitle = IDS_APP_TITLE;
 
-    // If LUA is enabled, 
-    if(g_dwWinVer >= OSVER_WINDOWS_VISTA && IsLUAEnabled())
-    {
-        nIDTitle = IsRunningAsElevated() ? IDS_APP_TITLE_VISTA1 : IDS_APP_TITLE_VISTA2;
-    }
+    // Get the elevation flags. Note that this returns FALSE on pre-Vista
+    if(GetElevationFlags(&dwElevationFlags))
+        nIDTitle = (dwElevationFlags & TOKEN_ELEVATION_TYPE_ADMINISTRATOR) ? IDS_APP_TITLE_VISTA2 : IDS_APP_TITLE_VISTA1;
 
     GetUserName(szUserName, &dwSize);
-    rsprintf(szTitle, nIDTitle, szUserName);
+    rsprintf(szTitle, nMaxChars, nIDTitle, szUserName);
 }
 
 //-----------------------------------------------------------------------------

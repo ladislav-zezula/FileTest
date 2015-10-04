@@ -581,13 +581,12 @@ DWORD TreeView_GetChildCount(HWND hTreeView, HTREEITEM hItem);
 HTREEITEM InsertTreeItem(HWND hTreeView, HTREEITEM hParentItem, HTREEITEM hInsertAfter, LPCTSTR szText, PVOID pParam);
 HTREEITEM InsertTreeItem(HWND hTreeView, HTREEITEM hParentItem, LPCTSTR szText, PVOID pParam);
 
-#define TOKEN_VIRT_QUERY  0x00000001
-#define TOKEN_VIRT_SET    0x00000002
 BOOL IsLUAEnabled();
-BOOL IsRunningAsElevated();
-DWORD TokenVirtualization(DWORD dwFlags, DWORD dwNewValue);
+BOOL GetElevationFlags(PDWORD PtrFlags);
+BOOL GetVirtualizationFlags(PDWORD PtrFlags);
+BOOL SetVirtualizationFlags(DWORD dwFlags);
 
-void GetFileTestAppTitle(LPTSTR szTitle);
+void GetFileTestAppTitle(LPTSTR szTitle, int nMaxChars);
 
 void SetResultInfo(HWND hDlg, NTSTATUS Status, HANDLE hHandle = NULL, UINT_PTR ResultLength = 0, PLARGE_INTEGER pResultLength = NULL);
 

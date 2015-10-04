@@ -283,9 +283,9 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
     g_Tooltip.AddToolTip(hDlg, IDC_SHARE_ACCESS, ShareAccessValues);
     g_Tooltip.AddToolTip(hDlg, IDC_CREATE_OPTIONS, CreateOptionsValues);
 
-    // On pre-Vista, disable the virtualization button
-    if(g_dwWinVer < 0x0600)
-        EnableDlgItems(hDlg, FALSE, IDC_VIRTUALIZATION, 0);
+    // On post-Vista, enable the virtualization button
+    if(GetVirtualizationFlags(NULL))
+        EnableDlgItems(hDlg, TRUE, IDC_VIRTUALIZATION, 0);
 
     return TRUE;
 }
@@ -294,7 +294,8 @@ static int OnSetActive(HWND hDlg)
 {
     TFileTestData * pData = GetDialogData(hDlg);
     TCHAR szEaInfo[128];
-    BOOL bEnabled = FALSE;
+    DWORD dwVirtFlags = 0;
+    BOOL bEnabled;
     int nChecked;
 
     // Set directory name and file name
@@ -315,18 +316,17 @@ static int OnSetActive(HWND hDlg)
     Hex2DlgText32(hDlg, IDC_CREATE_OPTIONS, pData->dwCreateOptions);
 
     // Update the info about extended attributes
-    rsprintf(szEaInfo, IDS_EA_INFO, pData->pFileEa, pData->dwEaSize);
+    rsprintf(szEaInfo, _tsize(szEaInfo), IDS_EA_INFO, pData->pFileEa, pData->dwEaSize);
     SetDlgItemText(hDlg, IDC_EXTENDED_ATTRIBUTES, szEaInfo);
 
     // Enable/disable transaction
-    if(pfnRtlSetCurrentTransaction != NULL && IsHandleValid(pData->hTransaction))
-        bEnabled = TRUE;
+    bEnabled = (pfnRtlSetCurrentTransaction != NULL && IsHandleValid(pData->hTransaction));
     EnableDlgItems(hDlg, bEnabled, IDC_TRANSACTED, 0);
-    if(bEnabled)
-        CheckDlgButton(hDlg, IDC_TRANSACTED, pData->bUseTransaction);
+    nChecked = (bEnabled && pData->bUseTransaction) ? BST_CHECKED : BST_UNCHECKED;
+    CheckDlgButton(hDlg, IDC_TRANSACTED, nChecked);
 
     // Check/uncheck virtualization
-    nChecked = TokenVirtualization(TOKEN_VIRT_QUERY, 0);
+    nChecked = (GetVirtualizationFlags(&dwVirtFlags) && dwVirtFlags) ? BST_CHECKED : BST_UNCHECKED;
     CheckDlgButton(hDlg, IDC_VIRTUALIZATION, nChecked);
 
     // Enable/disable "NtClose"
@@ -455,7 +455,7 @@ static int OnEditEaClick(HWND hDlg)
     if(ExtendedAtributesEditorDialog(hDlg, pData) == IDOK)
     {
         // Update the info about extended attributes
-        rsprintf(szEaInfo, IDS_EA_INFO, pData->pFileEa, pData->dwEaSize);
+        rsprintf(szEaInfo, _tsize(szEaInfo), IDS_EA_INFO, pData->pFileEa, pData->dwEaSize);
         SetDlgItemText(hDlg, IDC_EXTENDED_ATTRIBUTES, szEaInfo);
     }
 
@@ -466,7 +466,7 @@ static int OnVirtualization(HWND hDlg)
 {
     DWORD dwNewValue = (IsDlgButtonChecked(hDlg, IDC_VIRTUALIZATION) == BST_CHECKED) ? 1 : 0;
 
-    TokenVirtualization(TOKEN_VIRT_SET, dwNewValue);
+    SetVirtualizationFlags(dwNewValue);
     return TRUE;
 }
 

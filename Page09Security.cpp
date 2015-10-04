@@ -253,7 +253,7 @@ static BOOL IsTreeItemAcl(HWND hTreeView, HTREEITEM hItem)
 static BOOL WINAPI MyAddMandatoryAce(
     PACL pAcl,
     DWORD dwAceRevision,
-    DWORD AceFlags,
+    DWORD dwAceFlags,
     DWORD MandatoryPolicy,
     PSID pLabelSid)
 {
@@ -286,7 +286,7 @@ static BOOL WINAPI MyAddMandatoryAce(
 
     // Fill the ACE
     pAce->Header.AceType  = SYSTEM_MANDATORY_LABEL_ACE_TYPE;
-    pAce->Header.AceFlags = (BYTE)AceFlags;
+    pAce->Header.AceFlags = (BYTE)dwAceFlags;
     pAce->Header.AceSize  = (WORD)AceSize;
     pAce->Mask = MandatoryPolicy;
     CopySid(SidLength, (PSID)(&pAce->SidStart), pLabelSid);

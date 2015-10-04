@@ -16,17 +16,15 @@
 // Neutral resources
 
 #if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_NEU)
-#ifdef _WIN32
 LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL
 #pragma code_page(1250)
-#endif //_WIN32
 
 /////////////////////////////////////////////////////////////////////////////
 //
 // Accelerator
 //
 
-IDR_ACCELERATORS ACCELERATORS 
+IDR_ACCELERATORS ACCELERATORS
 BEGIN
     VK_F2,          ID_EDIT_LABEL,          VIRTKEY, NOINVERT
 END
@@ -37,7 +35,7 @@ END
 // RT_MANIFEST
 //
 
-1                       24                 "res\\FileTest.exe.manifest"
+1                       RT_MANIFEST             "res\\FileTest.exe.manifest"
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -56,13 +54,11 @@ IDI_ICON_WAIT           ICON                    "res\\IconWait.ico"
 
 
 /////////////////////////////////////////////////////////////////////////////
-// Czech resources
+// Czech (Czech Republic) resources
 
 #if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_CSY)
-#ifdef _WIN32
 LANGUAGE LANG_CZECH, SUBLANG_DEFAULT
 #pragma code_page(1250)
-#endif //_WIN32
 
 #ifdef APSTUDIO_INVOKED
 /////////////////////////////////////////////////////////////////////////////
@@ -89,18 +85,16 @@ END
 
 #endif    // APSTUDIO_INVOKED
 
-#endif    // Czech resources
+#endif    // Czech (Czech Republic) resources
 /////////////////////////////////////////////////////////////////////////////
 
 
 /////////////////////////////////////////////////////////////////////////////
-// English (U.S.) resources
+// English (United States) resources
 
 #if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
-#ifdef _WIN32
 LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 #pragma code_page(1252)
-#endif //_WIN32
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -126,13 +120,13 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Ladislav Zezula"
             VALUE "FileDescription", "Interactive File System API Test"
-            VALUE "FileVersion", "2, 6, 0, 488\0"
+            VALUE "FileVersion", "2, 6, 0, 488"
             VALUE "InternalName", "FileTest"
             VALUE "LegalCopyright", "Copyright © 2004 - 2014 Ladislav Zezula"
             VALUE "LegalTrademarks", "http://www.zezula.net"
             VALUE "OriginalFilename", "FileTest.exe"
             VALUE "ProductName", "FileTest"
-            VALUE "ProductVersion", "2, 6, 0, 488\0"
+            VALUE "ProductVersion", "2, 6, 0, 488"
         END
     END
     BLOCK "VarFileInfo"
@@ -147,7 +141,7 @@ END
 // Menu
 //
 
-IDR_ACE_MENU MENU 
+IDR_ACE_MENU MENU
 BEGIN
     POPUP "_ACE_MENU_"
     BEGIN
@@ -159,7 +153,7 @@ BEGIN
     END
 END
 
-IDR_DATA_PATTERN MENU 
+IDR_DATA_PATTERN MENU
 BEGIN
     POPUP "__DATA_PATTERN__"
     BEGIN
@@ -169,7 +163,7 @@ BEGIN
     END
 END
 
-IDR_QUICK_ACCESS_SELECTION MENU 
+IDR_QUICK_ACCESS_SELECTION MENU
 BEGIN
     POPUP "__QUICK_ACCESS__"
     BEGIN
@@ -183,7 +177,7 @@ BEGIN
     END
 END
 
-IDR_OPLOCK_PRE_WIN7 MENU 
+IDR_OPLOCK_PRE_WIN7 MENU
 BEGIN
     POPUP "__OPLOCK_TYPE__"
     BEGIN
@@ -257,9 +251,9 @@ BEGIN
     EDITTEXT        IDC_TEMPLATE_FILE,73,148,200,14,ES_AUTOHSCROLL
     PUSHBUTTON      "...",IDC_TEMPLATE_FILE_BROWSE,278,148,15,14
     CONTROL         "Transacted (requires Windows Vista and active transaction)",IDC_TRANSACTED,
-                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,73,199,219,8
+                    "Button",BS_AUTOCHECKBOX | WS_DISABLED | WS_TABSTOP,73,199,219,8
     CONTROL         "Enable file virtualization (requires Windows Vista)",IDC_VIRTUALIZATION,
-                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,73,210,219,8
+                    "Button",BS_AUTOCHECKBOX | WS_DISABLED | WS_TABSTOP,73,210,219,8
     CONTROL         "Breakpoint right before call to CreateFile",IDC_BREAKPOINT,
                     "Button",BS_AUTOCHECKBOX | WS_TABSTOP,73,221,219,8
     PUSHBUTTON      "Privileges ...",IDC_PRIVILEGES,12,243,61,14
@@ -309,9 +303,9 @@ BEGIN
     EDITTEXT        IDC_EXTENDED_ATTRIBUTES,73,179,200,14,ES_AUTOHSCROLL
     PUSHBUTTON      "...",IDC_EXTENDED_ATTRIBUTES_EDIT,278,179,15,14
     CONTROL         "Transacted (requires Windows Vista and active transaction)",IDC_TRANSACTED,
-                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,73,199,219,8
+                    "Button",BS_AUTOCHECKBOX | WS_DISABLED | WS_TABSTOP,73,199,219,8
     CONTROL         "Enable file virtualization (requires Windows Vista)",IDC_VIRTUALIZATION,
-                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,73,210,219,8
+                    "Button",BS_AUTOCHECKBOX | WS_DISABLED | WS_TABSTOP,73,210,219,8
     CONTROL         "Breakpoint right before call to NtCreate",IDC_BREAKPOINT,
                     "Button",BS_AUTOCHECKBOX | WS_TABSTOP,73,221,219,8
     PUSHBUTTON      "Privileges ...",IDC_PRIVILEGES,12,243,61,14
@@ -730,7 +724,7 @@ END
 //
 
 #ifdef APSTUDIO_INVOKED
-GUIDELINES DESIGNINFO 
+GUIDELINES DESIGNINFO
 BEGIN
     IDD_FILE_TEST, DIALOG
     BEGIN
@@ -1004,10 +998,26 @@ END
 
 /////////////////////////////////////////////////////////////////////////////
 //
+// AFX_DIALOG_LAYOUT
+//
+
+IDD_PAGE02_NTCREATE AFX_DIALOG_LAYOUT
+BEGIN
+    0
+END
+
+IDD_PAGE01_CREATE AFX_DIALOG_LAYOUT
+BEGIN
+    0
+END
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
 // String Table
 //
 
-STRINGTABLE 
+STRINGTABLE
 BEGIN
     IDS_FLUSH_FILE_BUFFERS_TIP 
                             "Flushes all file buffers to disk using FlushFileBuffers API"
@@ -1021,7 +1031,7 @@ BEGIN
     IDS_SELECT_FILE         "Select a file"
 END
 
-STRINGTABLE 
+STRINGTABLE
 BEGIN
     IDS_FILTER_ALL          "All files (*.*)|*.*|||"
     IDS_INVHANDLE           "INVALID_HANDLE_VALUE"
@@ -1042,7 +1052,7 @@ BEGIN
                             "Cannot use a directory when a file is open by ID"
 END
 
-STRINGTABLE 
+STRINGTABLE
 BEGIN
     IDS_E_INVALID_NT_FILE_NAME "Invalid NT file name."
     IDS_E_INVALID_FILE_ID   "Invalid file ID.\nThe file ID must be in the form of \\\\??\\\\C:\\Path\\File.ext"
@@ -1064,7 +1074,7 @@ BEGIN
     IDS_FILE_BASIC_INFORMATION "FILE_BASIC_INFORMATION"
 END
 
-STRINGTABLE 
+STRINGTABLE
 BEGIN
     IDS_STREAM_TYPE         "Type"
     IDS_APP_TITLE_VISTA1    "FileTest (User: ""%s"", elevated)"
@@ -1084,7 +1094,7 @@ BEGIN
     IDS_MANDATORY_MASK      "Mandatory Mask"
 END
 
-STRINGTABLE 
+STRINGTABLE
 BEGIN
     IDS_E_OPEN_TOKEN        "Failed to open current token.\n%s"
     IDS_EMPTY_STREAM        "<empty>"
@@ -1106,7 +1116,7 @@ BEGIN
     IDS_E_CONVERT_VALUE     "Failed to convert the value to an integer.\nPlease, enter a valid hexadecimal value with a proper maximum size."
 END
 
-STRINGTABLE 
+STRINGTABLE
 BEGIN
     IDS_DATA_EXCEPTION      "Access violation exception when %s data at %p."
     IDS_E_CONVERT_TO_UINT32 "Error converting ""%s"" to 32-bit integer"
@@ -1115,7 +1125,7 @@ BEGIN
     IDS_WANT_TRIM_DATA      "Data was pasted to the editor.\nDo you want to trim the data length?"
 END
 
-#endif    // English (U.S.) resources
+#endif    // English (United States) resources
 /////////////////////////////////////////////////////////////////////////////
 
 

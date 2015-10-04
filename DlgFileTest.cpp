@@ -165,7 +165,7 @@ static void InitializeTabControl(HWND hDlg, TWindowData * pData)
     int nPages = 0;
 
     // Get the title of FileTest application
-    GetFileTestAppTitle(szAppTitle);
+    GetFileTestAppTitle(szAppTitle, _tsize(szAppTitle));
 
     // Fill the property sheet header
     ZeroMemory(&psh, sizeof(PROPSHEETHEADER));
@@ -179,7 +179,7 @@ static void InitializeTabControl(HWND hDlg, TWindowData * pData)
     psh.ppsp       = psp;
 
     // Fill the "Transaction" page (Vista only)
-    if(g_dwWinVer >= 0x0600)
+    if(pfnCreateTransaction != NULL)
     {
         ZeroMemory(&psp[nPages], sizeof(PROPSHEETPAGE));
         psp[nPages].dwSize      = sizeof(PROPSHEETPAGE);

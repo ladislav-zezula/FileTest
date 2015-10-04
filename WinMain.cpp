@@ -14,6 +14,11 @@
 #pragma comment(lib, "Comctl32.lib")
 
 //-----------------------------------------------------------------------------
+// Local defines
+
+#define INITIAL_FILEINFO_BUFFER_SIZE 0x10000
+
+//-----------------------------------------------------------------------------
 // Global variables
 
 HINSTANCE g_hInst;
@@ -21,8 +26,6 @@ TToolTip g_Tooltip;
 HANDLE g_hHeap;
 DWORD g_dwWinVer;
 TCHAR g_szInitialDirectory[MAX_PATH];
-
-#define INITIAL_FILEINFO_BUFFER_SIZE 0x10000
 
 //-----------------------------------------------------------------------------
 // Local functions
@@ -88,7 +91,6 @@ static void SetTokenObjectIntegrityLevel(DWORD dwIntegrityLevel)
 
 int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
 {
-    OSVERSIONINFO osvi;
     TFileTestData * pData;
     DWORD dwDesiredAccess = GENERIC_READ;
     DWORD dwShareAccess = FILE_SHARE_READ;
@@ -99,12 +101,9 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
     g_hInst = hInstance;
     g_hHeap = GetProcessHeap();
     InitCommonControls();
-
+    
     // Get the Windows version
-    ZeroMemory(&osvi, sizeof(OSVERSIONINFO));
-    osvi.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
-    GetVersionEx(&osvi);
-    g_dwWinVer = (osvi.dwMajorVersion << 8) | osvi.dwMinorVersion;
+    g_dwWinVer = GetWindowsVersion();
 
     // Allocate and fill our working structure with command line parameters
     pData = (TFileTestData *)HeapAlloc(g_hHeap, HEAP_ZERO_MEMORY, sizeof(TFileTestData));

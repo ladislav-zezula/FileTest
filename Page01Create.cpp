@@ -192,15 +192,16 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
     g_Tooltip.AddToolTip(hDlg, IDC_FILE_ATTRIBUTES, FileAttributesValues);
 
     // On pre-Vista, disable the virtualization button
-    if(g_dwWinVer < 0x0600)
-        EnableDlgItems(hDlg, FALSE, IDC_VIRTUALIZATION, 0);
+    if(GetVirtualizationFlags(NULL))
+        EnableDlgItems(hDlg, TRUE, IDC_VIRTUALIZATION, 0);
     return TRUE;
 }
 
 static int OnSetActive(HWND hDlg)
 {
     TFileTestData * pData = GetDialogData(hDlg);
-    BOOL bEnabled = FALSE;
+    DWORD dwVirtFlags = 0;
+    BOOL bEnabled;
     int nChecked;
 
     // Set directory name
@@ -230,7 +231,7 @@ static int OnSetActive(HWND hDlg)
     CheckDlgButton(hDlg, IDC_TRANSACTED, nChecked);
 
     // Check/uncheck virtualization
-    nChecked = TokenVirtualization(TOKEN_VIRT_QUERY, 0);
+    nChecked = (GetVirtualizationFlags(&dwVirtFlags) && dwVirtFlags) ? BST_CHECKED : BST_UNCHECKED;
     CheckDlgButton(hDlg, IDC_VIRTUALIZATION, nChecked);
 
     // Enable/disable "CloseHandle"
@@ -298,7 +299,7 @@ static int OnVirtualization(HWND hDlg)
 {
     DWORD dwNewValue = (IsDlgButtonChecked(hDlg, IDC_VIRTUALIZATION) == BST_CHECKED) ? 1 : 0;
 
-    TokenVirtualization(TOKEN_VIRT_SET, dwNewValue);
+    SetVirtualizationFlags(dwNewValue);
     return TRUE;
 }
 

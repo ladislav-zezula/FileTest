@@ -304,7 +304,7 @@ static int FormatOneLine(TEditorData * pData, size_t nLineIndex)
         GuardedReadByte(pData, DataOffset);
         if(pData->bReadException)
         {
-            szLineBuffer += _stprintf(szLineBuffer, _T("Exception %08LX when reading address %p"), pData->ExceptionCode, pbDataBegin);
+            szLineBuffer += _stprintf(szLineBuffer, _T("Exception %08X when reading address %p"), pData->ExceptionCode, pbDataBegin);
             return (int)(szLineBuffer - pData->szLineBuffer);
         }
 

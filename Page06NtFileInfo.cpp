@@ -1644,7 +1644,7 @@ static int FillStructureMembers(
 {
     HTREEITEM hSubItem;
     LPBYTE pbStructPtr = pbData;        // Pointer to the begin of the structure
-    PUINT_PTR pEntry;
+    PHANDLE pHandle;
     PULONG pEntryCount;
     TCHAR szBuffer[256];
     int nTotalLength = 0;               // Length, in bytes, of the structure member
@@ -1682,7 +1682,7 @@ static int FillStructureMembers(
                 // The 'nMemberSize' must contain offset of 32-bit value, containing length
                 // of the string in bytes.
                 pEntryCount = (PULONG)(pbStructPtr + pMembers->nMemberSize);
-                pEntry = (UINT_PTR *)pbData;
+                pHandle = (PHANDLE)pbData;
 
                 // Insert the subitem
                 hSubItem = InsertTreeItem(hTreeView, hParentItem, pMembers->szMemberName, NULL);
@@ -1693,7 +1693,7 @@ static int FillStructureMembers(
                 {
                     for(ULONG i = 0; i < *pEntryCount; i++)
                     {
-                        _stprintf(szBuffer, _T("[0x%02X]: %p"), i, *pEntry++);
+                        _stprintf(szBuffer, _T("[0x%02X]: %p"), i, *pHandle++);
                         InsertTreeItem(hTreeView, hSubItem, szBuffer, NULL);
                         nDataLength += sizeof(UINT_PTR);
                     }
