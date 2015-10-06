@@ -63,6 +63,7 @@ static BOOL CopyFileByHand(const TCHAR * szOrigFile, const TCHAR * szNewFile)
     FILETIME ft3;
     HANDLE hFile1 = INVALID_HANDLE_VALUE;
     HANDLE hFile2 = INVALID_HANDLE_VALUE;
+    bool bHasFileTime = false;
     int nError = ERROR_SUCCESS;
 
     // Open the original file
@@ -82,10 +83,13 @@ static BOOL CopyFileByHand(const TCHAR * szOrigFile, const TCHAR * szNewFile)
     }
 
     // Get the file time of the original file
+    // Note that the SetFileTime can fail if the second file
+    // is actually a volume (\\.\GlobalRoot\Device\HarddiskVolume15)
+    // Do not report the error
     if(nError == ERROR_SUCCESS)
     {
-        if(!GetFileTime(hFile1, &ft1, &ft2, &ft3))
-            nError = GetLastError();
+        if(GetFileTime(hFile1, &ft1, &ft2, &ft3))
+            bHasFileTime = true;
     }
 
     // Copy the content
@@ -93,23 +97,43 @@ static BOOL CopyFileByHand(const TCHAR * szOrigFile, const TCHAR * szNewFile)
     {
         BYTE  * pbBuffer = NULL;
         DWORD dwBufferSize = 0x10000;
-        DWORD dwTransferred = 1;
 
-        pbBuffer = new BYTE [dwBufferSize];
-        while(dwTransferred != 0)
+        // Allocate buffer
+        pbBuffer = (LPBYTE)HeapAlloc(g_hHeap, 0, dwBufferSize);
+        if(pbBuffer != NULL)
         {
-            ReadFile(hFile1, pbBuffer, dwBufferSize, &dwTransferred, NULL);
-            if(dwTransferred != 0)
-                WriteFile(hFile2, pbBuffer, dwTransferred, &dwTransferred, NULL);
+            // Perform the copy
+            for(;;)
+            {
+                DWORD dwTransferred = 0;
+
+                // Read the source file/drive
+                if(!ReadFile(hFile1, pbBuffer, dwBufferSize, &dwTransferred, NULL))
+                {
+                    nError = GetLastError();
+                    break;
+                }
+
+                // If nothing was read, stop it
+                if(dwTransferred == 0)
+                    break;
+
+                if(!WriteFile(hFile2, pbBuffer, dwTransferred, &dwTransferred, NULL))
+                    break;
+            }
+
+            // Free the buffer
+            HeapFree(g_hHeap, 0, pbBuffer);
         }
-        delete pbBuffer;
     }
 
-    // Get the file time of the original file
-    if(nError == ERROR_SUCCESS)
+    // Set the file time of the copied file
+    // Note that the SetFileTime can fail if the second file
+    // is actually a volume (\\.\GlobalRoot\Device\HarddiskVolume15)
+    // Do not report the error
+    if(nError == ERROR_SUCCESS && bHasFileTime)
     {
-        if(!SetFileTime(hFile2, &ft1, &ft2, &ft3))
-            nError = GetLastError();
+        SetFileTime(hFile2, &ft1, &ft2, &ft3);
     }
 
     // Close both files
