@@ -171,7 +171,7 @@ void MoveItem(HWND hDlg, BOOL bUp)
     lvi1.stateMask  = (UINT)-1;
     lvi1.iItem      = nItem1;
     lvi1.pszText    = szText1;
-    lvi1.cchTextMax = _tsize(szText1);
+    lvi1.cchTextMax = _maxchars(szText1);
     ListView_GetItem(hListView, &lvi1);
 
     ZeroMemory(&lvi2, sizeof(LVITEM));
@@ -179,7 +179,7 @@ void MoveItem(HWND hDlg, BOOL bUp)
     lvi2.stateMask  = (UINT)-1;
     lvi2.iItem      = nItem2;
     lvi2.pszText    = szText2;
-    lvi2.cchTextMax = _tsize(szText2);
+    lvi2.cchTextMax = _maxchars(szText2);
     ListView_GetItem(hListView, &lvi2);
 
     // Switch the main items
@@ -189,8 +189,8 @@ void MoveItem(HWND hDlg, BOOL bUp)
     ListView_SetItem(hListView, &lvi1);
 
     // Switch the texts for the subitems
-    ListView_GetItemText(hListView, nItem1, 1, szText1, _tsize(szText1));
-    ListView_GetItemText(hListView, nItem2, 1, szText2, _tsize(szText2));
+    ListView_GetItemText(hListView, nItem1, 1, szText1, _maxchars(szText1));
+    ListView_GetItemText(hListView, nItem2, 1, szText2, _maxchars(szText2));
     ListView_SetItemText(hListView, nItem1, 1, szText2);
     ListView_SetItemText(hListView, nItem2, 1, szText1);
 

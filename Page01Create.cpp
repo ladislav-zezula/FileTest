@@ -92,9 +92,9 @@ static int SaveDialog(HWND hDlg)
     HWND hCombo = GetDlgItem(hDlg, IDC_CREATE_DISPOSITION);
     int nError = ERROR_SUCCESS;
 
-    GetDlgItemText(hDlg, IDC_DIRECTORY_NAME, pData->szDirName, _tsize(pData->szDirName));
-    GetDlgItemText(hDlg, IDC_FILE_NAME, pData->szFileName1, _tsize(pData->szFileName1));
-    GetDlgItemText(hDlg, IDC_TEMPLATE_FILE, pData->szTemplate, _tsize(pData->szTemplate));
+    GetDlgItemText(hDlg, IDC_DIRECTORY_NAME, pData->szDirName, _maxchars(pData->szDirName));
+    GetDlgItemText(hDlg, IDC_FILE_NAME, pData->szFileName1, _maxchars(pData->szFileName1));
+    GetDlgItemText(hDlg, IDC_TEMPLATE_FILE, pData->szTemplate, _maxchars(pData->szTemplate));
 
     if((nError = DlgText2Hex32(hDlg, IDC_DESIRED_ACCESS, &pData->dwDesiredAccess)) != ERROR_SUCCESS)
         return nError;

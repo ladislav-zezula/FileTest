@@ -274,8 +274,8 @@ static int SaveDialog(HWND hDlg)
     TFileTestData * pData = GetDialogData(hDlg);
 
     if((pData->dwCreateOptions & FILE_OPEN_BY_FILE_ID) == 0)
-        GetDlgItemText(hDlg, IDC_FILE_NAME1, pData->szFileName1, _tsize(pData->szFileName1));
-    GetDlgItemText(hDlg, IDC_FILE_NAME2, pData->szFileName2, _tsize(pData->szFileName2));
+        GetDlgItemText(hDlg, IDC_FILE_NAME1, pData->szFileName1, _maxchars(pData->szFileName1));
+    GetDlgItemText(hDlg, IDC_FILE_NAME2, pData->szFileName2, _maxchars(pData->szFileName2));
     return ERROR_SUCCESS;
 }
 
@@ -441,8 +441,8 @@ static int OnCopyFileClick(HWND hDlg)
     // Perform the copy
     if(nError == ERROR_SUCCESS)
     {
-        GetDlgItemText(hDlg, IDC_FILE_NAME1, pData->szFileName1, _tsize(pData->szFileName1));
-        GetDlgItemText(hDlg, IDC_FILE_NAME2, pData->szFileName2, _tsize(pData->szFileName2));
+        GetDlgItemText(hDlg, IDC_FILE_NAME1, pData->szFileName1, _maxchars(pData->szFileName1));
+        GetDlgItemText(hDlg, IDC_FILE_NAME2, pData->szFileName2, _maxchars(pData->szFileName2));
 
         if(bUseCopyFile)
             bResult = CopyFile(pData->szFileName1, pData->szFileName2, FALSE);
@@ -655,7 +655,7 @@ static int OnFileIdUse(HWND hDlg, UINT nIDEdit)
     TCHAR szFileId[0x100] = _T("");
 
     // Retrieve the file ID or object ID from the edit box
-    GetDlgItemText(hDlg, nIDEdit, szFileId, _tsize(szFileId));
+    GetDlgItemText(hDlg, nIDEdit, szFileId, _maxchars(szFileId));
     NtUseFileId(hDlg, szFileId);
     return TRUE;
 }    
@@ -723,7 +723,7 @@ static int OnObjectIdMoreClick(HWND hDlg)
             
             case IDC_SET_OBJECT_ID:
 
-                GetDlgItemText(hDlg, IDC_OBJECT_ID, szObjectID, _tsize(szObjectID));
+                GetDlgItemText(hDlg, IDC_OBJECT_ID, szObjectID, _maxchars(szObjectID));
                 nError = StringToFileID(szObjectID, NULL, ObjId.ObjectId, NULL);
                 if(nError != ERROR_SUCCESS)
                     break;

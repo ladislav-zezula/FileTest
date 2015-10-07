@@ -164,7 +164,7 @@ static void UpdateDialogFromToken(HWND hDlg)
         {
             PLUID_AND_ATTRIBUTES pLuid = pTokenPrivs->Privileges + i;
             TCHAR szPrivName[128];
-            DWORD cchName = _tsize(szPrivName);
+            DWORD cchName = _maxchars(szPrivName);
 
             LookupPrivilegeName(NULL, &pLuid->Luid, szPrivName, &cchName);
             SetPrivilegeCheckBox(hDlg, IDC_TAKE_OWNERSHIP_NAME, SE_TAKE_OWNERSHIP_NAME, szPrivName, pLuid->Attributes);

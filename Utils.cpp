@@ -158,7 +158,7 @@ int DlgText2Hex32(HWND hDlg, UINT nIDCtrl, PDWORD pValue)
     if(hWndChild != NULL)
     {
         // Retrieve the window text
-        GetWindowText(hWndChild, szText, _tsize(szText));
+        GetWindowText(hWndChild, szText, _maxchars(szText));
     
         // Attempt to convert the value
         nError = Text2Hex32(szText, pValue);
@@ -226,7 +226,7 @@ int DlgText2HexPtr(HWND hDlg, UINT nIDCtrl, PDWORD_PTR pValue)
     if(hWndChild != NULL)
     {
         // Retrieve the window text
-        GetWindowText(hWndChild, szText, _tsize(szText));
+        GetWindowText(hWndChild, szText, _maxchars(szText));
     
         // Attempt to convert the value
         nError = Text2HexPtr(szText, pValue);
@@ -296,7 +296,7 @@ int DlgText2Hex64(HWND hDlg, UINT nIDCtrl, PLONGLONG pValue)
     if(hWndChild != NULL)
     {
         // Retrieve the window text
-        GetWindowText(hWndChild, szText, _tsize(szText));
+        GetWindowText(hWndChild, szText, _maxchars(szText));
     
         // Attempt to convert the value
         nError = Text2Hex64(szText, pValue);
@@ -524,7 +524,7 @@ void GetFileTestAppTitle(LPTSTR szTitle, int nMaxChars)
 {
     TCHAR szUserName[256] = _T("");
     DWORD dwElevationFlags = 0;
-    DWORD dwSize = _tsize(szUserName);
+    DWORD dwSize = _maxchars(szUserName);
     UINT nIDTitle = IDS_APP_TITLE;
 
     // Get the elevation flags. Note that this returns FALSE on pre-Vista

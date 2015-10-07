@@ -459,8 +459,8 @@ static void SidToString(PSID pvSid, LPTSTR szString, bool bAddUserName)
         SID_NAME_USE SidNameUse;
         TCHAR szDomainName[128] = _T("");
         TCHAR szUserName[128] = _T("");
-        DWORD cchDomainName = _tsize(szDomainName);
-        DWORD cchUserName = _tsize(szUserName);
+        DWORD cchDomainName = _maxchars(szDomainName);
+        DWORD cchUserName = _maxchars(szUserName);
 
         if(LookupAccountSid(NULL, pSid, szUserName, &cchUserName, szDomainName, &cchDomainName, &SidNameUse))
         {
@@ -485,7 +485,7 @@ static BOOL StringToSid(LPTSTR szSid, PSID * ppSid)
     TCHAR szDomainName[128] = _T("");
     DWORD dwSubAuthCount = 0;
     DWORD dwSubAuth[8];
-    DWORD dwDomainName = _tsize(szDomainName);
+    DWORD dwDomainName = _maxchars(szDomainName);
     DWORD dwRevision = SID_REVISION;
     DWORD dwLength = 0;
     BOOL bResult;
@@ -649,7 +649,7 @@ static void ValueToTreeItem(
     TCHAR szItemText[256];
 
     // Format the item text
-    szEndChar = szItemText + _tsize(szItemText) - 1;
+    szEndChar = szItemText + _maxchars(szItemText) - 1;
     FormatBitFlags(pFlags, szFlagsFmt, szItemText, szEndChar, dwValue);
 
     // Set the text and item param
@@ -669,7 +669,7 @@ static BOOL TreeItemToValue(HWND hTreeView, HTREEITEM hItem, LPARAM lParam, DWOR
     tvi.mask = TVIF_TEXT | TVIF_PARAM;
     tvi.hItem = hItem;
     tvi.pszText = szItemText;
-    tvi.cchTextMax = _tsize(szItemText);
+    tvi.cchTextMax = _maxchars(szItemText);
     TreeView_GetItem(hTreeView, &tvi);
 
     // Verify the proper type
@@ -750,7 +750,7 @@ static BOOL TreeItemToSid(HWND hTreeView, HTREEITEM hItem, PSID * ppSid, BOOL bC
     tvi.mask = TVIF_TEXT | TVIF_PARAM;
     tvi.hItem = hItem;
     tvi.pszText = szItemText;
-    tvi.cchTextMax = _tsize(szItemText);
+    tvi.cchTextMax = _maxchars(szItemText);
     TreeView_GetItem(hTreeView, &tvi);
 
     // If there is "not present", we just create new SID for "Everyone"
@@ -882,7 +882,7 @@ static BOOL TreeItemToAce(HWND hTreeView, HTREEITEM hItem, PACCESS_ALLOWED_ACE *
     tvi.mask = TVIF_TEXT | TVIF_PARAM;
     tvi.hItem = hItem;
     tvi.pszText = szItemText;
-    tvi.cchTextMax = _tsize(szItemText);
+    tvi.cchTextMax = _maxchars(szItemText);
     TreeView_GetItem(hTreeView, &tvi);
     if(!IsTreeItemAce(tvi.lParam))
         return FALSE;
@@ -1102,7 +1102,7 @@ static void SecurityDescriptorToTreeView(
 
     // Clear all current tree view items
     TreeView_DeleteAllItems(hTreeView);
-    LoadString(g_hInst, IDS_NOT_PRESENT, szNotPresent, _tsize(szNotPresent));
+    LoadString(g_hInst, IDS_NOT_PRESENT, szNotPresent, _maxchars(szNotPresent));
 
     //
     // Insert tree item for owner security information

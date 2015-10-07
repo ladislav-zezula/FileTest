@@ -64,8 +64,8 @@ static PREPARSE_DATA_BUFFER Dlg2ReparseData(HWND hDlg, PULONG pTotalLength)
     HWND hWndChild;
 
     // Get the substitute name and the printable name
-    cchSubstName = GetDlgItemText(hDlg, IDC_SUBST_NAME, szSubstName, _tsize(szSubstName));
-    cchPrintName = GetDlgItemText(hDlg, IDC_PRINT_NAME, szPrintName, _tsize(szPrintName));
+    cchSubstName = GetDlgItemText(hDlg, IDC_SUBST_NAME, szSubstName, _maxchars(szSubstName));
+    cchPrintName = GetDlgItemText(hDlg, IDC_PRINT_NAME, szPrintName, _maxchars(szPrintName));
     if(cchSubstName == 0)
         return NULL;
 
@@ -413,8 +413,8 @@ static int OnSymlinkCreate(HWND hDlg)
     TCHAR szTargetName[MAX_PATH];
 
     // Get the name of the symbolic link
-    GetDlgItemText(hDlg, IDC_SYMLINK, szSymlinkName, _tsize(szSymlinkName));
-    GetDlgItemText(hDlg, IDC_SYMLINK_TARGET, szTargetName, _tsize(szTargetName));
+    GetDlgItemText(hDlg, IDC_SYMLINK, szSymlinkName, _maxchars(szSymlinkName));
+    GetDlgItemText(hDlg, IDC_SYMLINK_TARGET, szTargetName, _maxchars(szTargetName));
 
     // Query the symbolic link
     InitializeObjectAttributes(&ObjAttr,
@@ -450,7 +450,7 @@ static int OnSymlinkQuery(HWND hDlg)
     ULONG Length = 0;
 
     // Get the name of the symbolic link
-    GetDlgItemText(hDlg, IDC_SYMLINK, szSymlinkName, _tsize(szSymlinkName));
+    GetDlgItemText(hDlg, IDC_SYMLINK, szSymlinkName, _maxchars(szSymlinkName));
 
     // Query the symbolic link
     InitializeObjectAttributes(&ObjAttr, &SymlinkName, OBJ_CASE_INSENSITIVE, NULL, NULL);
@@ -517,8 +517,8 @@ static int OnHardlinkCreate(HWND hDlg)
     BYTE LinkInfoBuff[0x500];
 
     // Get the name of the symbolic link
-    GetDlgItemText(hDlg, IDC_HARDLINK_LIST, szFileName, _tsize(szFileName));
-    GetDlgItemText(hDlg, IDC_NEW_HARDLINK, szHardlinkName, _tsize(szHardlinkName));
+    GetDlgItemText(hDlg, IDC_HARDLINK_LIST, szFileName, _maxchars(szFileName));
+    GetDlgItemText(hDlg, IDC_NEW_HARDLINK, szHardlinkName, _maxchars(szHardlinkName));
 
     // Get the plain file name of the hardlink
     szPlainName = _tcsrchr(szHardlinkName, _T('\\'));
@@ -606,7 +606,7 @@ static int OnHardlinkQuery(HWND hDlg)
     HWND hCombo = GetDlgItem(hDlg, IDC_HARDLINK_LIST);
 
     // Get the name of the symbolic link
-    GetDlgItemText(hDlg, IDC_HARDLINK_LIST, szFileName, _tsize(szFileName));
+    GetDlgItemText(hDlg, IDC_HARDLINK_LIST, szFileName, _maxchars(szFileName));
 
     // Open the hardlink as if it was file
     InitializeObjectAttributes(&ObjAttr, &FileName, OBJ_CASE_INSENSITIVE, NULL, NULL);
@@ -698,7 +698,7 @@ static int OnHardlinkDelete(HWND hDlg)
     TCHAR szHardlinkName[MAX_PATH];
 
     // Get the name of the symbolic link
-    GetDlgItemText(hDlg, IDC_HARDLINK_LIST, szHardlinkName, _tsize(szHardlinkName));
+    GetDlgItemText(hDlg, IDC_HARDLINK_LIST, szHardlinkName, _maxchars(szHardlinkName));
 
     // Open the symlink and delete it
     InitializeObjectAttributes(&ObjAttr, &FileName, OBJ_CASE_INSENSITIVE, NULL, NULL);
@@ -728,8 +728,8 @@ static int OnReparseCreate(HWND hDlg)
     ULONG Length;
 
     // Get the name of the reparse point
-    GetDlgItemText(hDlg, IDC_REPARSE, szReparseName, _tsize(szReparseName));
-    GetDlgItemText(hDlg, IDC_REPARSE_TARGET, szTargetName, _tsize(szTargetName));
+    GetDlgItemText(hDlg, IDC_REPARSE, szReparseName, _maxchars(szReparseName));
+    GetDlgItemText(hDlg, IDC_REPARSE_TARGET, szTargetName, _maxchars(szTargetName));
 
     // Verify if the reparse point dir/file exists
     FileAttributes = GetFileAttributes(szTargetName);
@@ -799,7 +799,7 @@ static int OnReparseQuery(HWND hDlg)
     ULONG Length = 0x1000;
 
     // Get the name of the reparse point
-    GetDlgItemText(hDlg, IDC_REPARSE, szReparseName, _tsize(szReparseName));
+    GetDlgItemText(hDlg, IDC_REPARSE, szReparseName, _maxchars(szReparseName));
 
     // Open the reparse point
     InitializeObjectAttributes(&ObjAttr, &FileName, OBJ_CASE_INSENSITIVE, NULL, NULL);
@@ -861,7 +861,7 @@ static int OnReparseDelete(HWND hDlg)
     ULONG Length = 0x1000;
 
     // Get the name of the reparse point
-    GetDlgItemText(hDlg, IDC_REPARSE, szReparseName, _tsize(szReparseName));
+    GetDlgItemText(hDlg, IDC_REPARSE, szReparseName, _maxchars(szReparseName));
 
     // Open the reparse point
     InitializeObjectAttributes(&ObjAttr, &FileName, OBJ_CASE_INSENSITIVE, NULL, NULL);
@@ -926,7 +926,7 @@ static int OnSubstNameKillFocus(HWND hDlg)
 {
     TCHAR szWindowText[MAX_PATH];
 
-    GetDlgItemText(hDlg, IDC_SUBST_NAME, szWindowText, _tsize(szWindowText));
+    GetDlgItemText(hDlg, IDC_SUBST_NAME, szWindowText, _maxchars(szWindowText));
     SetDlgItemText(hDlg, IDC_PRINT_NAME, szWindowText);
     return TRUE;
 }

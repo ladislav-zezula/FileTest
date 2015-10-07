@@ -191,8 +191,8 @@ static int SaveDialog(HWND hDlg)
     HWND hCombo = GetDlgItem(hDlg, IDC_CREATE_DISPOSITION);
     int nError;
 
-    GetDlgItemText(hDlg, IDC_DIRECTORY_NAME, pData->szDirName, _tsize(pData->szDirName));
-    GetDlgItemText(hDlg, IDC_FILE_NAME, pData->szFileName1, _tsize(pData->szFileName1));
+    GetDlgItemText(hDlg, IDC_DIRECTORY_NAME, pData->szDirName, _maxchars(pData->szDirName));
+    GetDlgItemText(hDlg, IDC_FILE_NAME, pData->szFileName1, _maxchars(pData->szFileName1));
 
     if((nError = DlgText2Hex32(hDlg, IDC_OBJ_ATTR_FLAGS, &pData->dwObjAttrFlags)) != ERROR_SUCCESS)
         return nError;
@@ -316,7 +316,7 @@ static int OnSetActive(HWND hDlg)
     Hex2DlgText32(hDlg, IDC_CREATE_OPTIONS, pData->dwCreateOptions);
 
     // Update the info about extended attributes
-    rsprintf(szEaInfo, _tsize(szEaInfo), IDS_EA_INFO, pData->pFileEa, pData->dwEaSize);
+    rsprintf(szEaInfo, _maxchars(szEaInfo), IDS_EA_INFO, pData->pFileEa, pData->dwEaSize);
     SetDlgItemText(hDlg, IDC_EXTENDED_ATTRIBUTES, szEaInfo);
 
     // Enable/disable transaction
@@ -349,8 +349,8 @@ static int OnRelativeFileHelp(HWND hDlg)
     int nLength = 0;
 
     // Load both parts of the message
-    nLength += LoadString(g_hInst, IDS_RELATIVE_FILE1, szBuffer + nLength, _tsize(szMsgBuff) - nLength);
-    nLength += LoadString(g_hInst, IDS_RELATIVE_FILE2, szBuffer + nLength, _tsize(szMsgBuff) - nLength);
+    nLength += LoadString(g_hInst, IDS_RELATIVE_FILE1, szBuffer + nLength, _maxchars(szMsgBuff) - nLength);
+    nLength += LoadString(g_hInst, IDS_RELATIVE_FILE2, szBuffer + nLength, _maxchars(szMsgBuff) - nLength);
     nLength += rsprintf(szBuffer + nLength, IDS_RELATIVE_FILE3, pData->dwDesiredAccessRF,
                                                                 pData->dwOpenOptionsRF,
                                                                 pData->dwShareAccessRF);
@@ -455,7 +455,7 @@ static int OnEditEaClick(HWND hDlg)
     if(ExtendedAtributesEditorDialog(hDlg, pData) == IDOK)
     {
         // Update the info about extended attributes
-        rsprintf(szEaInfo, _tsize(szEaInfo), IDS_EA_INFO, pData->pFileEa, pData->dwEaSize);
+        rsprintf(szEaInfo, _maxchars(szEaInfo), IDS_EA_INFO, pData->pFileEa, pData->dwEaSize);
         SetDlgItemText(hDlg, IDC_EXTENDED_ATTRIBUTES, szEaInfo);
     }
 

@@ -76,7 +76,7 @@ static WORD LocaleNameToNumber(LPCTSTR szStr, LCID lcMin, LCID lcMax, LCID lcExt
     for(lcid = lcMax; lcid >= lcMin; lcid--)
     {
         // Get the localized month name
-        nLength = GetLocaleInfo(LOCALE_USER_DEFAULT, lcid, szLocaleName, _tsize(szLocaleName));
+        nLength = GetLocaleInfo(LOCALE_USER_DEFAULT, lcid, szLocaleName, _maxchars(szLocaleName));
         if(nLength == 0)
             break;
 
@@ -92,7 +92,7 @@ static WORD LocaleNameToNumber(LPCTSTR szStr, LCID lcMin, LCID lcMax, LCID lcExt
     if(lcExtra != 0)
     {
         // Get the localized 13th month name
-        nLength = GetLocaleInfo(LOCALE_USER_DEFAULT, lcExtra, szLocaleName, _tsize(szLocaleName));
+        nLength = GetLocaleInfo(LOCALE_USER_DEFAULT, lcExtra, szLocaleName, _maxchars(szLocaleName));
         if(nLength > 1)
         {
             // If the month name is identical, we found it
@@ -126,7 +126,7 @@ static WORD MonthNameGenitiveToNumber(LPCTSTR szStr, int * piMonthNameLength)
     for(stTemp.wMonth = 1; stTemp.wMonth <= 13; stTemp.wMonth++)
     {
         // Get genitive of month name
-        nLength = GetDateFormat(LOCALE_USER_DEFAULT, 0, &stTemp, _T("ddMMMM"), szMonthName, _tsize(szMonthName));
+        nLength = GetDateFormat(LOCALE_USER_DEFAULT, 0, &stTemp, _T("ddMMMM"), szMonthName, _maxchars(szMonthName));
         if(nLength < 3)
             break;
 
@@ -149,7 +149,7 @@ static BOOL AmPmNameToWord(LPCTSTR szStr, WORD & wHourModifier, int & nAmPmNameL
     int nLength;
 
     // Check AM
-    nLength = GetLocaleInfo(LOCALE_USER_DEFAULT, LOCALE_S1159, szAmPmStr, _tsize(szAmPmStr));
+    nLength = GetLocaleInfo(LOCALE_USER_DEFAULT, LOCALE_S1159, szAmPmStr, _maxchars(szAmPmStr));
     if(nLength > 0 && szStr[0] == szAmPmStr[0])
     {
         nAmPmNameLength = nLength;
@@ -158,7 +158,7 @@ static BOOL AmPmNameToWord(LPCTSTR szStr, WORD & wHourModifier, int & nAmPmNameL
     }
 
     // Check PM
-    nLength = GetLocaleInfo(LOCALE_USER_DEFAULT, LOCALE_S2359, szAmPmStr, _tsize(szAmPmStr));
+    nLength = GetLocaleInfo(LOCALE_USER_DEFAULT, LOCALE_S2359, szAmPmStr, _maxchars(szAmPmStr));
     if(nLength > 0 && szStr[0] == szAmPmStr[0])
     {
         nAmPmNameLength = nLength;

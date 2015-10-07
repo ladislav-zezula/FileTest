@@ -165,7 +165,7 @@ static void InitializeTabControl(HWND hDlg, TWindowData * pData)
     int nPages = 0;
 
     // Get the title of FileTest application
-    GetFileTestAppTitle(szAppTitle, _tsize(szAppTitle));
+    GetFileTestAppTitle(szAppTitle, _maxchars(szAppTitle));
 
     // Fill the property sheet header
     ZeroMemory(&psh, sizeof(PROPSHEETHEADER));
@@ -469,7 +469,7 @@ static void AddAboutToSystemMenu(HWND hDlg)
         // If we found a separator, we need to add two more items
         if(nSeparatorIndex != -1)
         {
-            LoadString(g_hInst, IDS_HELP_ABOUT, szItemText, _tsize(szItemText));
+            LoadString(g_hInst, IDS_HELP_ABOUT, szItemText, _maxchars(szItemText));
             InsertMenu(hSysMenu, nSeparatorIndex, MF_BYPOSITION | MF_SEPARATOR, 0, NULL);
             InsertMenu(hSysMenu, nSeparatorIndex+1, MF_BYPOSITION | MF_STRING, SC_HELP_ABOUT, szItemText);
         }

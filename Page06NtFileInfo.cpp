@@ -1526,7 +1526,7 @@ static int InsertTreeItemByDataType(
                 pMemberInfo->pbDataPtr    = pbDataPtr;
 
                 // Get the item text
-                if(DataToItemText(pMemberInfo, szItemText, _tsize(szItemText), FALSE) == ERROR_SUCCESS)
+                if(DataToItemText(pMemberInfo, szItemText, _maxchars(szItemText), FALSE) == ERROR_SUCCESS)
                     InsertTreeItem(hTreeView, hParentItem, szItemText, pMemberInfo);
             }
 
@@ -1549,7 +1549,7 @@ static int InsertTreeItemByDataType(
             pMemberInfo->pbDataPtr    = pbDataPtr;
 
             // Get the item text
-            if(DataToItemText(pMemberInfo, szItemText, _tsize(szItemText), FALSE) == ERROR_SUCCESS)
+            if(DataToItemText(pMemberInfo, szItemText, _maxchars(szItemText), FALSE) == ERROR_SUCCESS)
                 InsertTreeItem(hTreeView, hParentItem, szItemText, pMemberInfo);
         }
     }
@@ -1614,7 +1614,7 @@ static int ReloadTreeViewItems(HWND hDlg, HWND hTreeView, HTREEITEM hParentItem)
         if(pMemberInfo != NULL)
         {
             // Get the item text
-            if(DataToItemText(pMemberInfo, szItemText, _tsize(szItemText), FALSE) == ERROR_SUCCESS)
+            if(DataToItemText(pMemberInfo, szItemText, _maxchars(szItemText), FALSE) == ERROR_SUCCESS)
             {
                 tvi.mask    = TVIF_TEXT;
                 tvi.pszText = szItemText;
@@ -2080,9 +2080,9 @@ static int OnShowDateFormats(HWND hDlg, HWND hTreeItem, HTREEITEM hItem)
         return TRUE;
   
     // Prepare the text for the tooltip
-    LoadString(g_hInst, IDS_BAD_DATETIME_FORMAT, szTitle, _tsize(szTitle));
-    LoadString(g_hInst, IDS_DATE_FORMAT_PREFIX, szDateFormatPrefix, _tsize(szDateFormatPrefix));
-    LoadString(g_hInst, IDS_TIME_FORMAT_PREFIX, szTimeFormatPrefix, _tsize(szTimeFormatPrefix));
+    LoadString(g_hInst, IDS_BAD_DATETIME_FORMAT, szTitle, _maxchars(szTitle));
+    LoadString(g_hInst, IDS_DATE_FORMAT_PREFIX, szDateFormatPrefix, _maxchars(szDateFormatPrefix));
+    LoadString(g_hInst, IDS_TIME_FORMAT_PREFIX, szTimeFormatPrefix, _maxchars(szTimeFormatPrefix));
     GetSupportedDateTimeFormats(szDateFormatPrefix, szTimeFormatPrefix, szText, nMaxChars);
 
     // Create the additional tooltip window
@@ -2203,7 +2203,7 @@ static int OnBeginLabelEdit(HWND hDlg, NMTVDISPINFO * pTVDispInfo)
         if(hEdit != NULL)
         {
             // Get the item text
-            if(DataToItemText(pMemberInfo, szItemText, _tsize(szItemText), TRUE) == ERROR_SUCCESS)
+            if(DataToItemText(pMemberInfo, szItemText, _maxchars(szItemText), TRUE) == ERROR_SUCCESS)
             {
                 SetWindowText(hEdit, szItemText);
                 DisableDialogMessages(hDlg, TRUE);

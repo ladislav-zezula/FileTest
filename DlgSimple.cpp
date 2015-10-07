@@ -23,7 +23,7 @@ static void SetWindowModuleVersion(HWND hWndChild, LPCTSTR szModuleName)
     // Is such window really there ?
     if(hWndChild != NULL)
     {
-        GetWindowText(hWndChild, szFormat, _tsize(szFormat));
+        GetWindowText(hWndChild, szFormat, _maxchars(szFormat));
         GetModuleVersion(szModuleName, &Version);
         _stprintf(szText, szFormat, HIWORD(Version.HighPart), LOWORD(Version.HighPart),
                                     HIWORD(Version.LowPart),  LOWORD(Version.LowPart));

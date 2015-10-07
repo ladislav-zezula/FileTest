@@ -179,7 +179,7 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
     // Save the application initial directory
     //
 
-    GetCurrentDirectory(_tsize(g_szInitialDirectory), g_szInitialDirectory);
+    GetCurrentDirectory(_maxchars(g_szInitialDirectory), g_szInitialDirectory);
 
     //
     // Register the data editor window

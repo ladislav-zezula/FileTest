@@ -168,7 +168,7 @@ static int SaveDialog1(HWND hDlg)
     TFileTestData * pData = GetDialogData(hDlg);
     int nError;
 
-    GetDlgItemText(hDlg, IDC_SECTION_NAME, pData->szSectionName, _tsize(pData->szSectionName));
+    GetDlgItemText(hDlg, IDC_SECTION_NAME, pData->szSectionName, _maxchars(pData->szSectionName));
 
     if((nError = DlgText2Hex64(hDlg, IDC_SECTION_SIZE, &pData->MaximumSize.QuadPart)) != ERROR_SUCCESS)
         return nError;
