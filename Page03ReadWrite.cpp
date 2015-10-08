@@ -170,6 +170,7 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
         pAnchors->AddAnchor(hDlg, IDC_GET_FILE_SIZE, akTop | akRightCenter);
         pAnchors->AddAnchor(hDlg, IDC_SET_FILE_POINTER, akLeftCenter | akTop);
         pAnchors->AddAnchor(hDlg, IDC_SET_END_OF_FILE, akTop | akRight);
+        pAnchors->AddAnchor(hDlg, IDC_SET_ALLOCATION, akLeft | akTop);
         pAnchors->AddAnchor(hDlg, IDC_FILE_DATA, akAll);
         pAnchors->AddAnchor(hDlg, IDC_RESULT_FRAME, akLeft | akRight | akBottom);
         pAnchors->AddAnchor(hDlg, IDC_LAST_ERROR_TITLE, akLeft | akBottom);
@@ -214,6 +215,7 @@ static int OnSetActive(HWND hDlg)
                                   IDC_GET_FILE_SIZE,
                                   IDC_SET_FILE_POINTER,
                                   IDC_SET_END_OF_FILE,
+                                  IDC_SET_ALLOCATION,
                                   0);
     return TRUE;
 }
@@ -496,6 +498,20 @@ static int OnSetEndOfFileClick(HWND hDlg)
     return TRUE;
 }
 
+static int OnSetAllocationClick(HWND hDlg)
+{
+    TFileTestData * pData = GetDialogData(hDlg);
+    FILE_ALLOCATION_INFO AllocationInfo;
+    int nError = ERROR_SUCCESS;
+
+    DlgText2Hex64(hDlg, IDC_BYTE_OFFSET, &AllocationInfo.AllocationSize.QuadPart);
+    if(!SetFileInformationByHandle(pData->hFile, FileAllocationInfo, &AllocationInfo, sizeof(AllocationInfo)))
+        nError = GetLastError();
+
+    SetResultInfo(hDlg, nError);
+    return TRUE;
+}
+
 static int OnApc(HWND hDlg, LPARAM lParam)
 {
     TFileTestData * pData = GetDialogData(hDlg);
@@ -559,6 +575,9 @@ static int OnCommand(HWND hDlg, UINT nNotify, UINT nIDCtrl)
 
             case IDC_SET_END_OF_FILE:
                 return OnSetEndOfFileClick(hDlg);
+
+            case IDC_SET_ALLOCATION:
+                return OnSetAllocationClick(hDlg);
         }
     }
 
