@@ -128,6 +128,7 @@
 #define IDC_GET_FILE_ATTRIBUTES         1089
 #define IDC_DEFAULT                     1089
 #define IDC_DEFAULT_LENGTH              1089
+#define IDC_SET_ALLOCATION              1089
 #define IDC_DELETE_DIRECTORY            1090
 #define IDC_NT_QUERY_ATTRIBUTES_FILE    1091
 #define IDC_FILE_INFO_CLASS             1093
