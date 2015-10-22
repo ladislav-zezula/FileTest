@@ -16,72 +16,72 @@
 
 static TFlagInfo DesiredAccessValues[] =
 {
-    FLAG_INFO_ENTRY(SECTION_QUERY,                TRUE),
-    FLAG_INFO_ENTRY(SECTION_MAP_WRITE,            TRUE),
-    FLAG_INFO_ENTRY(SECTION_MAP_READ,             TRUE),
-    FLAG_INFO_ENTRY(SECTION_MAP_EXECUTE,          TRUE),
-    FLAG_INFO_ENTRY(SECTION_EXTEND_SIZE,          TRUE),
-    FLAG_INFO_ENTRY(SECTION_MAP_EXECUTE_EXPLICIT, TRUE),
+    FLAG_INFO_ENTRY(SECTION_QUERY),
+    FLAG_INFO_ENTRY(SECTION_MAP_WRITE),
+    FLAG_INFO_ENTRY(SECTION_MAP_READ),
+    FLAG_INFO_ENTRY(SECTION_MAP_EXECUTE),
+    FLAG_INFO_ENTRY(SECTION_EXTEND_SIZE),
+    FLAG_INFO_ENTRY(SECTION_MAP_EXECUTE_EXPLICIT),
 
-    FLAG_INFO_ENTRY(DELETE,                       TRUE),
-    FLAG_INFO_ENTRY(READ_CONTROL,                 TRUE),
-    FLAG_INFO_ENTRY(WRITE_DAC,                    TRUE),
-    FLAG_INFO_ENTRY(WRITE_OWNER,                  TRUE),
-    FLAG_INFO_ENTRY(SYNCHRONIZE,                  TRUE),
-    FLAG_INFO_ENTRY(ACCESS_SYSTEM_SECURITY,       TRUE),
-    FLAG_INFO_ENTRY(GENERIC_READ,                 TRUE),
-    FLAG_INFO_ENTRY(GENERIC_WRITE,                TRUE),
-    FLAG_INFO_ENTRY(GENERIC_EXECUTE,              TRUE),
-    FLAG_INFO_ENTRY(GENERIC_ALL,                  TRUE),
+    FLAG_INFO_ENTRY(DELETE),
+    FLAG_INFO_ENTRY(READ_CONTROL),
+    FLAG_INFO_ENTRY(WRITE_DAC),
+    FLAG_INFO_ENTRY(WRITE_OWNER),
+    FLAG_INFO_ENTRY(SYNCHRONIZE),
+    FLAG_INFO_ENTRY(ACCESS_SYSTEM_SECURITY),
+    FLAG_INFO_ENTRY(GENERIC_READ),
+    FLAG_INFO_ENTRY(GENERIC_WRITE),
+    FLAG_INFO_ENTRY(GENERIC_EXECUTE),
+    FLAG_INFO_ENTRY(GENERIC_ALL),
     FLAG_INFO_END
 };
 
 TFlagInfo AllocationAttributesValues[] =
 {
-    FLAG_INFO_ENTRY(SEC_FILE,            TRUE),
-    FLAG_INFO_ENTRY(SEC_IMAGE,           TRUE),
-    FLAG_INFO_ENTRY(SEC_PROTECTED_IMAGE, TRUE),
-    FLAG_INFO_ENTRY(SEC_RESERVE,         TRUE),
-    FLAG_INFO_ENTRY(SEC_COMMIT,          TRUE),
-    FLAG_INFO_ENTRY(SEC_NOCACHE,         TRUE),
-    FLAG_INFO_ENTRY(SEC_WRITECOMBINE,    TRUE),
-    FLAG_INFO_ENTRY(SEC_LARGE_PAGES,     TRUE),
+    FLAG_INFO_ENTRY(SEC_FILE),
+    FLAG_INFO_ENTRY(SEC_IMAGE),
+    FLAG_INFO_ENTRY(SEC_PROTECTED_IMAGE),
+    FLAG_INFO_ENTRY(SEC_RESERVE),
+    FLAG_INFO_ENTRY(SEC_COMMIT),
+    FLAG_INFO_ENTRY(SEC_NOCACHE),
+    FLAG_INFO_ENTRY(SEC_WRITECOMBINE),
+    FLAG_INFO_ENTRY(SEC_LARGE_PAGES),
     FLAG_INFO_END,
 };
 
 
 static TFlagInfo AllocationTypeValues[] =
 {
-    FLAG_INFO_ENTRY(MEM_COMMIT,          TRUE),
-    FLAG_INFO_ENTRY(MEM_RESERVE,         TRUE),
-    FLAG_INFO_ENTRY(MEM_DECOMMIT,        TRUE),
-    FLAG_INFO_ENTRY(MEM_RELEASE,         TRUE),
-    FLAG_INFO_ENTRY(MEM_FREE,            TRUE),
-    FLAG_INFO_ENTRY(MEM_PRIVATE,         TRUE),
-    FLAG_INFO_ENTRY(MEM_MAPPED,          TRUE),
-    FLAG_INFO_ENTRY(MEM_RESET,           TRUE),
-    FLAG_INFO_ENTRY(MEM_TOP_DOWN,        TRUE),
-    FLAG_INFO_ENTRY(MEM_WRITE_WATCH,     TRUE),
-    FLAG_INFO_ENTRY(MEM_PHYSICAL,        TRUE),
-    FLAG_INFO_ENTRY(MEM_ROTATE,          TRUE),
-    FLAG_INFO_ENTRY(MEM_LARGE_PAGES,     TRUE),
-    FLAG_INFO_ENTRY(MEM_4MB_PAGES,       TRUE),
+    FLAG_INFO_ENTRY(MEM_COMMIT),
+    FLAG_INFO_ENTRY(MEM_RESERVE),
+    FLAG_INFO_ENTRY(MEM_DECOMMIT),
+    FLAG_INFO_ENTRY(MEM_RELEASE),
+    FLAG_INFO_ENTRY(MEM_FREE),
+    FLAG_INFO_ENTRY(MEM_PRIVATE),
+    FLAG_INFO_ENTRY(MEM_MAPPED),
+    FLAG_INFO_ENTRY(MEM_RESET),
+    FLAG_INFO_ENTRY(MEM_TOP_DOWN),
+    FLAG_INFO_ENTRY(MEM_WRITE_WATCH),
+    FLAG_INFO_ENTRY(MEM_PHYSICAL),
+    FLAG_INFO_ENTRY(MEM_ROTATE),
+    FLAG_INFO_ENTRY(MEM_LARGE_PAGES),
+    FLAG_INFO_ENTRY(MEM_4MB_PAGES),
     FLAG_INFO_END,
 };
 
 static TFlagInfo PageProtectionValues[] =
 {
-    FLAG_INFO_ENTRY(PAGE_NOACCESS,           TRUE),   
-    FLAG_INFO_ENTRY(PAGE_READONLY,           TRUE),   
-    FLAG_INFO_ENTRY(PAGE_READWRITE,          TRUE),   
-    FLAG_INFO_ENTRY(PAGE_WRITECOPY,          TRUE),   
-    FLAG_INFO_ENTRY(PAGE_EXECUTE,            TRUE),   
-    FLAG_INFO_ENTRY(PAGE_EXECUTE_READ,       TRUE),   
-    FLAG_INFO_ENTRY(PAGE_EXECUTE_READWRITE,  TRUE),   
-    FLAG_INFO_ENTRY(PAGE_EXECUTE_WRITECOPY,  TRUE),   
-    FLAG_INFO_ENTRY(PAGE_GUARD,              TRUE),
-    FLAG_INFO_ENTRY(PAGE_NOCACHE,            TRUE),
-    FLAG_INFO_ENTRY(PAGE_WRITECOMBINE,       TRUE),
+    FLAG_INFO_ENTRY(PAGE_NOACCESS),   
+    FLAG_INFO_ENTRY(PAGE_READONLY),   
+    FLAG_INFO_ENTRY(PAGE_READWRITE),   
+    FLAG_INFO_ENTRY(PAGE_WRITECOPY),   
+    FLAG_INFO_ENTRY(PAGE_EXECUTE),   
+    FLAG_INFO_ENTRY(PAGE_EXECUTE_READ),   
+    FLAG_INFO_ENTRY(PAGE_EXECUTE_READWRITE),   
+    FLAG_INFO_ENTRY(PAGE_EXECUTE_WRITECOPY),   
+    FLAG_INFO_ENTRY(PAGE_GUARD),
+    FLAG_INFO_ENTRY(PAGE_NOCACHE),
+    FLAG_INFO_ENTRY(PAGE_WRITECOMBINE),
     FLAG_INFO_END,
 };
 
@@ -100,7 +100,7 @@ static void InitPageProtections(HWND hDlg, UINT nIDCombo, TFlagInfo * pFlags)
         while(pFlags->szFlagText != NULL)
         {
             // Format and insert the string to the combo box
-            _stprintf(szItemText, _T("[%04X] %s"), pFlags->dwFlag, pFlags->szFlagText);
+            _stprintf(szItemText, _T("[%04X] %s"), pFlags->dwValue, pFlags->szFlagText);
             ComboBox_AddString(hWndCombo, szItemText);
 
             // Move to the next flag
@@ -111,15 +111,16 @@ static void InitPageProtections(HWND hDlg, UINT nIDCombo, TFlagInfo * pFlags)
 
 static void Hex2PageProtection(HWND hDlg, UINT nIDCombo, DWORD dwProtection)
 {
+    TFlagInfo * pFlags = PageProtectionValues;
     HWND hWndCombo = GetDlgItem(hDlg, nIDCombo);
     int nItemIndex = 0;
 
     if(hWndCombo != NULL)
     {
         // Find the proper page protection
-        for(int i = 0; PageProtectionValues[i].szFlagText != NULL; i++)
+        for(int i = 0; pFlags->szFlagText != NULL; i++, pFlags++)
         {
-            if(dwProtection == PageProtectionValues[i].dwFlag)
+            if(IS_FLAG_SET(pFlags, dwProtection))
             {
                 nItemIndex = i;
                 break;
@@ -145,7 +146,7 @@ static DWORD PageProtection2Hex(HWND hDlg, UINT nIDCombo)
             nItemIndex = 0;
 
         // Get the page protection
-        return PageProtectionValues[nItemIndex].dwFlag;
+        return PageProtectionValues[nItemIndex].dwValue;
     }
 
     return 0;

@@ -164,7 +164,7 @@ void TToolTip::OnGetTooltipText(LPNMTTDISPINFO pTTDispInfo)
     HWND hWndChild = (HWND)pTTDispInfo->hdr.idFrom;
 
     // Only if the text buffer has been allocated
-    if(szTextBuff != NULL)
+    if(pFlags != NULL && szTextBuff != NULL)
     {
         // Reset the tooltip info to an empty string
         szToolTipText[0] = 0;
@@ -177,7 +177,7 @@ void TToolTip::OnGetTooltipText(LPNMTTDISPINFO pTTDispInfo)
             while(dwValue32 != 0 && pFlags->szFlagText != NULL)
             {
                 // Is that flag set?
-                if(dwValue32 & pFlags->dwFlag)
+                if(IS_FLAG_SET(pFlags, dwValue32))
                 {
                     size_t nLength = _tcslen(pFlags->szFlagText);
 
@@ -194,7 +194,7 @@ void TToolTip::OnGetTooltipText(LPNMTTDISPINFO pTTDispInfo)
                     szTextBuff += nLength;
 
                     // Clear the bit from the 
-                    dwValue32 &= ~pFlags->dwFlag;
+                    dwValue32 &= ~pFlags->dwValue;
                 }
 
                 // Move to the next flag

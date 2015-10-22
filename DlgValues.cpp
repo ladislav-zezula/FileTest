@@ -39,16 +39,13 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
     SetWindowTextRc(hDlg, pData->nIDTitle);
 
     // Load the combo box
-    for(int i = 0; pFlags[i].szFlagText != NULL; i++)
+    for(int i = 0; pFlags->szFlagText != NULL; i++, pFlags++)
     {
-        if(pFlags[i].bEnabled)
-        {
-            nIndex = ComboBox_AddString(hCombo, pFlags[i].szFlagText);
-            ComboBox_SetItemData(hCombo, nIndex, pFlags[i].dwFlag);
+        nIndex = ComboBox_AddString(hCombo, pFlags->szFlagText);
+        ComboBox_SetItemData(hCombo, nIndex, pFlags->dwValue);
 
-            if(pFlags[i].dwFlag == pData->dwFlags)
-                nSelect = nIndex;
-        }
+        if(IS_FLAG_SET(pFlags, pData->dwFlags))
+            nSelect = nIndex;
     }
 
     // Set the proper value

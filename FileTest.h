@@ -156,6 +156,10 @@ typedef struct _TOKEN_MANDATORY_LABEL
 #define FILE_ATTRIBUTE_VIRTUAL              0x00010000  
 #endif
 
+#ifndef SECURITY_VALUE_MASK
+#define SECURITY_VALUE_MASK                (SECURITY_ANONYMOUS | SECURITY_IDENTIFICATION | SECURITY_IMPERSONATION | SECURITY_DELEGATION)
+#endif
+
 #ifndef FSCTL_REQUEST_OPLOCK
 #define FSCTL_REQUEST_OPLOCK                CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 144, METHOD_BUFFERED, FILE_ANY_ACCESS)
 #endif
@@ -176,6 +180,10 @@ typedef struct _TOKEN_MANDATORY_LABEL
 #define REQUEST_OPLOCK_INPUT_FLAG_COMPLETE_ACK_ON_CLOSE (0x00000004)
 
 #define REQUEST_OPLOCK_CURRENT_VERSION          1
+
+#define APC_TYPE_NONE                   0
+#define APC_TYPE_READ_WRITE             1
+#define APC_TYPE_FSCTL                  2
 
 typedef struct _REQUEST_OPLOCK_INPUT_BUFFER {
 
@@ -257,18 +265,22 @@ typedef BOOL (WINAPI * ADDMANDATORYACE)(PACL pAcl,
 //-----------------------------------------------------------------------------
 // Structures
 
-#define FLAG_INFO_ENTRY(flag, enabled)  {_T(#flag), flag, enabled}
-#define FLAG_INFO_END                   {NULL, 0, 0}
-
-#define APC_TYPE_NONE                   1
-#define APC_TYPE_READ_WRITE             1
-#define APC_TYPE_FSCTL                  2
+#define FLAG_INFO_CTRLID(flag)          {{(LPCTSTR)IDC_##flag}, flag, flag}
+#define FLAG_INFO_ENTRY(flag)           {{_T(#flag)}, flag, flag}
+#define FLAG_INFO_MASK(mask, flag)      {{(LPCTSTR)IDC_##flag}, mask, flag}
+#define FLAG_INFO_END                   {{NULL}, 0, 0}
+#define IS_FLAG_SET(FlagInfo, flag)     ((flag & FlagInfo->dwMask) == FlagInfo->dwValue)
 
 struct TFlagInfo
 {
-    LPCTSTR szFlagText;
-    DWORD   dwFlag;
-    BOOL    bEnabled;
+    union
+    {
+        LPCTSTR szFlagText;                 // Text of the checkbox/radio button
+        UINT    nIDCtrl;                    // ID of the checkbox/radio button
+    };
+
+    DWORD   dwMask;                         // Item is checked when (dwFlags & dwMask) == dwValue
+    DWORD   dwValue;                        // - || -
 };
 
 // Common structure for APCs. Keep its size 8-byte aligned
@@ -634,6 +646,7 @@ INT_PTR HelpAboutDialog(HWND hParent);
 INT_PTR ValuesDialog(HWND hWndParent, PDWORD pdwValue, UINT nIDTitle, TFlagInfo * pFlags);
 INT_PTR FlagsDialog(HWND hWndParent, LPDWORD pdwFlags, UINT nIDTitle, TFlagInfo * pFlags);
 INT_PTR FlagsDialog(HWND hWndParent, UINT nIDValue, UINT nIDTitle, TFlagInfo * pFlags);
+INT_PTR FlagsDialog2(HWND hWndParent, UINT nIDDialog, UINT nIDCtrl, TFlagInfo * pFlags);
 INT_PTR EaEditorDialog(HWND hParent, PFILE_FULL_EA_INFORMATION * pEaInfo);
 INT_PTR PrivilegesDialog(HWND hParent);
 INT_PTR ObjectIDActionDialog(HWND hParent);

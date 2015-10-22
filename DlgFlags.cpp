@@ -1,11 +1,25 @@
 /*****************************************************************************/
 /* DlgFlags.cpp                           Copyright (c) Ladislav Zezula 2004 */
 /*---------------------------------------------------------------------------*/
-/* Description:                                                              */
+/* Each entry in the dialog is defined by the structure:                     */
+/*                                                                           */
+/*  struct TFlagInfo                                                         */
+/*  {                                                                        */
+/*      union                                                                */
+/*      {                                                                    */
+/*          LPCTSTR szItemText; // Text of the checkbox/radio button         */
+/*          UINT    nIDCtrl;    // ID of the checkbox/radio button           */
+/*      };                                                                   */
+/*                                                                           */
+/*      DWORD   dwMask;         // Item is checked when                      */
+/*      DWORD   dwValue;        // (dwFlags & dwMask) == dwValue             */
+/*  };                                                                       */
+/*                                                                           */
 /*---------------------------------------------------------------------------*/
 /*   Date    Ver   Who  Comment                                              */
 /* --------  ----  ---  -------                                              */
 /* 06.01.04  1.00  Lad  The first version of DlgFlags.cpp                    */
+/* 22.10.15  1.00  Lad  Flag info extended to contain mask as well           */
 /*****************************************************************************/
 
 #include "FileTest.h"
@@ -17,29 +31,56 @@
 struct TFlagDialogData
 {
     TFlagInfo * pFlags;                     // Flags (structure array)
-    HWND        hParent;                    // Parent of the dialog
+    HWND        hWndParent;                 // Parent of the dialog
+    HWND        hDlg;                       // The dialog itself
     UINT        nIDTitle;                   // String ID of the dialog title
     DWORD       dwFlags;                    // Flag value (in/out)
+    DWORD       IsPreArranged:1;            // If TRUE, then the dialog is already pre-arranged
+    DWORD       SpareBits:31;
 };
+
+typedef void (*CHILD_WINDOW_CALLBACK)(TFlagDialogData * pData, TFlagInfo * pFlags, HWND hWndChild, DWORD dwStyles);
 
 //-----------------------------------------------------------------------------
 // Local functions
 
-static void ArrangeDialogLayout(
-    TFlagDialogData * pData,
-    HWND hDlg,
-    HWND hWndGroup,
-    HWND hWndCheck,
-    HWND hCheckAll,
-    HWND hClearAll)
+// Arranging the dialog layout for pre-arranged dialogs
+static void CreateDialogLayout_PreArranged(TFlagDialogData * pData)
 {
-    TFlagInfo * pFlagInfo;
+    TFlagInfo * pFlags;
+    HWND hWndChild;
+    UINT nChecked;
+
+    // Parse all flags and setup every child item
+    for(pFlags = pData->pFlags; pFlags->nIDCtrl != 0; pFlags++)
+    {
+        // Retrieve the child window belonging to this flag
+        hWndChild = GetDlgItem(pData->hDlg, pFlags->nIDCtrl);
+        assert(hWndChild != NULL);
+
+        // Set the pointer to flag info structure to the child's window data
+        SetWindowLongPtr(hWndChild, GWLP_USERDATA, (LONG_PTR)pFlags);
+
+        // If the flag is set, we need to check that item
+        nChecked = IS_FLAG_SET(pFlags, pData->dwFlags);
+        Button_SetCheck(hWndChild, nChecked);
+    }
+}
+
+// Arranging the dialog layout for empty dialogs, where the controls need to be created
+static void CreateDialogLayout_Empty(TFlagDialogData * pData)
+{
+    TFlagInfo * pFlags;
+    TCHAR szItemText[MAX_PATH+1];
     HFONT hFont;
     DWORD dwExStyle;
     DWORD dwStyle;
-    HWND hWndParent;
-    HWND hOkButton = GetDlgItem(hDlg, IDOK);
-    HWND hPrevCheck = hWndCheck;
+    HWND hPrevChild = NULL;
+    HWND hWndGroup = GetDlgItem(pData->hDlg, IDC_GROUPBOX);
+    HWND hCheckAll = GetDlgItem(pData->hDlg, IDC_SELECT_ALL);
+    HWND hClearAll = GetDlgItem(pData->hDlg, IDC_CLEAR_ALL);
+    HWND hOkButton = GetDlgItem(pData->hDlg, IDOK);
+    HWND hWndChild = GetDlgItem(pData->hDlg, IDC_CHECKBOX);
     RECT DialogRect;                        // Rectangle of the dialog (screen-relative)
     RECT ParentRect;                        // Rectangle of the dialog's parent (screen-relative)
     RECT ClientRect;                        // Rectangle of the dialog client area (screen-relative)
@@ -49,37 +90,35 @@ static void ArrangeDialogLayout(
     RECT ClearAllRect;                      // Distance of "Clear All" from left-bottom corner of the dialog
     RECT OkButtonRect;                      // Distance of "OK" from right-bottom corner of the dialog
     int nChecked = BST_UNCHECKED;
-    int nIDCtrl = IDC_CHECKBOX;             // ID of the check box
     int nDeltaY = 0;                        // Delta dialog size
     int x, y, cx, cy;
 
     // Get the size of the parent
-    hWndParent = GetParent(hDlg);
-    if(hWndParent != NULL)
-        GetWindowRect(hWndParent, &ParentRect);
+    if(pData->hWndParent != NULL)
+        GetWindowRect(pData->hWndParent, &ParentRect);
     else
         SystemParametersInfo(SPI_GETWORKAREA, 0, &ParentRect, FALSE);
 
     // Get the size of the dialog and the "master" settings
-    GetWindowRect(hDlg, &DialogRect);
-    GetClientRect(hDlg, &ClientRect);
-    hFont = (HFONT)SendMessage(hWndCheck, WM_GETFONT, 0, 0);
+    GetWindowRect(pData->hDlg, &DialogRect);
+    GetClientRect(pData->hDlg, &ClientRect);
+    hFont = (HFONT)SendMessage(hWndChild, WM_GETFONT, 0, 0);
 
     // Get the position of the children
     GetWindowRect(hWndGroup, &GroupRect);
-    ScreenRectToClientRect(hDlg, &GroupRect);
-    GetWindowRect(hWndCheck, &CheckBoxRect);
-    ScreenRectToClientRect(hDlg, &CheckBoxRect);
+    ScreenRectToClientRect(pData->hDlg, &GroupRect);
+    GetWindowRect(hWndChild, &CheckBoxRect);
+    ScreenRectToClientRect(pData->hDlg, &CheckBoxRect);
     GetWindowRect(hCheckAll, &CheckAllRect);
-    ScreenRectToClientRect(hDlg, &CheckAllRect);
+    ScreenRectToClientRect(pData->hDlg, &CheckAllRect);
     GetWindowRect(hClearAll, &ClearAllRect);
-    ScreenRectToClientRect(hDlg, &ClearAllRect);
+    ScreenRectToClientRect(pData->hDlg, &ClearAllRect);
     GetWindowRect(hOkButton, &OkButtonRect);
-    ScreenRectToClientRect(hDlg, &OkButtonRect);
+    ScreenRectToClientRect(pData->hDlg, &OkButtonRect);
 
     // Get the settings of the "master" checkbox
-    dwExStyle = (DWORD)GetWindowLongPtr(hWndCheck, GWL_EXSTYLE);
-    dwStyle   = (DWORD)GetWindowLongPtr(hWndCheck, GWL_STYLE) & ~(WS_TABSTOP | WS_GROUP);
+    dwExStyle = GetWindowLong(hWndChild, GWL_EXSTYLE);
+    dwStyle   = GetWindowLong(hWndChild, GWL_STYLE) & ~(WS_TABSTOP | WS_GROUP);
 
     // Calculate width and height of the check box
     cx = (CheckBoxRect.right - CheckBoxRect.left);
@@ -87,15 +126,15 @@ static void ArrangeDialogLayout(
 
     // Arrange all checkboxes
     // Create all check boxes
-    for(pFlagInfo = pData->pFlags; pFlagInfo->szFlagText != NULL; pFlagInfo++, nIDCtrl++)
+    for(pFlags = pData->pFlags; pFlags->szFlagText != NULL; pFlags++)
     {
-        if(hWndCheck == NULL)
+        if(hWndChild == NULL)
         {
             // Increment the dialog height
             nDeltaY = nDeltaY + cy + 6;
 
             // Create the checkbox
-            hWndCheck = CreateWindowEx(dwExStyle,
+            hWndChild = CreateWindowEx(dwExStyle,
                                        WC_BUTTON,
                                        NULL,
                                        dwStyle | WS_VISIBLE,
@@ -103,27 +142,28 @@ static void ArrangeDialogLayout(
                                        CheckBoxRect.top + nDeltaY,
                                        cx,
                                        cy,
-                                       hDlg,
-                       (HMENU)(INT_PTR)nIDCtrl,
+                                       pData->hDlg,
+                                       0,
                                        g_hInst,
                                        NULL);
-            SendMessage(hWndCheck, WM_SETFONT, (WPARAM)hFont, FALSE);
+            SendMessage(hWndChild, WM_SETFONT, (WPARAM)hFont, FALSE);
 
             // Set the checkbox's Z-order after the previous one
-            SetWindowPos(hWndCheck, hPrevCheck, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
-            hPrevCheck = hWndCheck;
+            SetWindowPos(hWndChild, hPrevChild, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+            hPrevChild = hWndChild;
         }
 
         // Set the window text
-        SetWindowText(hWndCheck, pFlagInfo->szFlagText);
+        _stprintf(szItemText, _T("(%08X) %s"), pFlags->dwValue, pFlags->szFlagText);
+        SetWindowText(hWndChild, szItemText);
 
-        // Enable/disable check box
-        EnableWindow(hWndCheck, pFlagInfo->bEnabled);
+        // Set the parametert to the flag pointer
+        SetWindowLongPtr(hWndChild, GWLP_USERDATA, (LONG_PTR)pFlags);
 
         // Check/uncheck the box
-        nChecked = (pData->dwFlags & pFlagInfo->dwFlag) ? BST_CHECKED : BST_UNCHECKED;
-        Button_SetCheck(hWndCheck, nChecked);
-        hWndCheck = NULL;
+        nChecked = IS_FLAG_SET(pFlags, pData->dwFlags) ? BST_CHECKED : BST_UNCHECKED;
+        Button_SetCheck(hWndChild, nChecked);
+        hWndChild = NULL;
     }
 
     // Now we have to resize the group box
@@ -142,7 +182,54 @@ static void ArrangeDialogLayout(
     cy = (DialogRect.bottom - DialogRect.top) + nDeltaY;
     x = ParentRect.left + ((ParentRect.right - ParentRect.left) - cx) / 2;
     y = ParentRect.top + ((ParentRect.bottom - ParentRect.top) - cy) / 2;
-    SetWindowPos(hDlg, NULL, x, y, cx, cy, SWP_NOZORDER | SWP_NOACTIVATE);
+    SetWindowPos(pData->hDlg, NULL, x, y, cx, cy, SWP_NOZORDER | SWP_NOACTIVATE);
+}
+
+static void ForEachChildWindow(HWND hDlg, CHILD_WINDOW_CALLBACK ChildCallback)
+{
+    TFlagDialogData * pData = (TFlagDialogData *)GetWindowLongPtr(hDlg, DWLP_USER);
+    TFlagInfo * pFlags;
+    DWORD dwStyles;
+    HWND hWndChild;
+
+    // Enumerate all children. For checkboxes and radio buttons,
+    // get their value and add them to the summary flag value
+    for(hWndChild = GetWindow(hDlg, GW_CHILD); hWndChild != NULL; hWndChild = GetWindow(hWndChild, GW_HWNDNEXT))
+    {
+        // Is that a check box or a radio button?
+        dwStyles = GetWindowLong(hWndChild, GWL_STYLE);
+        if((dwStyles & BS_TYPEMASK) == BS_AUTOCHECKBOX || (dwStyles & BS_TYPEMASK) == BS_AUTORADIOBUTTON)
+        {
+            // Retrieve flag info structure the button
+            pFlags = (TFlagInfo *)GetWindowLongPtr(hWndChild, GWLP_USERDATA);
+            if(pFlags != NULL)
+            {
+                // Call the for-each callback
+                ChildCallback(pData, pFlags, hWndChild, dwStyles);
+            }
+        }
+    }
+}
+
+// Only do checkboxes. Ignore radio buttons
+static void Callback_SetCheck(TFlagDialogData * /* pData */, TFlagInfo * /* pFlags */, HWND hWndChild, DWORD dwStyles)
+{
+    if((dwStyles & BS_TYPEMASK) == BS_AUTOCHECKBOX)
+        Button_SetCheck(hWndChild, BST_CHECKED);
+}
+
+// Only do checkboxes. Ignore radio buttons
+static void Callback_ClearCheck(TFlagDialogData * /* pData */, TFlagInfo * /* pFlags */, HWND hWndChild, DWORD dwStyles)
+{
+    if((dwStyles & BS_TYPEMASK) == BS_AUTOCHECKBOX)
+        Button_SetCheck(hWndChild, BST_UNCHECKED);
+}
+
+// If the button is checked, add the flag to the flags
+static void Callback_SaveFlag(TFlagDialogData * pData, TFlagInfo * pFlags, HWND hWndChild, DWORD /* dwStyles */)
+{
+    if(Button_GetCheck(hWndChild) == BST_CHECKED)
+        pData->dwFlags |= pFlags->dwValue;
 }
 
 //-----------------------------------------------------------------------------
@@ -151,69 +238,29 @@ static void ArrangeDialogLayout(
 static int OnInitDialog(HWND hDlg, LPARAM lParam)
 {
     TFlagDialogData * pData = (TFlagDialogData *)lParam;
-    HWND hWndGroup = GetDlgItem(hDlg, IDC_GROUPBOX);
-    HWND hWndCheck = GetDlgItem(hDlg, IDC_CHECKBOX);
-    HWND hCheckAll = GetDlgItem(hDlg, IDC_SELECT_ALL);
-    HWND hClearAll = GetDlgItem(hDlg, IDC_CLEAR_ALL);
 
     // Configure the dialog
     SetDialogData(hDlg, lParam);
     SetDialogIcon(hDlg, IDI_FILE_TEST);
-    SetWindowTextRc(hDlg, pData->nIDTitle);
 
-    // Arrange the checkbox group
-    ArrangeDialogLayout(pData, hDlg, hWndGroup, hWndCheck, hCheckAll, hClearAll);
-    return TRUE;
-}
+    // Remember the dialog handle
+    pData->hDlg = hDlg;
 
-static void SelectAllCheckboxes(HWND hDlg, int nCheck)
-{
-    UINT nIDCtrl = IDC_CHECKBOX;
-    HWND hCheck = GetDlgItem(hDlg, nIDCtrl);
-
-    while(hCheck != NULL)
+    // Is the dialog pre-arranged?
+    if(pData->IsPreArranged)
     {
-        DWORD_PTR dwStyle = (DWORD_PTR)GetWindowLongPtr(hCheck, GWL_STYLE);
-
-        // If not a checkbox, do nothing
-        if((dwStyle & 0x0F) != BS_AUTOCHECKBOX)
-            break;
-
-        // Check or uncheck the button
-        if(IsWindowEnabled(hCheck))
-            Button_SetCheck(hCheck, nCheck);
-
-        // Move to the next checkbox
-        hCheck = GetDlgItem(hDlg, ++nIDCtrl);
+        CreateDialogLayout_PreArranged(pData);
     }
-}
+    else
+    {
+        SetWindowTextRc(hDlg, pData->nIDTitle);
+        CreateDialogLayout_Empty(pData);
+    }
 
-static int OnSaveDialog(HWND hDlg)
-{
-    TFlagDialogData * pData = (TFlagDialogData *)GetWindowLongPtr(hDlg, DWLP_USER);
-    UINT nIDCtrl = IDC_CHECKBOX;
-    HWND hCheck = GetDlgItem(hDlg, nIDCtrl);
-    int nIndex = 0;
-
+    // Clear the dialog flags
     pData->dwFlags = 0;
-    while(hCheck != NULL)
-    {
-        DWORD_PTR dwStyle = (DWORD_PTR)GetWindowLongPtr(hCheck, GWL_STYLE);
-
-        // If not a checkbox, do nothing
-        if((dwStyle & 0x0F) != BS_AUTOCHECKBOX)
-            break;
-
-        if(Button_GetCheck(hCheck) == BST_CHECKED)
-            pData->dwFlags |= pData->pFlags[nIndex].dwFlag;
-
-        // Move to the next checkbox
-        hCheck = GetDlgItem(hDlg, ++nIDCtrl);
-        nIndex++;
-    }
     return TRUE;
 }
-
 
 static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
@@ -228,15 +275,15 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM l
             switch(LOWORD(wParam))
             {
                 case IDC_SELECT_ALL:
-                    SelectAllCheckboxes(hDlg, BST_CHECKED);
+                    ForEachChildWindow(hDlg, Callback_SetCheck);
                     break;
             
                 case IDC_CLEAR_ALL:
-                    SelectAllCheckboxes(hDlg, BST_UNCHECKED);
+                    ForEachChildWindow(hDlg, Callback_ClearCheck);
                     break;
 
                 case IDOK:
-                    OnSaveDialog(hDlg);
+                    ForEachChildWindow(hDlg, Callback_SaveFlag);
                     // No break here !!
 
                 case IDCANCEL:
@@ -249,6 +296,9 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM l
     return FALSE;
 }
 
+//-----------------------------------------------------------------------------
+// Public functions
+
 INT_PTR FlagsDialog(HWND hWndParent, LPDWORD pdwFlags, UINT nIDTitle, TFlagInfo * pFlags)
 {
     TFlagDialogData fdd;
@@ -257,7 +307,7 @@ INT_PTR FlagsDialog(HWND hWndParent, LPDWORD pdwFlags, UINT nIDTitle, TFlagInfo 
     // Prepare the structure that gives parameters to the Flags dialog
     ZeroMemory(&fdd, sizeof(TFlagDialogData));
     fdd.pFlags   = pFlags;
-    fdd.hParent  = hWndParent;
+    fdd.hWndParent = hWndParent;
     fdd.nIDTitle = nIDTitle;
     fdd.dwFlags  = *pdwFlags;
 
@@ -282,5 +332,25 @@ INT_PTR FlagsDialog(HWND hWndParent, UINT nIDCtrl, UINT nIDTitle, TFlagInfo * pF
     Result = FlagsDialog(hWndParent, &dwFlags, nIDTitle, pFlags);
     if(Result == IDOK)
         Hex2DlgText32(hWndParent, nIDCtrl, dwFlags);
+    return Result;
+}
+
+INT_PTR FlagsDialog2(HWND hWndParent, UINT nIDDialog, UINT nIDCtrl, TFlagInfo * pFlags)
+{
+    TFlagDialogData fdd;
+    INT_PTR Result;
+
+    // Retrieve the flags
+    ZeroMemory(&fdd, sizeof(TFlagDialogData));
+    fdd.pFlags   = pFlags;
+    fdd.hWndParent = hWndParent;
+    fdd.IsPreArranged = TRUE;
+    DlgText2Hex32(hWndParent, nIDCtrl, &fdd.dwFlags);
+
+    // Execute the dialog
+    Result = DialogBoxParam(g_hInst, MAKEINTRESOURCE(nIDDialog), hWndParent, DialogProc, (LPARAM)&fdd);
+    if(Result == IDOK)
+        Hex2DlgText32(hWndParent, nIDCtrl, fdd.dwFlags);
+
     return Result;
 }

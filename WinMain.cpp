@@ -101,7 +101,7 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
     g_hInst = hInstance;
     g_hHeap = GetProcessHeap();
     InitCommonControls();
-    
+
     // Get the Windows version
     g_dwWinVer = GetWindowsVersion();
 

@@ -16,20 +16,20 @@
 
 static TFlagInfo MoveFileFlags[] =
 {
-    FLAG_INFO_ENTRY(MOVEFILE_REPLACE_EXISTING,      TRUE),
-    FLAG_INFO_ENTRY(MOVEFILE_COPY_ALLOWED,          TRUE),
-    FLAG_INFO_ENTRY(MOVEFILE_DELAY_UNTIL_REBOOT,    TRUE),
-    FLAG_INFO_ENTRY(MOVEFILE_WRITE_THROUGH,         TRUE),
-    FLAG_INFO_ENTRY(MOVEFILE_CREATE_HARDLINK,       TRUE),
-    FLAG_INFO_ENTRY(MOVEFILE_FAIL_IF_NOT_TRACKABLE, TRUE),
+    FLAG_INFO_ENTRY(MOVEFILE_REPLACE_EXISTING),
+    FLAG_INFO_ENTRY(MOVEFILE_COPY_ALLOWED),
+    FLAG_INFO_ENTRY(MOVEFILE_DELAY_UNTIL_REBOOT),
+    FLAG_INFO_ENTRY(MOVEFILE_WRITE_THROUGH),
+    FLAG_INFO_ENTRY(MOVEFILE_CREATE_HARDLINK),
+    FLAG_INFO_ENTRY(MOVEFILE_FAIL_IF_NOT_TRACKABLE),
     FLAG_INFO_END
 };
 
 static TFlagInfo Win7OplockFlags[] =
 {
-    FLAG_INFO_ENTRY(OPLOCK_LEVEL_CACHE_READ,        TRUE),
-    FLAG_INFO_ENTRY(OPLOCK_LEVEL_CACHE_HANDLE,      TRUE),
-    FLAG_INFO_ENTRY(OPLOCK_LEVEL_CACHE_WRITE,       TRUE),
+    FLAG_INFO_ENTRY(OPLOCK_LEVEL_CACHE_READ),
+    FLAG_INFO_ENTRY(OPLOCK_LEVEL_CACHE_HANDLE),
+    FLAG_INFO_ENTRY(OPLOCK_LEVEL_CACHE_WRITE),
     FLAG_INFO_END
 };
 
@@ -751,6 +751,7 @@ static int OnObjectIdMoreClick(HWND hDlg)
 static int OnGetFileAttributes(HWND hDlg)
 {
     TFileTestData * pData = GetDialogData(hDlg);
+    TFlagInfo * pFlags = FileAttributesValues;
     TCHAR szFileAttributes[512] = _T("");
     DWORD dwAttr;
     int nError = ERROR_SUCCESS;
@@ -759,11 +760,11 @@ static int OnGetFileAttributes(HWND hDlg)
     dwAttr = GetFileAttributes(pData->szFileName1);
     if(dwAttr != INVALID_FILE_ATTRIBUTES)
     {
-        for(int i = 0; FileAttributesValues[i].dwFlag != 0; i++)
+        for(int i = 0; pFlags->dwValue != 0; i++, pFlags++)
         {
-            if(dwAttr & FileAttributesValues[i].dwFlag)
+            if(IS_FLAG_SET(pFlags, dwAttr))
             {
-                _tcscat(szFileAttributes, FileAttributesValues[i].szFlagText);
+                _tcscat(szFileAttributes, pFlags->szFlagText);
                 _tcscat(szFileAttributes, _T("\n"));
             }
         }

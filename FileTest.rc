@@ -16,15 +16,17 @@
 // Neutral resources
 
 #if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_NEU)
+#ifdef _WIN32
 LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL
 #pragma code_page(1250)
+#endif //_WIN32
 
 /////////////////////////////////////////////////////////////////////////////
 //
 // Accelerator
 //
 
-IDR_ACCELERATORS ACCELERATORS
+IDR_ACCELERATORS ACCELERATORS 
 BEGIN
     VK_F2,          ID_EDIT_LABEL,          VIRTKEY, NOINVERT
 END
@@ -54,11 +56,13 @@ IDI_ICON_WAIT           ICON                    "res\\IconWait.ico"
 
 
 /////////////////////////////////////////////////////////////////////////////
-// Czech (Czech Republic) resources
+// Czech resources
 
 #if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_CSY)
+#ifdef _WIN32
 LANGUAGE LANG_CZECH, SUBLANG_DEFAULT
 #pragma code_page(1250)
+#endif //_WIN32
 
 #ifdef APSTUDIO_INVOKED
 /////////////////////////////////////////////////////////////////////////////
@@ -85,16 +89,18 @@ END
 
 #endif    // APSTUDIO_INVOKED
 
-#endif    // Czech (Czech Republic) resources
+#endif    // Czech resources
 /////////////////////////////////////////////////////////////////////////////
 
 
 /////////////////////////////////////////////////////////////////////////////
-// English (United States) resources
+// English (U.S.) resources
 
 #if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
 LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 #pragma code_page(1252)
+#endif //_WIN32
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -102,8 +108,8 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 2,6,0,490
- PRODUCTVERSION 2,6,0,490
+ FILEVERSION 2,6,0,493
+ PRODUCTVERSION 2,6,0,493
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -120,13 +126,13 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Ladislav Zezula"
             VALUE "FileDescription", "Interactive File System API Test"
-            VALUE "FileVersion", "2, 6, 0, 490\0"
+            VALUE "FileVersion", "2, 6, 0, 493\0"
             VALUE "InternalName", "FileTest"
             VALUE "LegalCopyright", "Copyright © 2004 - 2014 Ladislav Zezula"
             VALUE "LegalTrademarks", "http://www.zezula.net"
             VALUE "OriginalFilename", "FileTest.exe"
             VALUE "ProductName", "FileTest"
-            VALUE "ProductVersion", "2, 6, 0, 490\0"
+            VALUE "ProductVersion", "2, 6, 0, 493\0"
         END
     END
     BLOCK "VarFileInfo"
@@ -141,7 +147,7 @@ END
 // Menu
 //
 
-IDR_ACE_MENU MENU
+IDR_ACE_MENU MENU 
 BEGIN
     POPUP "_ACE_MENU_"
     BEGIN
@@ -153,7 +159,7 @@ BEGIN
     END
 END
 
-IDR_DATA_PATTERN MENU
+IDR_DATA_PATTERN MENU 
 BEGIN
     POPUP "__DATA_PATTERN__"
     BEGIN
@@ -163,7 +169,7 @@ BEGIN
     END
 END
 
-IDR_QUICK_ACCESS_SELECTION MENU
+IDR_QUICK_ACCESS_SELECTION MENU 
 BEGIN
     POPUP "__QUICK_ACCESS__"
     BEGIN
@@ -177,7 +183,7 @@ BEGIN
     END
 END
 
-IDR_OPLOCK_PRE_WIN7 MENU
+IDR_OPLOCK_PRE_WIN7 MENU 
 BEGIN
     POPUP "__OPLOCK_TYPE__"
     BEGIN
@@ -717,6 +723,80 @@ BEGIN
     DEFPUSHBUTTON   "Close",IDOK,167,63,50,14
 END
 
+IDD_FLAGS_AND_ATTRS DIALOGEX 0, 0, 422, 237
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Flags and Attributes for CreateFile(Transacted)"
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    GROUPBOX        "",IDC_GROUPBOX,7,4,407,207
+    CONTROL         "(00000001) FILE_ATTRIBUTE_READONLY",IDC_FILE_ATTRIBUTE_READONLY,
+                    "Button",BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP,13,14,207,10
+    CONTROL         "(00000002) FILE_ATTRIBUTE_HIDDEN",IDC_FILE_ATTRIBUTE_HIDDEN,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,13,26,207,10
+    CONTROL         "(00000004) FILE_ATTRIBUTE_SYSTEM",IDC_FILE_ATTRIBUTE_SYSTEM,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,13,38,207,10
+    CONTROL         "(00000008) OLD_DOS_VOLID",IDC_OLD_DOS_VOLID,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,13,50,207,10
+    CONTROL         "(00000010) FILE_ATTRIBUTE_DIRECTORY",IDC_FILE_ATTRIBUTE_DIRECTORY,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,13,62,207,10
+    CONTROL         "(00000020) FILE_ATTRIBUTE_ARCHIVE",IDC_FILE_ATTRIBUTE_ARCHIVE,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,13,74,207,10
+    CONTROL         "(00000040) FILE_ATTRIBUTE_DEVICE",IDC_FILE_ATTRIBUTE_DEVICE,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,13,86,207,10
+    CONTROL         "(00000080) FILE_ATTRIBUTE_NORMAL",IDC_FILE_ATTRIBUTE_NORMAL,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,13,98,207,10
+    CONTROL         "(00000100) FILE_ATTRIBUTE_TEMPORARY",IDC_FILE_ATTRIBUTE_TEMPORARY,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,13,110,207,10
+    CONTROL         "(00000200) FILE_ATTRIBUTE_SPARSE_FILE",IDC_FILE_ATTRIBUTE_SPARSE_FILE,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,13,122,207,10
+    CONTROL         "(00000400) FILE_ATTRIBUTE_REPARSE_POINT",IDC_FILE_ATTRIBUTE_REPARSE_POINT,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,13,134,207,10
+    CONTROL         "(00000800) FILE_ATTRIBUTE_COMPRESSED",IDC_FILE_ATTRIBUTE_COMPRESSED,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,13,146,207,10
+    CONTROL         "(00001000) FILE_ATTRIBUTE_OFFLINE",IDC_FILE_ATTRIBUTE_OFFLINE,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,13,158,207,10
+    CONTROL         "(00002000) FILE_ATTRIBUTE_NOT_CONTENT_INDEXED",IDC_FILE_ATTRIBUTE_NOT_CONTENT_INDEXED,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,13,170,226,10
+    CONTROL         "(00004000) FILE_ATTRIBUTE_ENCRYPTED",IDC_FILE_ATTRIBUTE_ENCRYPTED,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,13,182,207,10
+    CONTROL         "(00008000) FILE_ATTRIBUTE_INTEGRITY_STREAM",IDC_FILE_ATTRIBUTE_INTEGRITY_STREAM,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,13,194,207,10
+    CONTROL         "(00200000) FILE_FLAG_OPEN_REPARSE_POINT",IDC_FILE_FLAG_OPEN_REPARSE_POINT,
+                    "Button",BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP,228,14,179,10
+    CONTROL         "(01000000) FILE_FLAG_POSIX_SEMANTICS",IDC_FILE_FLAG_POSIX_SEMANTICS,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,228,26,179,10
+    CONTROL         "(02000000) FILE_FLAG_BACKUP_SEMANTICS",IDC_FILE_FLAG_BACKUP_SEMANTICS,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,228,38,179,10
+    CONTROL         "(04000000) FILE_FLAG_DELETE_ON_CLOSE",IDC_FILE_FLAG_DELETE_ON_CLOSE,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,228,50,179,10
+    CONTROL         "(08000000) FILE_FLAG_SEQUENTIAL_SCAN",IDC_FILE_FLAG_SEQUENTIAL_SCAN,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,228,62,179,10
+    CONTROL         "(10000000) FILE_FLAG_RANDOM_ACCESS",IDC_FILE_FLAG_RANDOM_ACCESS,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,228,74,179,10
+    CONTROL         "(20000000) FILE_FLAG_NO_BUFFERING",IDC_FILE_FLAG_NO_BUFFERING,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,228,86,179,10
+    CONTROL         "(40000000) FILE_FLAG_OVERLAPPED",IDC_FILE_FLAG_OVERLAPPED,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,228,98,179,10
+    CONTROL         "(80000000) FILE_FLAG_WRITE_THROUGH",IDC_FILE_FLAG_WRITE_THROUGH,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,228,110,179,10
+    CONTROL         "(00100000) SECURITY_SQOS_PRESENT",IDC_SECURITY_SQOS_PRESENT,
+                    "Button",BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP,228,122,179,10
+    CONTROL         "(00080000) SECURITY_EFFECTIVE_ONLY",IDC_SECURITY_EFFECTIVE_ONLY,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,228,134,179,10
+    CONTROL         "(00040000) SECURITY_CONTEXT_TRACKING",IDC_SECURITY_CONTEXT_TRACKING,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,228,146,179,10
+    CONTROL         "(00000000) SECURITY_ANONYMOUS",IDC_SECURITY_ANONYMOUS,
+                    "Button",BS_AUTORADIOBUTTON | WS_GROUP,228,158,179,10
+    CONTROL         "(00010000) SECURITY_IDENTIFICATION",IDC_SECURITY_IDENTIFICATION,
+                    "Button",BS_AUTORADIOBUTTON,228,170,179,10
+    CONTROL         "(00020000) SECURITY_IMPERSONATION",IDC_SECURITY_IMPERSONATION,
+                    "Button",BS_AUTORADIOBUTTON,228,182,179,10
+    CONTROL         "(00030000) SECURITY_DELEGATION",IDC_SECURITY_DELEGATION,
+                    "Button",BS_AUTORADIOBUTTON,228,194,179,10
+    PUSHBUTTON      "Select All",IDC_SELECT_ALL,7,216,50,14,WS_GROUP
+    PUSHBUTTON      "Clear All",IDC_CLEAR_ALL,61,216,50,14
+    DEFPUSHBUTTON   "OK",IDOK,365,216,50,14
+END
+
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -724,7 +804,7 @@ END
 //
 
 #ifdef APSTUDIO_INVOKED
-GUIDELINES DESIGNINFO
+GUIDELINES DESIGNINFO 
 BEGIN
     IDD_FILE_TEST, DIALOG
     BEGIN
@@ -901,6 +981,14 @@ BEGIN
         TOPMARGIN, 7
         BOTTOMMARGIN, 77
     END
+
+    IDD_FLAGS_AND_ATTRS, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 415
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 230
+    END
 END
 #endif    // APSTUDIO_INVOKED
 
@@ -998,26 +1086,10 @@ END
 
 /////////////////////////////////////////////////////////////////////////////
 //
-// AFX_DIALOG_LAYOUT
-//
-
-IDD_PAGE02_NTCREATE AFX_DIALOG_LAYOUT
-BEGIN
-    0
-END
-
-IDD_PAGE01_CREATE AFX_DIALOG_LAYOUT
-BEGIN
-    0
-END
-
-
-/////////////////////////////////////////////////////////////////////////////
-//
 // String Table
 //
 
-STRINGTABLE
+STRINGTABLE 
 BEGIN
     IDS_FLUSH_FILE_BUFFERS_TIP 
                             "Flushes all file buffers to disk using FlushFileBuffers API"
@@ -1031,7 +1103,7 @@ BEGIN
     IDS_SELECT_FILE         "Select a file"
 END
 
-STRINGTABLE
+STRINGTABLE 
 BEGIN
     IDS_FILTER_ALL          "All files (*.*)|*.*|||"
     IDS_INVHANDLE           "INVALID_HANDLE_VALUE"
@@ -1052,7 +1124,7 @@ BEGIN
                             "Cannot use a directory when a file is open by ID"
 END
 
-STRINGTABLE
+STRINGTABLE 
 BEGIN
     IDS_E_INVALID_NT_FILE_NAME "Invalid NT file name."
     IDS_E_INVALID_FILE_ID   "Invalid file ID.\nThe file ID must be in the form of \\\\??\\\\C:\\Path\\File.ext"
@@ -1074,7 +1146,7 @@ BEGIN
     IDS_FILE_BASIC_INFORMATION "FILE_BASIC_INFORMATION"
 END
 
-STRINGTABLE
+STRINGTABLE 
 BEGIN
     IDS_STREAM_TYPE         "Type"
     IDS_APP_TITLE_VISTA1    "FileTest (User: ""%s"", elevated)"
@@ -1094,7 +1166,7 @@ BEGIN
     IDS_MANDATORY_MASK      "Mandatory Mask"
 END
 
-STRINGTABLE
+STRINGTABLE 
 BEGIN
     IDS_E_OPEN_TOKEN        "Failed to open current token.\n%s"
     IDS_EMPTY_STREAM        "<empty>"
@@ -1116,16 +1188,17 @@ BEGIN
     IDS_E_CONVERT_VALUE     "Failed to convert the value to an integer.\nPlease, enter a valid hexadecimal value with a proper maximum size."
 END
 
-STRINGTABLE
+STRINGTABLE 
 BEGIN
     IDS_DATA_EXCEPTION      "Access violation exception when %s data at %p."
     IDS_E_CONVERT_TO_UINT32 "Error converting ""%s"" to 32-bit integer"
     IDS_OPLOCK_FLAGS        "Oplock Flags"
     IDS_HELP_ABOUT          "About FileTest ..."
     IDS_WANT_TRIM_DATA      "Data was pasted to the editor.\nDo you want to trim the data length?"
+    IDS_ACE_TYPE_NOT_SUPPORTED "This ACE type is not supported by FileTest."
 END
 
-#endif    // English (United States) resources
+#endif    // English (U.S.) resources
 /////////////////////////////////////////////////////////////////////////////
 
 
