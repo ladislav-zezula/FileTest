@@ -69,6 +69,10 @@
 
 #define SEVERITY_PENDING            2
 
+#define APC_TYPE_NONE                   0
+#define APC_TYPE_READ_WRITE             1
+#define APC_TYPE_FSCTL                  2
+
 //-----------------------------------------------------------------------------
 // Defines for the mandatory label ACEs.
 // Several symbols are not defined in the pre-Vista SDKs
@@ -180,10 +184,6 @@ typedef struct _TOKEN_MANDATORY_LABEL
 #define REQUEST_OPLOCK_INPUT_FLAG_COMPLETE_ACK_ON_CLOSE (0x00000004)
 
 #define REQUEST_OPLOCK_CURRENT_VERSION          1
-
-#define APC_TYPE_NONE                   0
-#define APC_TYPE_READ_WRITE             1
-#define APC_TYPE_FSCTL                  2
 
 typedef struct _REQUEST_OPLOCK_INPUT_BUFFER {
 
