@@ -189,7 +189,8 @@
       </InputResourceManifests>
     </Manifest>
     <PostBuildEvent>
-      <Command>PostBuild.exe $(OutDir)$(ProjectName).exe FileTest.rc  /subsystem4 /tools</Command>
+      <Command>
+      </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -224,7 +225,8 @@
       </InputResourceManifests>
     </Manifest>
     <PostBuildEvent>
-      <Command>PostBuild.exe $(OutDir)$(ProjectName).exe /subsystem4 /tools</Command>
+      <Command>
+      </Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
