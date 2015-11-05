@@ -1195,7 +1195,6 @@ BEGIN
     IDS_OPLOCK_FLAGS        "Oplock Flags"
     IDS_HELP_ABOUT          "About FileTest ..."
     IDS_WANT_TRIM_DATA      "Data was pasted to the editor.\nDo you want to trim the data length?"
-    IDS_ACE_TYPE_NOT_SUPPORTED "This ACE type is not supported by FileTest."
 END
 
 #endif    // English (U.S.) resources

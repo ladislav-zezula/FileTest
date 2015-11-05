@@ -14,10 +14,13 @@
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav</Extensions>
     </Filter>
     <Filter Include="Doc Files">
-      <UniqueIdentifier>{61320615-eeeb-4fce-bcd9-eb8afa042679}</UniqueIdentifier>
+      <UniqueIdentifier>{97fa0adf-94c2-490e-a30b-3fec2e2bb059}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="DateTime.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="DlgDataEditor.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -93,9 +96,6 @@
     <ClCompile Include="WinMain.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="DateTime.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="FileTest.rc">
@@ -121,6 +121,11 @@
     <ClInclude Include="TToolTip.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Manifest Include="res\FileTest.exe.manifest">
+      <Filter>Resource Files</Filter>
+    </Manifest>
   </ItemGroup>
   <ItemGroup>
     <Image Include="Res\FileTest.ico">
@@ -151,8 +156,5 @@
     <Text Include="doc\History.txt">
       <Filter>Doc Files</Filter>
     </Text>
-  </ItemGroup>
-  <ItemGroup>
-    <Manifest Include="res\FileTest.exe.manifest" />
   </ItemGroup>
 </Project>

@@ -19,10 +19,10 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
+    <ProjectName>FileTest</ProjectName>
     <ProjectGuid>{73D582FC-D08A-4322-AFDB-C244E9716CB4}</ProjectGuid>
     <RootNamespace>FileTest</RootNamespace>
     <Keyword>Win32Proj</Keyword>
-    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
@@ -64,14 +64,13 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <_ProjectFileVersion>11.0.61030.0</_ProjectFileVersion>
+    <_ProjectFileVersion>14.0.23107.0</_ProjectFileVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <OutDir>.\bin\$(Platform)\$(Configuration)\</OutDir>
     <IntDir>.\bin\$(Platform)\$(Configuration)\</IntDir>
     <LinkIncremental>true</LinkIncremental>
     <GenerateManifest>false</GenerateManifest>
-    <TargetName>FileTest</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <OutDir>.\bin\$(Platform)\$(Configuration)\</OutDir>
@@ -109,17 +108,9 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
-      <DataExecutionPrevention />
+      <DataExecutionPrevention>true</DataExecutionPrevention>
       <TargetMachine>MachineX86</TargetMachine>
-      <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
-      <MinimumRequiredVersion>5.1</MinimumRequiredVersion>
     </Link>
-    <Manifest>
-      <AdditionalManifestFiles>
-      </AdditionalManifestFiles>
-      <InputResourceManifests>
-      </InputResourceManifests>
-    </Manifest>
     <PostBuildEvent>
       <Command />
     </PostBuildEvent>
@@ -146,16 +137,9 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
-      <DataExecutionPrevention />
+      <DataExecutionPrevention>true</DataExecutionPrevention>
       <TargetMachine>MachineX64</TargetMachine>
-      <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>
-    <Manifest>
-      <AdditionalManifestFiles>
-      </AdditionalManifestFiles>
-      <InputResourceManifests>
-      </InputResourceManifests>
-    </Manifest>
     <PostBuildEvent>
       <Command />
     </PostBuildEvent>
@@ -177,17 +161,9 @@
       <OptimizeReferences>true</OptimizeReferences>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
-      <DataExecutionPrevention />
+      <DataExecutionPrevention>true</DataExecutionPrevention>
       <TargetMachine>MachineX86</TargetMachine>
-      <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
-      <MinimumRequiredVersion>5.1</MinimumRequiredVersion>
     </Link>
-    <Manifest>
-      <AdditionalManifestFiles>
-      </AdditionalManifestFiles>
-      <InputResourceManifests>
-      </InputResourceManifests>
-    </Manifest>
     <PostBuildEvent>
       <Command>PostBuild.exe $(OutDir)$(ProjectName).exe FileTest.rc  /subsystem4 /tools</Command>
     </PostBuildEvent>
@@ -213,16 +189,9 @@
       <OptimizeReferences>true</OptimizeReferences>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
-      <DataExecutionPrevention />
+      <DataExecutionPrevention>true</DataExecutionPrevention>
       <TargetMachine>MachineX64</TargetMachine>
-      <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
     </Link>
-    <Manifest>
-      <AdditionalManifestFiles>
-      </AdditionalManifestFiles>
-      <InputResourceManifests>
-      </InputResourceManifests>
-    </Manifest>
     <PostBuildEvent>
       <Command>PostBuild.exe $(OutDir)$(ProjectName).exe /subsystem4 /tools</Command>
     </PostBuildEvent>
@@ -231,10 +200,10 @@
     <ClCompile Include="DateTime.cpp" />
     <ClCompile Include="DlgDataEditor.cpp" />
     <ClCompile Include="DlgEaEditor.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Use</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Use</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Use</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Use</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="DlgEasEditor.cpp" />
     <ClCompile Include="DlgFileTest.cpp" />
@@ -258,18 +227,26 @@
     <ClCompile Include="TDataEditor.cpp" />
     <ClCompile Include="TToolTip.cpp" />
     <ClCompile Include="Utils.cpp" />
-    <ClCompile Include="WinMain.cpp" />
+    <ClCompile Include="WinMain.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="FileTest.rc" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="FileTest.h" />
     <ClInclude Include="..\Aaa\inc\ntdll.h" />
+    <ClInclude Include="FileTest.h" />
     <ClInclude Include="ntstatus.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="TDataEditor.h" />
     <ClInclude Include="TToolTip.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Manifest Include="res\FileTest.exe.manifest" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="Res\FileTest.ico" />
@@ -284,9 +261,6 @@
   </ItemGroup>
   <ItemGroup>
     <Text Include="doc\History.txt" />
-  </ItemGroup>
-  <ItemGroup>
-    <Manifest Include="res\FileTest.exe.manifest" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
