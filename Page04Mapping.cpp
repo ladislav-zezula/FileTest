@@ -100,7 +100,7 @@ static void InitPageProtections(HWND hDlg, UINT nIDCombo, TFlagInfo * pFlags)
         while(pFlags->szFlagText != NULL)
         {
             // Format and insert the string to the combo box
-            _stprintf(szItemText, _T("[%04X] %s"), pFlags->dwValue, pFlags->szFlagText);
+            StringCchPrintf(szItemText, _countof(szItemText), _T("[%04X] %s"), pFlags->dwValue, pFlags->szFlagText);
             ComboBox_AddString(hWndCombo, szItemText);
 
             // Move to the next flag

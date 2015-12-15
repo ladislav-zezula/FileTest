@@ -38,10 +38,13 @@ static TFlagInfo Win7OplockFlags[] =
 
 extern TFlagInfo FileAttributesValues[];
 
-static LPTSTR FormatOplockTypeWindows7(LPTSTR szBuffer, DWORD dwOplockFlags)
+static LPTSTR FormatOplockTypeWindows7(LPTSTR szBuffer, size_t cchBuffer, DWORD dwOplockFlags)
 {
+    size_t nIndex;
+
     // Print the base information
-    int nIndex = _stprintf(szBuffer, _T("windows7:"));
+    StringCchPrintf(szBuffer, cchBuffer, _T("windows7:"));
+    nIndex = _tcslen(szBuffer);
 
     if(dwOplockFlags & OPLOCK_LEVEL_CACHE_READ)
         szBuffer[nIndex++] = _T('R');
@@ -764,13 +767,14 @@ static int OnGetFileAttributes(HWND hDlg)
         {
             if(IS_FLAG_SET(pFlags, dwAttr))
             {
-                _tcscat(szFileAttributes, pFlags->szFlagText);
-                _tcscat(szFileAttributes, _T("\n"));
+                if(szFileAttributes[0] != 0)
+                    StringCchCat(szFileAttributes, _countof(szFileAttributes), _T("\n"));
+                StringCchCat(szFileAttributes, _countof(szFileAttributes), pFlags->szFlagText);
             }
         }
 
         if(szFileAttributes[0] == 0)
-            _tcscpy(szFileAttributes, _T("0"));
+            StringCchCopy(szFileAttributes, _countof(szFileAttributes), _T("0"));
         MessageBoxRc(hDlg, IDS_FILE_ATTRIBUTES, (UINT_PTR)szFileAttributes);
     }
     else
@@ -802,7 +806,8 @@ static int OnNtQueryAttributesFile(HWND hDlg)
         Status = NtQueryAttributesFile(&ObjAttr, &BasicInfo);
         if(NT_SUCCESS(Status))
         {
-            _stprintf(szMsgText, _T("CreationTime: %08X-%08X\n")
+            StringCchPrintf(szMsgText, _countof(szMsgText),
+                                 _T("CreationTime: %08X-%08X\n")
                                  _T("LastAccessTime: %08X-%08X\n")
                                  _T("LastWriteTime: %08X-%08X\n")
                                  _T("ChangeTime: %08X-%08X\n")
@@ -994,8 +999,8 @@ static void OnCompleteOplockApc_Win7(TWindowData * pData, TApcEntry * pApc)
     // Get the original and new type of oplock
     // Note: Even if the new oplock is non-zero,
     // the event will not trigger again even if we requeue it to the APC thread
-    szOplockType = FormatOplockTypeWindows7(szBuffer1, pOut->OriginalOplockLevel);
-    szBrokenTo = FormatOplockTypeWindows7(szBuffer2, pOut->NewOplockLevel);
+    szOplockType = FormatOplockTypeWindows7(szBuffer1, _countof(szBuffer1), pOut->OriginalOplockLevel);
+    szBrokenTo = FormatOplockTypeWindows7(szBuffer2, _countof(szBuffer2), pOut->NewOplockLevel);
 
     // Show the message box that the oplock broke
     MessageBoxRc(pData->hDlg, IDS_INFO, IDS_OPLOCK_BROKE, szOplockType, szBrokenTo);

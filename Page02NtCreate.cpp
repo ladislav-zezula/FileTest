@@ -558,8 +558,8 @@ static int OnCreateFileClick(HWND hDlg)
     }
 
     // Get the directory name from the dialog data
-    _tcscpy(szDirName, pData->szDirName);
-    _tcscpy(szFileName, pData->szFileName1);
+    StringCchCopy(szDirName, _countof(szDirName), pData->szDirName);
+    StringCchCopy(szFileName, _countof(szFileName), pData->szFileName1);
 
     // If we are about to open a file by ID, and we have no relative directory,
     // try to take the directory from the file name
@@ -571,9 +571,8 @@ static int OnCreateFileClick(HWND hDlg)
 
         if(szFileId != NULL)
         {
-            _tcsncpy(szDirName, szFullName, nLength);
-            szDirName[nLength] = 0;
-            _tcscpy(szFileName, szFileId + 1);
+            StringCchCopy(szDirName, nLength, szFullName);
+            StringCchCopy(szFileName, _countof(szFileName), szFileId + 1);
         }
     }
 

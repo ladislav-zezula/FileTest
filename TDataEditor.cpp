@@ -280,6 +280,7 @@ static int FormatOneLine(TEditorData * pData, size_t nLineIndex)
     LPBYTE pbDataPtr;
     LPBYTE pbDataEnd;
     LPTSTR szLineBuffer = pData->szLineBuffer;
+    LPTSTR szLineEnd = szLineBuffer + pData->nEndTextValues;
     size_t DataOffset = (nLineIndex * pData->cbBytesPerLine);
 
     // Get the single line
@@ -304,7 +305,8 @@ static int FormatOneLine(TEditorData * pData, size_t nLineIndex)
         GuardedReadByte(pData, DataOffset);
         if(pData->bReadException)
         {
-            szLineBuffer += _stprintf(szLineBuffer, _T("Exception %08X when reading address %p"), pData->ExceptionCode, pbDataBegin);
+            StringCchPrintf(szLineBuffer, (szLineEnd - szLineBuffer), _T("Exception %08X when reading address %p"), pData->ExceptionCode, pbDataBegin);
+            szLineBuffer += _tcslen(szLineBuffer);
             return (int)(szLineBuffer - pData->szLineBuffer);
         }
 
@@ -412,14 +414,14 @@ static void CreateTextFont(TEditorData * pData)
     LogFont.lfQuality        = DEFAULT_QUALITY;
     LogFont.lfPitchAndFamily = FIXED_PITCH;
     LogFont.lfHeight         = -12;
-    _tcscpy(LogFont.lfFaceName, _T("Courier New"));
+    StringCchCopy(LogFont.lfFaceName, _countof(LogFont.lfFaceName), _T("Courier New"));
     pData->hFont = CreateFontIndirect(&LogFont);
 
     // If the font couldn't be created, create default one
     if(pData->hFont == NULL)
     {
         LogFont.lfHeight = -15;
-        _tcscpy(LogFont.lfFaceName, _T("Courier"));
+        StringCchCopy(LogFont.lfFaceName, _countof(LogFont.lfFaceName), _T("Courier"));
         pData->hFont = CreateFontIndirect(&LogFont);
 
         // If even that failed, get the default fixed width font

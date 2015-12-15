@@ -2275,7 +2275,7 @@ LPCTSTR NtStatus2Text(NTSTATUS Status)
     szStr = GetNtStatusString(Status);
     if(szStr == NULL)
     {
-        _stprintf(szStatus, _T("%08lX"), Status);
+        StringCchPrintf(szStatus, _countof(szStatus), _T("%08lX"), Status);
         szStr = szStatus;
     }
 

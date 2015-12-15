@@ -143,15 +143,15 @@ static bool CheckForServiceAccount(LPTSTR szUserName)
     HKEY hSubKey;
 
     // Save the user name
-    _tcscpy(szSaveUserName, szUserName);
+    StringCchCopy(szSaveUserName, _countof(szSaveUserName), szUserName);
 
     // If the name resembles a service, give it the NT_SERVICE prefix. This only applies in Vista or newer
     if(g_dwWinVer >= 0x0600 && _tcschr(szUserName, _T('\\')) == NULL)
     {
-        _stprintf(szKeyName, _T("SYSTEM\\CurrentControlSet\\Services\\%s"), szUserName);
+        StringCchPrintf(szKeyName, _countof(szKeyName), _T("SYSTEM\\CurrentControlSet\\Services\\%s"), szUserName);
         if(RegOpenKeyEx(HKEY_LOCAL_MACHINE, szKeyName, 0, KEY_QUERY_VALUE, &hSubKey) == ERROR_SUCCESS)
         {
-            _stprintf(szUserName, _T("NT SERVICE\\%s"), szSaveUserName);
+            StringCchPrintf(szUserName, MAX_PATH, _T("NT SERVICE\\%s"), szSaveUserName);
             RegCloseKey(hSubKey);
             return true;
         }
@@ -376,7 +376,7 @@ static LPTSTR FormatBitFlags(
     // If the flags are zero, append zero only
     if(dwFlags == 0 && szMask == NULL)
     {
-        if(szEndChar > szBuffer)
+        if(szBuffer < szEndChar)
             *szBuffer++ = _T('0');
         *szBuffer = 0;
         return szBuffer;
@@ -385,7 +385,7 @@ static LPTSTR FormatBitFlags(
     // Append the byte value
     if(szMask != NULL)
     {
-        szBuffer += _stprintf(szBuffer, szMask, dwFlags);
+        StringCchPrintfEx(szBuffer, (szEndChar - szBuffer), &szBuffer, NULL, 0, szMask, dwFlags);
     }
 
     // If the caller requires full output, give the flag values as named values
@@ -406,8 +406,8 @@ static LPTSTR FormatBitFlags(
                 }
 
                 // Append the flag value now
-                while(szBuffer < szEndChar && *szFlagName != 0)
-                    *szBuffer++ = *szFlagName++;
+                StringCchCopy(szBuffer, (szEndChar - szBuffer), szFlagName);
+                szBuffer += _tcslen(szBuffer);
             }
 
             // Clear this flag from the values
@@ -417,11 +417,11 @@ static LPTSTR FormatBitFlags(
     }
 
     // If there are some flags remaining, insert them as hexa value
-    if(dwFlags != 0 && (szEndChar - szBuffer) >= 8)
+    if(dwFlags != 0)
     {
         if(nFlagsAppended > 0)
             *szBuffer++ = _T('|');
-        szBuffer += _stprintf(szBuffer, _T("%08lX"), dwFlags);
+        StringCchPrintfEx(szBuffer, (szEndChar - szBuffer), &szBuffer, NULL, 0, _T("%08lX"), dwFlags);
     }
 
     // Terminate the string and exit
@@ -429,31 +429,25 @@ static LPTSTR FormatBitFlags(
     return szBuffer;
 }
 
-static void SidToString(PSID pvSid, LPTSTR szString, bool bAddUserName)
+static void SidToString(PSID pvSid, LPTSTR szString, size_t cchString, bool bAddUserName)
 {
     PSID_IDENTIFIER_AUTHORITY pSia;
     SID * pSid = (SID *)pvSid;
+    LPTSTR szStringEnd = szString + cchString;
     UCHAR SubAuthCount;
 
-    // Add the "S-" begin
-    *szString++ = _T('S');
-    *szString++ = _T('-');
-
-    // Add the revision
-    szString += _stprintf(szString, _T("%u-"), pSid->Revision);
-
-    // Add the last value of the authority
-    // TODO: Is this correct ?
+    // Add the "S-%u-" begin with revision
     pSia = GetSidIdentifierAuthority(pSid);
-    szString += _stprintf(szString, _T("%u"), pSia->Value[5]);
-
+    StringCchPrintfEx(szString, (szStringEnd - szString), &szString, NULL, 0, _T("S-%u-%u"),
+                                                                              pSid->Revision,
+                                                                              pSia->Value[5]);
     // Add the subauthorities
     SubAuthCount = *GetSidSubAuthorityCount(pSid);
     for(DWORD i = 0; i < SubAuthCount; i++)
     {
         DWORD dwSubAuth = *GetSidSubAuthority(pSid, i);
 
-        szString += swprintf(szString, L"-%u", dwSubAuth);
+        StringCchPrintfEx(szString, (szStringEnd - szString), &szString, NULL, 0, L"-%u", dwSubAuth);
     }
 
     // If we are required to add user name, do it.
@@ -468,13 +462,13 @@ static void SidToString(PSID pvSid, LPTSTR szString, bool bAddUserName)
         if(LookupAccountSid(NULL, pSid, szUserName, &cchUserName, szDomainName, &cchDomainName, &SidNameUse))
         {
             if(szDomainName[0] != 0)
-                _stprintf(szString, _T(" (%s\\%s)"), szDomainName, szUserName);
+                StringCchPrintf(szString, (szStringEnd - szString), _T(" (%s\\%s)"), szDomainName, szUserName);
             else
-                _stprintf(szString, _T(" (%s)"), szUserName);
+                StringCchPrintf(szString, (szStringEnd - szString), _T(" (%s)"), szUserName);
         }
         else
         {
-            _tcscpy(szString, _T(" (Unknown SID)"));
+            StringCchPrintf(szString, (szStringEnd - szString), _T(" (Unknown SID)"));
         }
     }
 }
@@ -721,7 +715,7 @@ static void SidToTreeItem(HWND hTreeView, HTREEITEM hItem, PSID pSid)
     TCHAR szItemText[256];
 
     // Convert the SID to text
-    SidToString(pSid, szItemText, true);
+    SidToString(pSid, szItemText, _countof(szItemText), true);
 
     // Put the SID text to the tree view item
     tvi.mask = TVIF_TEXT | TVIF_PARAM;
@@ -761,7 +755,7 @@ static void MandLabelSidToTreeItem(HWND hTreeView, HTREEITEM hItem, PSID pSid)
     DWORD dwIntLevel = SidToIntegrityLevel(pSid);
 
     // Convert the integrity level to number
-    _stprintf(szItemText, szIntLevelFmt, dwIntLevel);
+    StringCchPrintf(szItemText, _countof(szItemText), szIntLevelFmt, dwIntLevel);
 
     // Put the SID text to the tree view item
     tvi.mask = TVIF_TEXT | TVIF_PARAM;
@@ -805,7 +799,7 @@ static void AceToTreeItem(
 
     // Insert the subitem with ACE type
     hItem = InsertTreeItem(hTreeView, hAceItem, TVI_FIRST, _T(""), NULL);
-    _stprintf(szItemText, szAceTypeFmt, pAce->Header.AceType);
+    StringCchPrintf(szItemText, _countof(szItemText), szAceTypeFmt, pAce->Header.AceType);
     TextToTreeItem(hTreeView, hItem, TREE_ITEM_ACE_TYPE, szItemText);
 
     // Insert the subitem with ACE flags
@@ -814,7 +808,7 @@ static void AceToTreeItem(
 
     // Insert the subitem with ACE size
     hItem = InsertTreeItem(hTreeView, hAceItem, hItem, _T(""), NULL);
-    _stprintf(szItemText, szAceSizeFmt, pAce->Header.AceSize);
+    StringCchPrintf(szItemText, _countof(szItemText), szAceSizeFmt, pAce->Header.AceSize);
     TextToTreeItem(hTreeView, hItem, TREE_ITEM_ACE_SIZE, szItemText);
 
     // If the ACE is one of four supported ACE types, insetr access mask and SID
@@ -1365,7 +1359,7 @@ static BOOL StartEditingAceFlags(HWND /* hDlg */, HWND hTreeView, HTREEITEM hIte
         if(TreeItemToAceFlags(hTreeView, hItem, dwAceFlags))
         {
             Edit_LimitText(hEdit, 0x08);
-            _stprintf(szItemText, _T("%02lX"), dwAceFlags);
+            StringCchPrintf(szItemText, _countof(szItemText), _T("%02lX"), dwAceFlags);
             SetWindowText(hEdit, szItemText);
             return TRUE;
         }
@@ -1385,7 +1379,7 @@ static BOOL StartEditingAceMask(HWND /* hDlg */, HWND hTreeView, HTREEITEM hItem
         if(TreeItemToAceMask(hTreeView, hItem, dwAceMask))
         {
             Edit_LimitText(hEdit, 0x20);
-            _stprintf(szItemText, _T("%08lX"), dwAceMask);
+            StringCchPrintf(szItemText, _countof(szItemText), _T("%08lX"), dwAceMask);
             SetWindowText(hEdit, szItemText);
             return TRUE;
         }
@@ -1405,7 +1399,7 @@ static BOOL StartEditingMandAceMask(HWND /* hDlg */, HWND hTreeView, HTREEITEM h
         if(TreeItemToMandatoryMask(hTreeView, hItem, dwAceMask))
         {
             Edit_LimitText(hEdit, 0x20);
-            _stprintf(szItemText, _T("%08lX"), dwAceMask);
+            StringCchPrintf(szItemText, _countof(szItemText), _T("%08lX"), dwAceMask);
             SetWindowText(hEdit, szItemText);
             return TRUE;
         }
@@ -1425,7 +1419,7 @@ static BOOL StartEditingSid(HWND /* hDlg */, HWND hTreeView, HTREEITEM hItem)
         if(TreeItemToSid(hTreeView, hItem, &pSid, true))
         {
             Edit_LimitText(hEdit, 128);
-            SidToString(pSid, szItemText, false);
+            SidToString(pSid, szItemText, _countof(szItemText), false);
             SetWindowText(hEdit, szItemText);
             HeapFree(g_hHeap, 0, pSid);
             return TRUE;
@@ -1448,7 +1442,7 @@ static BOOL StartEditingMandLabelSid(HWND /* hDlg */, HWND hTreeView, HTREEITEM 
         {
             // Format the integrity level
             dwIntLevel = SidToIntegrityLevel(pSid);
-            _stprintf(szItemText, _T("%08lX"), dwIntLevel);
+            StringCchPrintf(szItemText, _countof(szItemText), _T("%08lX"), dwIntLevel);
 
             // Apply the integrity level to the editbox
             Edit_LimitText(hEdit, 0x20);

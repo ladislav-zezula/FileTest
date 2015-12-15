@@ -54,38 +54,38 @@ static TAnchors * pAnchors = NULL;
 //-----------------------------------------------------------------------------
 // Local functions
 
-static LPTSTR StringFromAnsi(LPCSTR szStringA, ULONG nLength)
+static LPTSTR StringFromAnsi(LPCSTR szStringA, ULONG cchLength)
 {
     LPTSTR szStringT;
 
-    szStringT = new TCHAR[nLength+1];
+    szStringT = new TCHAR[cchLength+1];
     if(szStringT != NULL)
     {
 #ifdef _UNICODE
-        MultiByteToWideChar(CP_ACP, 0, szStringA, nLength, szStringT, nLength);
-        szStringT[nLength] = 0;
+        MultiByteToWideChar(CP_ACP, 0, szStringA, cchLength, szStringT, cchLength);
+        szStringT[cchLength] = 0;
 #else
-        _tcsncpy(szStringT, szStringA, nLength);
-        szStringT[nLength] = 0;
+        StringCchCopyA(szStringT, szStringA, cchLength);
+        szStringT[cchLength] = 0;
 #endif
     }
 
     return szStringT;
 }
 
-static LPTSTR StringFromWide(LPCWSTR szStringW, ULONG nLength)
+static LPTSTR StringFromWide(LPCWSTR szStringW, ULONG cchLength)
 {
     LPTSTR szStringT;
 
-    szStringT = new TCHAR[nLength+1];
+    szStringT = new TCHAR[cchLength+1];
     if(szStringT != NULL)
     {
 #ifdef _UNICODE
-        _tcsncpy(szStringT, szStringW, nLength);
-        szStringT[nLength] = 0;
+        StringCchCopyW(szStringT, cchLength+1, szStringW);
+        szStringT[cchLength] = 0;
 #else
-        WideCharToMultiByte(CP_ACP, WC_COMPOSITECHECK, szStringW, nLength, szStringT, nLength, 0, 0);
-        szStringT[nLength] = 0;
+        WideCharToMultiByte(CP_ACP, WC_COMPOSITECHECK, szStringW, cchLength, szStringT, cchLength, 0, 0);
+        szStringT[cchLength] = 0;
 #endif
     }
 
@@ -127,7 +127,8 @@ static void ItemDataToString(
             break;
 
         // Print the data bytes
-        szStreamData += _stprintf(szStreamData, _T("%02X "), (DWORD)pbStreamData[0]);
+        StringCchPrintf(szStreamData, (szStreamDataEnd - szStreamData), _T("%02X "), (DWORD)pbStreamData[0]);
+        szStreamData += 3;
         pbStreamData++;
     }
 }
@@ -201,7 +202,6 @@ NTSTATUS NtCreateFileStream(PUNICODE_STRING SourceName, TFileStream * pStream)
     NTSTATUS Status;
     LPWSTR szStreamName;
     HANDLE FileHandle = NULL;
-    int nLength;
 
     // Create the full name of the stream
     FileName.MaximumLength = SourceName->MaximumLength;
@@ -210,8 +210,8 @@ NTSTATUS NtCreateFileStream(PUNICODE_STRING SourceName, TFileStream * pStream)
     if(pStream->szStreamName[0] != 0)
     {
         szStreamName = (LPWSTR)((LPBYTE)FileName.Buffer + FileName.Length);
-        nLength = swprintf(szStreamName, L":%s", pStream->szStreamName);
-        FileName.Length = FileName.Length + (USHORT)(nLength * sizeof(WCHAR));
+        StringCchPrintfW(szStreamName, (FileName.MaximumLength - FileName.Length) / sizeof(WCHAR), L":%s", pStream->szStreamName);
+        FileName.Length = (USHORT)(wcslen(FileName.Buffer) * sizeof(WCHAR));
     }
 
     // Open the stream
@@ -248,8 +248,9 @@ NTSTATUS NtCreateFileStream(PUNICODE_STRING SourceName, TFileStream * pStream)
     return Status;
 }
 
-static PFILE_FULL_EA_INFORMATION ConvertStreamsToEaList(
+static NTSTATUS ConvertStreamsToEaList(
     PLIST_ENTRY pHeadEntry,
+    PFILE_FULL_EA_INFORMATION * PtrFileEa,
     LPDWORD pcbFileEa)
 {
     PFILE_FULL_EA_INFORMATION pFileEa = NULL;
@@ -272,52 +273,59 @@ static PFILE_FULL_EA_INFORMATION ConvertStreamsToEaList(
         }
     }
 
-    // Allocate space for complete EAs
-    pFileEa = pEa = (PFILE_FULL_EA_INFORMATION)RtlAllocateHeap(RtlProcessHeap(), HEAP_ZERO_MEMORY, cbEaLength);
-    if(pFileEa == NULL)
-        return NULL;
-    cbEaLength = 0;
-
-    // Parse the list again and store all EAs
-    for(pListEntry = pHeadEntry->Flink; pListEntry != pHeadEntry; pListEntry = pListEntry->Flink)
+    // If there are no EAs, do nothing
+    if(cbEaLength != 0)
     {
-        // Get the entry and the next entry
-        pStream = CONTAINING_RECORD(pListEntry, TFileStream, Entry);
-        if(pStream->dwStreamType == STREAM_TYPE_EA)
+        // Allocate space for complete EAs
+        pFileEa = pEa = (PFILE_FULL_EA_INFORMATION)RtlAllocateHeap(RtlProcessHeap(), HEAP_ZERO_MEMORY, cbEaLength);
+        if(pFileEa == NULL)
+            return STATUS_INSUFFICIENT_RESOURCES;
+    
+        cbEaLength = 0;
+
+        // Parse the list again and store all EAs
+        for(pListEntry = pHeadEntry->Flink; pListEntry != pHeadEntry; pListEntry = pListEntry->Flink)
         {
-            // Convert to the EA
-            pEa->NextEntryOffset = 0;
-            pEa->Flags           = 0;
-            pEa->EaNameLength    = (UCHAR)_tcslen(pStream->szStreamName);
-            pEa->EaValueLength   = (USHORT)pStream->cbStreamData;
+            // Get the entry and the next entry
+            pStream = CONTAINING_RECORD(pListEntry, TFileStream, Entry);
+            if(pStream->dwStreamType == STREAM_TYPE_EA)
+            {
+                // Convert to the EA
+                pEa->NextEntryOffset = 0;
+                pEa->Flags           = 0;
+                pEa->EaNameLength    = (UCHAR)_tcslen(pStream->szStreamName);
+                pEa->EaValueLength   = (USHORT)pStream->cbStreamData;
 
-            // Copy the file name
-            for(i = 0; pStream->szStreamName[i] != 0; i++)
-                pEa->EaName[i] = (CHAR)pStream->szStreamName[i];
-            pEa->EaName[i] = 0;
+                // Copy the file name
+                for(i = 0; pStream->szStreamName[i] != 0; i++)
+                    pEa->EaName[i] = (CHAR)pStream->szStreamName[i];
+                pEa->EaName[i] = 0;
 
-            // Copy the EA data
-            memcpy(&pEa->EaName[i + 1], pStream->pbStreamData, pStream->cbStreamData);
+                // Copy the EA data
+                memcpy(&pEa->EaName[i + 1], pStream->pbStreamData, pStream->cbStreamData);
 
-            // Calculate the length of the entry
-            cbEntryLength = GetEaEntrySize(pEa);
-            cbEaLength += cbEntryLength;
+                // Calculate the length of the entry
+                cbEntryLength = GetEaEntrySize(pEa);
+                cbEaLength += cbEntryLength;
 
-            // If this is not the last entry, put the next entry offset
-            pLastEa = pEa;
-            pEa->NextEntryOffset = cbEntryLength;
-            pEa = (PFILE_FULL_EA_INFORMATION)((LPBYTE)pEa + cbEntryLength);
+                // If this is not the last entry, put the next entry offset
+                pLastEa = pEa;
+                pEa->NextEntryOffset = cbEntryLength;
+                pEa = (PFILE_FULL_EA_INFORMATION)((LPBYTE)pEa + cbEntryLength);
+            }
         }
+
+        // Clear next entry offset for the last EA
+        if(pLastEa != NULL)
+            pLastEa->NextEntryOffset = 0;
     }
 
-    // Clear next entry offset for the last EA
-    if(pLastEa != NULL)
-        pLastEa->NextEntryOffset = 0;
-
     // Give EA list and its size to the caller
+    if(PtrFileEa != NULL)
+        PtrFileEa[0] = pFileEa;
     if(pcbFileEa != NULL)
-        *pcbFileEa = cbEaLength; 
-    return pFileEa;
+        pcbFileEa[0] = cbEaLength; 
+    return STATUS_SUCCESS;
 }
 
 static NTSTATUS LoadStreamFromFile(
@@ -334,6 +342,7 @@ static NTSTATUS LoadStreamFromFile(
     LPCTSTR szStreamName = NULL;
     HANDLE FileHandle;
     DWORD dwStreamType = STREAM_TYPE_NONE;
+    size_t cchStreamName = 0;
     size_t nSize;
 
     // Extract the stream type from the file name
@@ -389,7 +398,8 @@ static NTSTATUS LoadStreamFromFile(
     // Create new stream
     if(NT_SUCCESS(Status))
     {
-        nSize = sizeof(TFileStream) + (_tcslen(szStreamName) + 1) * sizeof(TCHAR) + StdInfo.EndOfFile.LowPart;
+        cchStreamName = _tcslen(szStreamName) + 1;
+        nSize = sizeof(TFileStream) + cchStreamName * sizeof(TCHAR) + StdInfo.EndOfFile.LowPart;
         pStream = (TFileStream *)RtlAllocateHeap(RtlProcessHeap(), HEAP_ZERO_MEMORY, nSize);
         if(pStream == NULL)
             Status = STATUS_INSUFFICIENT_RESOURCES;
@@ -399,7 +409,7 @@ static NTSTATUS LoadStreamFromFile(
     if(NT_SUCCESS(Status))
     {
         pStream->szStreamName = (LPTSTR)(pStream + 1);
-        _tcscpy(pStream->szStreamName, szStreamName);
+        StringCchCopy(pStream->szStreamName, cchStreamName, szStreamName);
 
         pStream->pbStreamData = (LPBYTE)(pStream->szStreamName + _tcslen(pStream->szStreamName) + 1);
         pStream->cbStreamData = StdInfo.EndOfFile.LowPart;
@@ -445,7 +455,7 @@ static NTSTATUS SaveStreamToFile(
     TCHAR szFileName[MAX_PATH];
     
     // Construct the new file name
-    _stprintf(szFileName, _T("%s#%s%02u#%s"), szMainFileName, StreamTypes[dwStreamType], dwStreamIndex, szStreamName);
+    StringCchPrintf(szFileName, _countof(szFileName), _T("%s#%s%02u#%s"), szMainFileName, StreamTypes[dwStreamType], dwStreamIndex, szStreamName);
     Status = FileNameToUnicodeString(&FileName, szFileName);
 
     // Create the stream file
@@ -520,7 +530,7 @@ NTSTATUS LoadStreamsFromDirectory(
         FileMask.MaximumLength = SourceName->MaximumLength - FolderName.Length;
         FileMask.Length = SourceName->Length - FolderName.Length + 4;
         FileMask.Buffer = SourceName->Buffer + (FolderName.Length / sizeof(WCHAR));
-        wcscat(szPlainName, L"#*");
+        StringCchCat(szPlainName, SourceName->MaximumLength / sizeof(WCHAR), L"#*");
         
         // Open the directory
         InitializeObjectAttributes(&ObjAttr, &FolderName, OBJ_CASE_INSENSITIVE, NULL, NULL);
@@ -681,7 +691,7 @@ static NTSTATUS StreamsToListView(
     for(;;)
     {
         // Get the name and value from the EA
-        szStreamName = StringFromWide(StrmBuffer->StreamName, StrmBuffer->StreamNameLength);
+        szStreamName = StringFromWide(StrmBuffer->StreamName, StrmBuffer->StreamNameLength / sizeof(WCHAR));
         NormalizeStreamName(szStreamName);
 
         // Get the stream size
@@ -695,7 +705,7 @@ static NTSTATUS StreamsToListView(
         {
             // Prepare the ADS name
             szFormat = (szStreamName[0] != 0) ? _T("%s:%s") : _T("%s");
-            _stprintf(szFileName, szFormat, pData->szFileName1, szStreamName);
+            StringCchPrintf(szFileName, _countof(szFileName), szFormat, pData->szFileName1, szStreamName);
             Status = FileNameToUnicodeString(&FileName, szFileName);
             if(!NT_SUCCESS(Status))
                 break;
@@ -1009,13 +1019,11 @@ static int OnImportStreams(HWND hDlg)
     // Convert the remaining streams to list of extended attributes
     if(NT_SUCCESS(Status))
     {
-        pFileEa = ConvertStreamsToEaList(&StreamLinks, &cbFileEa);
-        if(pFileEa == NULL)
-            nError = STATUS_INSUFFICIENT_RESOURCES;
+        Status = ConvertStreamsToEaList(&StreamLinks, &pFileEa, &cbFileEa);
     }
 
     // Now apply the EAs to the file
-    if(NT_SUCCESS(Status))
+    if(NT_SUCCESS(Status) && pFileEa && cbFileEa)
     {
         Status = NtSetEaFile(FileHandle, &IoStatus, pFileEa, cbFileEa);
     }

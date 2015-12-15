@@ -37,7 +37,7 @@ class TToolTip
     protected:
 
     BOOL AddToolTipInternal(HWND hDlg, UINT nIDCtrl, LPCTSTR szTip, LPARAM lParam);
-    LPTSTR AddNewLine(LPTSTR szTextBuff);
+    LPTSTR AddNewLine(LPTSTR szTextBuff, size_t cchMaxChars);
     void OnGetTooltipText(LPNMTTDISPINFO pTTDispInfo);
 
     LPTSTR szToolTipText;       // Text for preparing the buffer

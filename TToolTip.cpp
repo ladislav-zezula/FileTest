@@ -148,9 +148,9 @@ BOOL TToolTip::AddToolTipInternal(HWND hDlg, UINT nIDCtrl, LPCTSTR szTip, LPARAM
     return bResult;
 }
 
-LPTSTR TToolTip::AddNewLine(LPTSTR szTextBuff)
+LPTSTR TToolTip::AddNewLine(LPTSTR szTextBuff, size_t cchMaxChars)
 {
-    _tcscpy(szTextBuff, _T(" |\r\n"));
+    StringCchCopy(szTextBuff, cchMaxChars, _T(" |\r\n"));
     return szTextBuff + 4;
 }
 
@@ -187,7 +187,7 @@ void TToolTip::OnGetTooltipText(LPNMTTDISPINFO pTTDispInfo)
 
                     // If there is a flag from the previous pass, append newline to it
                     if(szTextBuff > szToolTipText)
-                        szTextBuff = AddNewLine(szTextBuff);
+                        szTextBuff = AddNewLine(szTextBuff, (szTextBuffEnd - szTextBuff));
 
                     // Append the flag text
                     memcpy(szTextBuff, pFlags->szFlagText, (nLength + 1) * sizeof(TCHAR));
@@ -206,9 +206,9 @@ void TToolTip::OnGetTooltipText(LPNMTTDISPINFO pTTDispInfo)
             {
                 // If there is a flag from the previous pass, append newline to it
                 if(szTextBuff > szToolTipText)
-                    szTextBuff = AddNewLine(szTextBuff);
+                    szTextBuff = AddNewLine(szTextBuff, (szTextBuffEnd - szTextBuff));
 
-                _stprintf(szTextBuff, _T("0x%08X"), dwValue32);
+                StringCchPrintf(szTextBuff, (szTextBuffEnd - szTextBuff), _T("0x%08X"), dwValue32);
             }
 
             // Supply the text to the tooltip
@@ -217,7 +217,7 @@ void TToolTip::OnGetTooltipText(LPNMTTDISPINFO pTTDispInfo)
         }
         else
         {
-            _stprintf(pTTDispInfo->szText, _T("Error converting \"%s\" to 32-bit integer"), szWindowText);
+            StringCchPrintf(pTTDispInfo->szText, _countof(pTTDispInfo->szText), _T("Error converting \"%s\" to 32-bit integer"), szWindowText);
         }
     }
 }

@@ -67,6 +67,7 @@ static int SetListViewEaEntry(
     LPTSTR szTemp;
     PBYTE pbEaValue = (PBYTE)pEaItem->EaName + pEaItem->EaNameLength + 1;
     TCHAR szEaSize[20];
+    size_t cchEaValue;
     int i;
 
     // -1 means insert to the end of the list
@@ -80,32 +81,40 @@ static int SetListViewEaEntry(
     szEaName[i] = 0;
 
     // Allocate buffer for EA value and convert the value
-    szEaValue = szTemp = new TCHAR[(pEaItem->EaValueLength * 3) + 1];
-    for(i = 0; i < pEaItem->EaValueLength; i++)
-        szTemp += _stprintf(szTemp, _T("%02lX "), pbEaValue[i]);
-    szTemp[0] = 0;
+    cchEaValue = (pEaItem->EaValueLength * 3) + 1;
+    szEaValue = szTemp = new TCHAR[cchEaValue];
+    if(szEaValue != NULL)
+    {
+        LPTSTR szEaValueEnd = szEaValue + cchEaValue;
 
-    // Set the main item
-    ZeroMemory(&lvi, sizeof(LVITEM));
-    lvi.mask    = LVIF_TEXT | LVIF_PARAM;
-    lvi.iItem   = nIndex;
-    lvi.pszText = szEaName;
-    lvi.lParam  = (LPARAM)pEaItem;
+        for(i = 0; i < pEaItem->EaValueLength; i++)
+        {
+            StringCchPrintf(szTemp, (szEaValueEnd - szTemp), _T("%02lX "), pbEaValue[i]);
+            szTemp += 3;
+        }
 
-    // Insert or set the item
-    if(bInsertNew)
-        nIndex = ListView_InsertItem(hListView, &lvi);
-    else
-        ListView_SetItem(hListView, &lvi);
+        // Set the main item
+        ZeroMemory(&lvi, sizeof(LVITEM));
+        lvi.mask    = LVIF_TEXT | LVIF_PARAM;
+        lvi.iItem   = nIndex;
+        lvi.pszText = szEaName;
+        lvi.lParam  = (LPARAM)pEaItem;
 
-    // Set the sub item text
-    _stprintf(szEaSize, _T("0x%04X"), pEaItem->EaValueLength);
-    ListView_SetItemText(hListView, nIndex, 1, szEaSize);
+        // Insert or set the item
+        if(bInsertNew)
+            nIndex = ListView_InsertItem(hListView, &lvi);
+        else
+            ListView_SetItem(hListView, &lvi);
 
-    // Set the sub item text
-    ListView_SetItemText(hListView, nIndex, 2, szEaValue);
+        // Set the sub item text
+        StringCchPrintf(szEaSize, _countof(szEaSize), _T("0x%04X"), pEaItem->EaValueLength);
+        ListView_SetItemText(hListView, nIndex, 1, szEaSize);
 
-    delete [] szEaValue;
+        // Set the sub item text
+        ListView_SetItemText(hListView, nIndex, 2, szEaValue);
+
+        delete [] szEaValue;
+    }
     delete [] szEaName;
     return TRUE;
 }

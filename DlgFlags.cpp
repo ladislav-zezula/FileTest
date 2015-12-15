@@ -154,7 +154,7 @@ static void CreateDialogLayout_Empty(TFlagDialogData * pData)
         }
 
         // Set the window text
-        _stprintf(szItemText, _T("(%08X) %s"), pFlags->dwValue, pFlags->szFlagText);
+        StringCchPrintf(szItemText, _countof(szItemText), _T("(%08X) %s"), pFlags->dwValue, pFlags->szFlagText);
         SetWindowText(hWndChild, szItemText);
 
         // Set the parametert to the flag pointer

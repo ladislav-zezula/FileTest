@@ -907,7 +907,7 @@ int NtUseFileId(HWND hDlg, LPCTSTR szFileId)
     pData->szDirName[3] = 0;
 
     // Copy the file id
-    _tcscpy(pData->szFileName1, szPlainName);
+    StringCchCopy(pData->szFileName1, _countof(pData->szFileName1), szPlainName);
 
     // Set the appropriate flags
     pData->dwCreateOptions = FILE_SYNCHRONOUS_IO_NONALERT | FILE_OPEN_BY_FILE_ID;

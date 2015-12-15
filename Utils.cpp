@@ -712,7 +712,7 @@ void SetResultInfo(HWND hDlg, NTSTATUS Status, HANDLE hHandle, UINT_PTR ResultLe
         szError = GetErrorText(Status);
         if(szError != NULL)
         {
-            _stprintf(szText, _T("(0x%08lX) %s"), Status, szError);
+            StringCchPrintf(szText, _countof(szText), _T("(0x%08lX) %s"), Status, szError);
             SetWindowText(hWndChild, szText);
             delete [] szError;
         }
@@ -1237,7 +1237,7 @@ int ConvertToWin32Name(HWND hDlg, UINT nIDEdit)
     LPTSTR szNewFileName;
     LPTSTR szFileName;
     HWND hWndEdit = GetDlgItem(hDlg, nIDEdit);
-    int nLength = GetWindowTextLength(hWndEdit);
+    size_t nLength = GetWindowTextLength(hWndEdit);
 
     // Only do something if the text length is > 0)
     if(nLength > 0)
@@ -1248,7 +1248,7 @@ int ConvertToWin32Name(HWND hDlg, UINT nIDEdit)
         {
             // Get the window text
             // If it already appears to be an Win32 name, do nothing
-            GetWindowText(hWndEdit, szFileName, nLength + 1);
+            GetWindowText(hWndEdit, szFileName, (int)(nLength + 1));
 
             // The "\??\Path" case
             if(!_tcsnicmp(szFileName, _T("\\??\\"), 4))
@@ -1279,10 +1279,11 @@ int ConvertToWin32Name(HWND hDlg, UINT nIDEdit)
             // The "\Systemroot case can still be solved on WinXP or newer
             else if(g_dwWinVer >= 0x0501 && IsNativeName(szFileName))
             {
-                szNewFileName = new TCHAR[nLength + wcslen(szGlobalRootMaskW) + 1];
+                nLength = nLength + wcslen(szGlobalRootMaskW) + 1;
+                szNewFileName = new TCHAR[nLength];
                 if(szNewFileName != NULL)
                 {
-                    _stprintf(szNewFileName, _T("%s%s"), szGlobalRootMaskW, szFileName);
+                    StringCchPrintf(szNewFileName, nLength, _T("%s%s"), szGlobalRootMaskW, szFileName);
                     SetWindowText(hWndEdit, szNewFileName);
                     delete [] szNewFileName;
                 }

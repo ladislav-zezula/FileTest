@@ -25,8 +25,11 @@ static void SetWindowModuleVersion(HWND hWndChild, LPCTSTR szModuleName)
     {
         GetWindowText(hWndChild, szFormat, _maxchars(szFormat));
         GetModuleVersion(szModuleName, &Version);
-        _stprintf(szText, szFormat, HIWORD(Version.HighPart), LOWORD(Version.HighPart),
-                                    HIWORD(Version.LowPart),  LOWORD(Version.LowPart));
+        StringCchPrintf(szText, _countof(szText), szFormat,
+                                                  HIWORD(Version.HighPart),
+                                                  LOWORD(Version.HighPart),
+                                                  HIWORD(Version.LowPart),
+                                                  LOWORD(Version.LowPart));
         SetWindowText(hWndChild, szText);
     }
 }

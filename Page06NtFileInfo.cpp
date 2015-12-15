@@ -891,23 +891,25 @@ static LPTSTR WStringToItemText(
 
 static LPTSTR CreateFullName(LPCTSTR szDirectory, LPCWSTR szPlainName, ULONG cbPlainName)
 {
-    LPTSTR szAppendPos;
     LPTSTR szFileName;
-    size_t nLength;
+    size_t cchLength;
 
     // Allocate buffer
-    nLength = _tcslen(szDirectory) + 1 + (cbPlainName / sizeof(WCHAR)) + 1; 
-    szFileName = new TCHAR[nLength];
-
-    // Copy the file name
-    _tcscpy(szFileName, szDirectory);
-    AddBackslash(szFileName);
+    cchLength = _tcslen(szDirectory) + 1 + (cbPlainName / sizeof(WCHAR)) + 1; 
+    szFileName = new TCHAR[cchLength];
+    if(szFileName != NULL)
+    {
+        // Construct the full name. Note that if there already is
+        // a backslash in the directory name, it will be doubled by
+        // this, which is fine. FileTest is not supposed to correct
+        // the user's input, but to send anything the user wants into the FS
+        StringCchPrintf(szFileName, cchLength,
+                                    _T("%s\\%.*s"),
+                                    szDirectory,
+                                    cbPlainName / sizeof(WCHAR),
+                                    szPlainName);
+    }
     
-    // Append the plain name
-    szAppendPos = szFileName + _tcslen(szFileName);
-    memcpy(szAppendPos, szPlainName, cbPlainName);
-    szAppendPos[cbPlainName / sizeof(TCHAR)] = 0;
-
     return szFileName;
 }
 
@@ -925,7 +927,7 @@ static void FillComboBoxFiltered(HWND hWndCombo, TInfoData * pInfoList, LPCTSTR 
     while(pInfoList->szInfoClass != NULL)
     {
         // Convert the string to uppercase
-        _tcscpy(szItemText, pInfoList->szInfoClass);
+        StringCchCopy(szItemText, _countof(szItemText), pInfoList->szInfoClass);
         CharUpper(szItemText);
 
         // If the item contains the substring, include it in the list
@@ -1157,8 +1159,7 @@ static int DataToItemText(TStructMember * pMember, LPTSTR szBuffer, size_t nMaxC
         {
             PUCHAR pucValue = (PUCHAR)pMember->pbDataPtr;
 
-            if((szEndChar - szBuffer) >= 2)
-                szBuffer += _stprintf(szBuffer, _T("0x%02lX"), *pucValue);
+            StringCchPrintfEx(szBuffer, (szEndChar - szBuffer), &szBuffer, NULL, 0, _T("0x%02lX"), *pucValue);
             break;
         }
 
@@ -1166,8 +1167,7 @@ static int DataToItemText(TStructMember * pMember, LPTSTR szBuffer, size_t nMaxC
         {
             PUSHORT pusValue = (PUSHORT)pMember->pbDataPtr;
 
-            if((szEndChar - szBuffer) >= 4)
-                szBuffer += _stprintf(szBuffer, _T("0x%04lX"), *pusValue);
+            StringCchPrintfEx(szBuffer, (szEndChar - szBuffer), &szBuffer, NULL, 0, _T("0x%04lX"), *pusValue);
             break;
         }
 
@@ -1175,8 +1175,7 @@ static int DataToItemText(TStructMember * pMember, LPTSTR szBuffer, size_t nMaxC
         {
             PULONG pulValue = (PULONG)pMember->pbDataPtr;
 
-            if((szEndChar - szBuffer) >= 8)
-                szBuffer += _stprintf(szBuffer, _T("0x%08lX"), *pulValue);
+            StringCchPrintfEx(szBuffer, (szEndChar - szBuffer), &szBuffer, NULL, 0, _T("0x%08lX"), *pulValue);
             break;
         }
 
@@ -1184,8 +1183,7 @@ static int DataToItemText(TStructMember * pMember, LPTSTR szBuffer, size_t nMaxC
         {
             PLARGE_INTEGER pliValue = (PLARGE_INTEGER)pMember->pbDataPtr;
 
-            if((szEndChar - szBuffer) >= 17)
-                szBuffer += _stprintf(szBuffer, _T("%08lX-%08lX"), pliValue->HighPart, pliValue->LowPart);
+            StringCchPrintfEx(szBuffer, (szEndChar - szBuffer), &szBuffer, NULL, 0, _T("%08lX-%08lX"), pliValue->HighPart, pliValue->LowPart);
             break;
         }
 
@@ -1198,8 +1196,7 @@ static int DataToItemText(TStructMember * pMember, LPTSTR szBuffer, size_t nMaxC
 
             for(UINT i = 0; i < pMember->nMemberSize; i++)
             {
-                if((szEndChar - szBuffer) >= 3)
-                    szBuffer += _stprintf(szBuffer, _T("%02lX "), *pbData++);
+                StringCchPrintfEx(szBuffer, (szEndChar - szBuffer), &szBuffer, NULL, 0, _T("%02lX "), *pbData++);
             }
 
             if(szEndChar > szBuffer)
@@ -1212,8 +1209,7 @@ static int DataToItemText(TStructMember * pMember, LPTSTR szBuffer, size_t nMaxC
         {
             PHANDLE phHandle = (PHANDLE)pMember->pbDataPtr;
 
-            if((szEndChar - szBuffer) >= sizeof(void *) * 2)
-                szBuffer += _stprintf(szBuffer, _T("%p"), *phHandle);
+            StringCchPrintfEx(szBuffer, (szEndChar - szBuffer), &szBuffer, NULL, 0, _T("%p"), *phHandle);
             break;
         }
 
@@ -1223,8 +1219,7 @@ static int DataToItemText(TStructMember * pMember, LPTSTR szBuffer, size_t nMaxC
 
             if(*phHandle != NULL)
             {
-                if((szEndChar - szBuffer) >= sizeof(void *) * 2)
-                    szBuffer += _stprintf(szBuffer, _T("%p"), *phHandle);
+                StringCchPrintfEx(szBuffer, (szEndChar - szBuffer), &szBuffer, NULL, 0, _T("%p"), *phHandle);
                 break;
             }
 
@@ -1337,13 +1332,12 @@ static int DataToItemText(TStructMember * pMember, LPTSTR szBuffer, size_t nMaxC
         {
             PLARGE_INTEGER pliValue = (PLARGE_INTEGER)pMember->pbDataPtr;
 
-            if((szEndChar - szBuffer) >= 17)
-                szBuffer += _stprintf(szBuffer, _T("%08lX-%08lX"), pliValue->HighPart, pliValue->LowPart);
+            StringCchPrintfEx(szBuffer, (szEndChar - szBuffer), &szBuffer, NULL, 0, _T("%08lX-%08lX"), pliValue->HighPart, pliValue->LowPart);
             break;
         }
 
         default:
-            _stprintf(szBuffer, _T("<unsupported>"));
+            StringCchPrintfEx(szBuffer, (szEndChar - szBuffer), &szBuffer, NULL, 0, _T("<unsupported>"));
             // No break here !!
 
         case TYPE_STRUCT:
@@ -1693,7 +1687,7 @@ static int FillStructureMembers(
                 {
                     for(ULONG i = 0; i < *pEntryCount; i++)
                     {
-                        _stprintf(szBuffer, _T("[0x%02X]: %p"), i, *pHandle++);
+                        StringCchPrintf(szBuffer, _countof(szBuffer), _T("[0x%02X]: %p"), i, *pHandle++);
                         InsertTreeItem(hTreeView, hSubItem, szBuffer, NULL);
                         nDataLength += sizeof(UINT_PTR);
                     }
@@ -1749,7 +1743,7 @@ static int FillChainedStructMembers(
     // Insert infos about the streams
     while(pbData < pbDataEnd)
     {
-        _stprintf(szItemName, _T("[%u]"), nIndex++);
+        StringCchPrintf(szItemName, _countof(szItemName), _T("[%u]"), nIndex++);
         hItem = InsertTreeItem(hTreeView, hParentItem, szItemName, pbData);
         FillStructureMembers(hTreeView, hItem, pMembers, pbData, pbDataEnd);
 
@@ -2304,10 +2298,12 @@ static int OnDoubleClick(HWND hDlg, LPNMHDR pNMHDR)
                 {
                     pliValue = (PLARGE_INTEGER)pMemberInfo->pbDataPtr;
 
-                    _stprintf(szItemText, szFormat, pMemberInfo->szMemberName,
-                                                    pliValue->HighPart,
-                                                    pliValue->LowPart,
-                                                    szFileName);
+                    StringCchPrintf(szItemText, nLength,
+                                                szFormat,
+                                                pMemberInfo->szMemberName,
+                                                pliValue->HighPart,
+                                                pliValue->LowPart,
+                                                szFileName);
                     tvi.mask = TVIF_TEXT;
                     tvi.pszText = szItemText;
                     TreeView_SetItem(hTreeView, &tvi);
@@ -2338,7 +2334,7 @@ static int OnDoubleClick(HWND hDlg, LPNMHDR pNMHDR)
         szFileName = CreateFullName(pData->szFileName1, (LPWSTR)pMemberInfo->pbDataPtr, FileNameLength);
         if(szFileName != NULL)
         {
-            _tcscpy(pData->szFileName1, szFileName);
+            StringCchCopy(pData->szFileName1, _countof(pData->szFileName1), szFileName);
             TabCtrl_SelectPageByID(hTabCtrl, MAKEINTRESOURCE(IDD_PAGE02_NTCREATE));
             delete [] szFileName;
         }

@@ -198,7 +198,7 @@ static void ReparseData2Dlg(HWND hDlg, PREPARSE_DATA_BUFFER ReparseData)
         // Set the substitute name
         if(szSubstName != NULL)
         {
-            wcsncpy(szNameBuffer, szSubstName, SubstituteNameLength / sizeof(WCHAR));
+            StringCchCopyNW(szNameBuffer, _countof(szNameBuffer), szSubstName, SubstituteNameLength / sizeof(WCHAR));
             szNameBuffer[SubstituteNameLength / sizeof(WCHAR)] = 0;
             SetDlgItemText(hDlg, IDC_SUBST_NAME, szNameBuffer);
         }
@@ -206,7 +206,7 @@ static void ReparseData2Dlg(HWND hDlg, PREPARSE_DATA_BUFFER ReparseData)
         // Set the printable name
         if(szPrintName != NULL)
         {
-            wcsncpy(szNameBuffer, szPrintName, PrintNameLength / sizeof(WCHAR));
+            StringCchCopyNW(szNameBuffer, _countof(szNameBuffer), szPrintName, PrintNameLength / sizeof(WCHAR));
             szNameBuffer[PrintNameLength / sizeof(WCHAR)] = 0;
             SetDlgItemText(hDlg, IDC_PRINT_NAME, szNameBuffer);
         }
@@ -214,7 +214,7 @@ static void ReparseData2Dlg(HWND hDlg, PREPARSE_DATA_BUFFER ReparseData)
     else
     {
         ComboBox_SetCurSel(hWndChild, 2);
-        _stprintf(szNameBuffer, _T("Unknown reparse tag: %08lX"), ReparseData->ReparseTag);
+        StringCchPrintf(szNameBuffer, _countof(szNameBuffer), _T("Unknown reparse tag: %08lX"), ReparseData->ReparseTag);
         SetDlgItemText(hDlg, IDC_SUBST_NAME, szNameBuffer);
         SetDlgItemText(hDlg, IDC_PRINT_NAME, _T(""));
     }
@@ -297,7 +297,7 @@ LPTSTR GetFullHardLinkName(PFILE_LINK_ENTRY_INFORMATION pLinkInfo, LPTSTR szFile
                     if(szHardLinkName != NULL)
                     {
                         // Copy the volume name
-                        _tcscpy(szTemp, szVolumeName);
+                        StringCchCopy(szTemp, NameLength / sizeof(WCHAR), szVolumeName);
                         szTemp = _tcsrchr(szTemp, _T('\\'));
 
                         // Copy the directory name
@@ -525,7 +525,7 @@ static int OnHardlinkCreate(HWND hDlg)
     if(szPlainName != NULL)
     {
         // Extract directory name from the hardlink path
-        _tcsncpy(szDirectory, szHardlinkName, (szPlainName - szHardlinkName + 1));
+        StringCchCopyN(szDirectory, _countof(szDirectory), szHardlinkName, (szPlainName - szHardlinkName + 1));
         szDirectory[szPlainName - szHardlinkName + 1] = 0;
 
         // Open the directory
@@ -571,7 +571,9 @@ static int OnHardlinkCreate(HWND hDlg)
             pLinkInfo->ReplaceIfExists = FALSE;
             pLinkInfo->RootDirectory   = hDirectory;
             pLinkInfo->FileNameLength  = (ULONG)(_tcslen(szPlainName) * sizeof(TCHAR));
-            wcscpy(pLinkInfo->FileName, szPlainName);
+            StringCchCopy(pLinkInfo->FileName,
+                         (sizeof(LinkInfoBuff) - sizeof(FILE_LINK_INFORMATION)) / sizeof(WCHAR),
+                          szPlainName);
 
             // Create the hard link
             Status = NtSetInformationFile(hFile,

@@ -16,8 +16,6 @@
 #define _UNICODE
 #endif
 
-#define _CRT_NON_CONFORMING_SWPRINTFS
-#define _CRT_SECURE_NO_DEPRECATE
 #include <tchar.h>
 #include <stdio.h>
 
@@ -26,6 +24,7 @@
 #include <windowsx.h>
 #include <ShlObj.h>
 #include <winioctl.h>
+#include <strsafe.h>
 
 #undef WIN32_NO_STATUS 
 #include "ntstatus.h"

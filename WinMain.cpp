@@ -117,17 +117,17 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
             switch(nFileNameIndex)
             {
                 case 0: // The first file name argument
-                    _tcscpy(pData->szFileName1, __targv[i]);
+                    StringCchCopy(pData->szFileName1, _countof(pData->szFileName1), __targv[i]);
                     nFileNameIndex++;
                     break;
 
                 case 1: // The second file name argument
-                    _tcscpy(pData->szFileName2, __targv[i]);
+                    StringCchCopy(pData->szFileName2, _countof(pData->szFileName2), __targv[i]);
                     nFileNameIndex++;
                     break;
 
                 case 2: // The directory file name argument
-                    _tcscpy(pData->szDirName, __targv[i]);
+                    StringCchCopy(pData->szDirName, _countof(pData->szFileName2), __targv[i]);
                     nFileNameIndex++;
                     break;
             }
@@ -152,7 +152,7 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
 
     // Set default file name
     if(pData->szFileName1[0] == 0)
-        _tcscpy(pData->szFileName1, _T("C:\\TestFile.bin"));
+        StringCchCopy(pData->szFileName1, _countof(pData->szFileName1), _T("C:\\TestFile.bin"));
 
     //
     // DEVELOPMENT CODE: Build the NT status table from the NTSTATUS.h

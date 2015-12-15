@@ -105,30 +105,34 @@ static int BinTextToBinArray(LPTSTR szBinValue, LPBYTE pbBinValue)
     return nLength;
 }
 
-static int BinArrayToBinText(LPBYTE pbBinValue, int nBinLength, LPTSTR szBinValue)
+static int BinArrayToBinText(LPBYTE pbBinValue, int nBinLength, LPTSTR szBinValue, size_t cchBinValue)
 {
-    *szBinValue = 0;
-    for(int i = 0; i < nBinLength; i++, pbBinValue++)
-        szBinValue += _stprintf(szBinValue, _T("%02lX "), (*pbBinValue & 0x000000FF));
+    LPTSTR szBinValueEnd = szBinValue + cchBinValue;
 
+    for(int i = 0; i < nBinLength; i++, pbBinValue++)
+    {
+        StringCchPrintf(szBinValue, (szBinValueEnd - szBinValue), _T("%02lX "), (*pbBinValue & 0x000000FF));
+        szBinValue += 3;
+    }
+
+    *szBinValue = 0;
     return nBinLength;
 }
 
-static int BinArrayToCText(LPBYTE pbBinValue, int nBinLength, LPTSTR szTextValue)
+static int BinArrayToCText(LPBYTE pbBinValue, int nBinLength, LPTSTR szTextValue, size_t cchTextLength)
 {
+    LPTSTR szTextEnd = szTextValue + cchTextLength;
+
     for(int i = 0; i < nBinLength; i++, pbBinValue++)
     {
-        if(*pbBinValue == '\\')
-        {
-            szTextValue += _stprintf(szTextValue, _T("\\\\"));
-        }
-        else if(0x20 <= *pbBinValue && *pbBinValue < 0x80)
+        if(0x20 <= *pbBinValue && *pbBinValue < 0x80)
         {
             *szTextValue++ = (TCHAR)*pbBinValue;
         }
         else
         {
-            szTextValue += _stprintf(szTextValue, _T("\\x%02lX"), (*pbBinValue & 0x000000FF));
+            StringCchPrintf(szTextValue, (szTextEnd - szTextValue), _T("\\x%02lX"), (*pbBinValue & 0x000000FF));
+            szTextValue += 4;
         }
     }
 
@@ -156,11 +160,12 @@ static void UpdateDialog(HWND hDlg)
 static void SetDlgItemCText(HWND hDlg, UINT nIDCtrl, LPBYTE pbData, int nLength)
 {
     LPTSTR szBinText;
+    size_t cchLength = nLength * 4 + 1;
 
-    szBinText = new TCHAR[nLength * 4 + 1];
+    szBinText = new TCHAR[cchLength];
     if(szBinText != NULL)
     {
-        BinArrayToCText(pbData, nLength, szBinText);
+        BinArrayToCText(pbData, nLength, szBinText, cchLength);
         SetDlgItemText(hDlg, nIDCtrl, szBinText);
         delete [] szBinText;
     }
@@ -169,11 +174,13 @@ static void SetDlgItemCText(HWND hDlg, UINT nIDCtrl, LPBYTE pbData, int nLength)
 
 static void SetDlgItemBin(HWND hDlg, UINT nIDCtrl, LPBYTE pbData, int nLength)
 {
-    LPTSTR szBinText = new TCHAR [nLength * 4 + 1];
+    LPTSTR szBinText;
+    size_t cchLength = nLength * 4 + 1;
 
+    szBinText = new TCHAR[cchLength];
     if(szBinText != NULL)
     {
-        BinArrayToBinText(pbData, nLength, szBinText);
+        BinArrayToBinText(pbData, nLength, szBinText, cchLength);
         SetDlgItemText(hDlg, nIDCtrl, szBinText);
         delete [] szBinText;
     }
@@ -188,10 +195,11 @@ static int UpdateEaValueBin(HWND hDlg)
     HWND hSrcEdit = GetDlgItem(hDlg, IDC_DATA_VALUE_TEXT);
     HWND hTrgEdit = GetDlgItem(hDlg, IDC_DATA_VALUE_BIN);
     int nTextLength = GetWindowTextLength(hSrcEdit);
+    int cchTextLength = nTextLength * 3 + 1;
     int nBinLength;
 
     szTextValue = new TCHAR[nTextLength + 1];
-    szBinValue = new TCHAR[nTextLength * 3 + 1];
+    szBinValue = new TCHAR[cchTextLength];
     pbBinValue = new BYTE[nTextLength + 1];
     GetWindowText(hSrcEdit, szTextValue, nTextLength + 1);
 
@@ -200,7 +208,7 @@ static int UpdateEaValueBin(HWND hDlg)
     nBinLength = CTextToBinArray(szTextValue, pbBinValue);
     if(nBinLength != -1)
     {
-        BinArrayToBinText(pbBinValue, nBinLength, szBinValue);
+        BinArrayToBinText(pbBinValue, nBinLength, szBinValue, cchTextLength);
         SetWindowText(hTrgEdit, szBinValue);
     }
     else
@@ -222,20 +230,21 @@ static int UpdateEaValueText(HWND hDlg)
     HWND hSrcEdit = GetDlgItem(hDlg, IDC_DATA_VALUE_BIN);
     HWND hTrgEdit = GetDlgItem(hDlg, IDC_DATA_VALUE_TEXT);
     int nTextLength = GetWindowTextLength(hSrcEdit);
+    int cchTextLength = nTextLength * 4 + 1;
     int nBinLength;
 
-    szTextValue = new TCHAR[nTextLength * 4 + 1];
+    szTextValue = new TCHAR[cchTextLength];
     szBinValue = new TCHAR[nTextLength + 1];
     pbBinValue = new BYTE[nTextLength + 1];
     GetWindowText(hSrcEdit, szBinValue, nTextLength + 1);
-    _tcsupr(szBinValue);
+    CharUpper(szBinValue);
 
     // Process the binary buffer and convert it to the binary data
     nChangingEdit++;
     nBinLength = BinTextToBinArray(szBinValue, pbBinValue);
     if(nBinLength != -1)
     {
-        BinArrayToCText(pbBinValue, nBinLength, szTextValue);
+        BinArrayToCText(pbBinValue, nBinLength, szTextValue, cchTextLength);
         SetWindowText(hTrgEdit, szTextValue);
     }
     else

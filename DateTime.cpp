@@ -550,7 +550,7 @@ static LPTSTR FileTimeToLargeInteger(
     TCHAR szTemp[0x20];
 
     // Format the filetime
-    _stprintf(szTemp, _T("%08lX-%08lX"), pFt->dwHighDateTime, pFt->dwLowDateTime);
+    StringCchPrintf(szTemp, _countof(szTemp), _T("%08lX-%08lX"), pFt->dwHighDateTime, pFt->dwLowDateTime);
 
     // Copy to target buffer
     for(int i = 0; szTemp[i] != 0; i++)

@@ -193,7 +193,7 @@ static void UpdateDialogFromToken(HWND hDlg)
         if(!memcmp(GetSidIdentifierAuthority(pSid), &SiaMandatoryLabel, sizeof(SID_IDENTIFIER_AUTHORITY)))
             dwIntegrityLevel = *GetSidSubAuthority(pSid, dwSubAuthCount - 1);
 
-        _stprintf(szText, _T("%08lX"), dwIntegrityLevel);
+        StringCchPrintf(szText, _countof(szText), _T("%08lX"), dwIntegrityLevel);
         SetDlgItemText(hDlg, IDC_INTLEVEL_VALUE, szText);
         HeapFree(g_hHeap, 0, pMandatoryLabel);
     }

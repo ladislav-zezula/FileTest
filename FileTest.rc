@@ -108,8 +108,8 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 2,6,0,497
- PRODUCTVERSION 2,6,0,497
+ FILEVERSION 2,6,0,504
+ PRODUCTVERSION 2,6,0,504
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -126,13 +126,13 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Ladislav Zezula"
             VALUE "FileDescription", "Interactive File System API Test"
-            VALUE "FileVersion", "2, 6, 0, 497\0"
+            VALUE "FileVersion", "2, 6, 0, 504\0"
             VALUE "InternalName", "FileTest"
             VALUE "LegalCopyright", "Copyright © 2004 - 2014 Ladislav Zezula"
             VALUE "LegalTrademarks", "http://www.zezula.net"
             VALUE "OriginalFilename", "FileTest.exe"
             VALUE "ProductName", "FileTest"
-            VALUE "ProductVersion", "2, 6, 0, 497\0"
+            VALUE "ProductVersion", "2, 6, 0, 504\0"
         END
     END
     BLOCK "VarFileInfo"
@@ -525,9 +525,9 @@ BEGIN
     PUSHBUTTON      "Query Reparse Point",IDC_REPARSE_QUERY,115,261,77,14,WS_GROUP
     PUSHBUTTON      "Delete Reparse Point",IDC_REPARSE_DELETE,218,261,77,14,WS_GROUP
     GROUPBOX        " Result ",IDC_RESULT_FRAME,7,286,293,46,WS_GROUP
-    LTEXT           "Status:",IDC_RESULT_STATUS_TITLE,12,297,66,14,SS_CENTERIMAGE
+    LTEXT           "Status:",IDC_RESULT_STATUS_TITLE,12,297,49,14,SS_CENTERIMAGE
     EDITTEXT        IDC_RESULT_STATUS,81,297,214,14,ES_AUTOHSCROLL | ES_READONLY
-    LTEXT           "IoStatus.Info:",IDC_IOSTATUS_INFO_TITLE,12,313,66,14,SS_CENTERIMAGE
+    LTEXT           "IoStatus.Info:",IDC_IOSTATUS_INFO_TITLE,12,313,49,14,SS_CENTERIMAGE
     EDITTEXT        IDC_IOSTATUS_INFO,81,313,214,14,ES_AUTOHSCROLL | ES_READONLY
 END
 
@@ -717,7 +717,7 @@ FONT 8, "MS Shell Dlg", 400, 0, 0x1
 BEGIN
     GROUPBOX        "",IDC_STATIC,7,4,209,51
     LTEXT           "FileTest version %u.%u.%u.%u",IDC_VERSION,13,13,167,8
-    LTEXT           "Copyright (c) Ladislav Zezula 2003-2014",IDC_STATIC,13,24,167,8
+    LTEXT           "Copyright (c) Ladislav Zezula 2003-2016",IDC_STATIC,13,24,167,8
     CONTROL         "http://www.zezula.net/fstools.html",IDC_FILETEST_WEB,
                     "Button",BS_OWNERDRAW | BS_LEFT | WS_TABSTOP,13,36,167,9
     DEFPUSHBUTTON   "Close",IDOK,167,63,50,14
