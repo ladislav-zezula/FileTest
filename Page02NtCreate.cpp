@@ -361,7 +361,7 @@ static int OnRelativeFileHelp(HWND hDlg)
 
 static int OnBrowseDirClick(HWND hDlg)
 {
-    BrowseForDirectory(hDlg, MAKEINTRESOURCE(IDC_DIRECTORY_NAME), IDS_SELECT_DIRECTORY);
+    BrowseForDirectory(hDlg, MAKEINTRESOURCE(IDC_DIRECTORY_NAME), IDS_SELECT_DIRECTORY, MAX_PATH);
     ConvertToNtName(hDlg, IDC_DIRECTORY_NAME);
     return TRUE;
 }

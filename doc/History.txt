@@ -2,6 +2,11 @@
   FileTest history
   ================
 
+ Version 2.6.0.503
+
+ - Changed old unsafe str* and sprintf functions to StringCch* versions
+ - Fixed importing streams when there is no EAs
+
  Version 2.6.0.481
 
  - Fixed missing entries in combobox in "Links" page

@@ -252,7 +252,7 @@ static int OnKillActive(HWND hDlg)
 
 static int OnBrowseDirClick(HWND hDlg)
 {
-    return BrowseForDirectory(hDlg, MAKEINTRESOURCE(IDC_DIRECTORY_NAME), IDS_SELECT_DIRECTORY);
+    return BrowseForDirectory(hDlg, MAKEINTRESOURCE(IDC_DIRECTORY_NAME), IDS_SELECT_DIRECTORY, MAX_PATH);
 }
 
 static int OnBrowseFileClick(HWND hDlg)
