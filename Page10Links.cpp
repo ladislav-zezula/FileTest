@@ -14,131 +14,180 @@
 //-----------------------------------------------------------------------------
 // Helper functions
 
-static PREPARSE_DATA_BUFFER Dlg2ReparseData(HWND hDlg, PULONG pTotalLength)
+static void BinaryToString(LPBYTE pbData, ULONG cbData, LPTSTR szBuffer, size_t cchBuffer)
+{
+    LPCTSTR IntToHex = _T("0123456789abcdef");
+    LPTSTR szSaveBuffer = szBuffer;
+    LPTSTR szBufferEnd = szBuffer + cchBuffer;
+    LPBYTE pbDataEnd = pbData + cbData;
+
+    while((szBuffer + 3) <= szBufferEnd && pbData < pbDataEnd)
+    {
+        // Put space there, if any
+        if(szBuffer > szSaveBuffer)
+            *szBuffer++ = _T(' ');
+
+        // Printf the hexa digit
+        *szBuffer++ = IntToHex[pbData[0] >> 0x04];
+        *szBuffer++ = IntToHex[pbData[0] & 0x0F];
+        pbData++;
+    }
+}
+
+static void PrepareReparseNames(
+    PREPARSE_DATA_BUFFER ReparseData,
+    PVOID pvNameBuffer,
+    PUNICODE_STRING SubstName,
+    PWSTR szPrintName,
+    ULONG cbPrintName)
+{
+    LPBYTE pbNameBuffer = (LPBYTE)pvNameBuffer;
+
+    // Copy the substitute name
+    memcpy(pbNameBuffer, SubstName->Buffer, SubstName->Length);
+    ReparseData->MountPointReparseBuffer.SubstituteNameOffset = 0;
+    ReparseData->MountPointReparseBuffer.SubstituteNameLength = SubstName->Length;
+
+    // Move the name buffer
+    pbNameBuffer = pbNameBuffer + SubstName->Length + sizeof(WCHAR);
+
+    // Copy the printable name
+    memcpy(pbNameBuffer, szPrintName, cbPrintName);
+    ReparseData->MountPointReparseBuffer.PrintNameOffset = (USHORT)(SubstName->Length + sizeof(WCHAR));
+    ReparseData->MountPointReparseBuffer.PrintNameLength = (USHORT)cbPrintName;
+}
+
+static NTSTATUS Dlg2ReparseData(HWND hDlg, PREPARSE_DATA_BUFFER * PtrReparseData, PULONG PtrTotalLength)
 {
     PREPARSE_DATA_BUFFER ReparseData = NULL;
-    UNICODE_STRING SubstName = {0};
+    UNICODE_STRING SubstName;
     NTSTATUS Status;
-    LPBYTE pbTargetPtr = NULL;
     TCHAR szSubstName[MAX_PATH];
     TCHAR szPrintName[MAX_PATH];
-    ULONG cchSubstName;
-    ULONG cchPrintName;
-    USHORT cbPrintName;
+    ULONG cbSubstName;
+    ULONG cbPrintName;
     ULONG TotalLength = 0;
     HWND hWndChild;
 
     // Get the substitute name and the printable name
-    cchSubstName = GetDlgItemText(hDlg, IDC_SUBST_NAME, szSubstName, _maxchars(szSubstName));
-    cchPrintName = GetDlgItemText(hDlg, IDC_PRINT_NAME, szPrintName, _maxchars(szPrintName));
-    if(cchSubstName == 0)
-        return NULL;
+    cbSubstName = GetDlgItemText(hDlg, IDC_SUBST_NAME, szSubstName, _maxchars(szSubstName)) * sizeof(WCHAR);
+    cbPrintName = GetDlgItemText(hDlg, IDC_PRINT_NAME, szPrintName, _maxchars(szPrintName)) * sizeof(WCHAR);
+    if(cbSubstName == 0)
+        return STATUS_INVALID_PARAMETER;
 
-    // Also calculate the byte length
-    Status = FileNameToUnicodeString(&SubstName, szSubstName);
-    if(NT_SUCCESS(Status))
+    // Allocate buffer of the maximum size
+    ReparseData = (PREPARSE_DATA_BUFFER)HeapAlloc(g_hHeap, HEAP_ZERO_MEMORY, MAXIMUM_REPARSE_DATA_BUFFER_SIZE);
+    if(ReparseData == NULL)
+        return STATUS_NO_MEMORY;
+
+    // Get the type of the reparse point
+    hWndChild = GetDlgItem(hDlg, IDC_JUNCTION_TYPE);
+    switch(ComboBox_GetCurSel(hWndChild))
     {
-        // Get the printable name length in bytes
-        cbPrintName = (USHORT)(cchPrintName * sizeof(WCHAR));
+        case 0: // IO_REPARSE_TAG_MOUNT_POINT
 
-        // Get the type of the reparse point
-        hWndChild = GetDlgItem(hDlg, IDC_JUNCTION_TYPE);
-        switch(ComboBox_GetCurSel(hWndChild))
-        {
-            case 0: // IO_REPARSE_TAG_MOUNT_POINT
+            //
+            // Prepare the header of REPARSE_DATA_BUFFER:
+            //
+            // - Total data length must be REPARSE_DATA_BUFFER_HEADER_SIZE + sizeof(MountPointReparseBuffer) - sizeof(WCHAR) + filenames
+            // - ReparseDataLength + REPARSE_DATA_BUFFER_HEADER_SIZE must be equal to total data length
+            // - There must be both NT name and DOS name. Both names will be zero-terminated
+            //
 
-                // Calculate the total memory needed for the reparse data buffer
+            Status = FileNameToUnicodeString(&SubstName, szSubstName);
+            if(NT_SUCCESS(Status))
+            {
                 TotalLength = FIELD_OFFSET(REPARSE_DATA_BUFFER, MountPointReparseBuffer.PathBuffer) +
-                              SubstName.Length + sizeof(WCHAR) +
-                              cbPrintName + sizeof(WCHAR);
-                ReparseData = (PREPARSE_DATA_BUFFER)HeapAlloc(g_hHeap, HEAP_ZERO_MEMORY, TotalLength);
-                if(ReparseData != NULL)
-                {
-                    //
-                    // Prepare the header of REPARSE_DATA_BUFFER:
-                    //
-                    // - Total data length must be REPARSE_DATA_BUFFER_HEADER_SIZE + sizeof(MountPointReparseBuffer) - sizeof(WCHAR) + filenames
-                    // - ReparseDataLength + REPARSE_DATA_BUFFER_HEADER_SIZE must be equal to total data length
-                    // - There must be both NT name and DOS name. Both names will be zero-terminated
-                    //
+                              SubstName.Length + sizeof(WCHAR) + cbPrintName + sizeof(WCHAR);
 
-                    ReparseData->ReparseTag        = IO_REPARSE_TAG_MOUNT_POINT;
-                    ReparseData->ReparseDataLength = (USHORT)(TotalLength - REPARSE_DATA_BUFFER_HEADER_SIZE);
-                    ReparseData->MountPointReparseBuffer.SubstituteNameOffset = 0;
-                    ReparseData->MountPointReparseBuffer.SubstituteNameLength = SubstName.Length;
-                    ReparseData->MountPointReparseBuffer.PrintNameOffset = SubstName.Length + sizeof(WCHAR);
-                    ReparseData->MountPointReparseBuffer.PrintNameLength = cbPrintName;
-                    pbTargetPtr = (LPBYTE)ReparseData->MountPointReparseBuffer.PathBuffer;
-                }
-                break;
+                // Set the tag and total data size
+                ReparseData->ReparseTag = IO_REPARSE_TAG_MOUNT_POINT;
+                ReparseData->ReparseDataLength = (USHORT)(TotalLength - REPARSE_DATA_BUFFER_HEADER_SIZE);
 
-            case 1: // IO_REPARSE_TAG_SYMLINK
+                // Set both names
+                PrepareReparseNames(ReparseData,
+                                    ReparseData->MountPointReparseBuffer.PathBuffer,
+                                   &SubstName,
+                                    szPrintName,
+                                    cbPrintName);
+                FreeFileNameString(&SubstName);
+            }
+            break;
 
-                // Calculate the total memory needed for the reparse data buffer
+        case 1: // IO_REPARSE_TAG_SYMLINK
+
+            //
+            // Prepare the header of REPARSE_DATA_BUFFER:
+            //
+            // - Total data length must be REPARSE_DATA_BUFFER_HEADER_SIZE + sizeof(SymbolicLinkReparseBuffer) - sizeof(WCHAR) + filenames
+            // - ReparseDataLength + REPARSE_DATA_BUFFER_HEADER_SIZE must be equal to total data length
+            // - There must be both NT name and DOS name. Both names will be zero-terminated
+            //
+
+            Status = FileNameToUnicodeString(&SubstName, szSubstName);
+            if(NT_SUCCESS(Status))
+            {
                 TotalLength = FIELD_OFFSET(REPARSE_DATA_BUFFER, SymbolicLinkReparseBuffer.PathBuffer) +
-                              SubstName.Length + sizeof(WCHAR) +
-                              cbPrintName + sizeof(WCHAR);
-                ReparseData = (PREPARSE_DATA_BUFFER)HeapAlloc(g_hHeap, HEAP_ZERO_MEMORY, TotalLength);
-                if(ReparseData != NULL)
-                {
-                    //
-                    // Prepare the header of REPARSE_DATA_BUFFER:
-                    //
-                    // - Total data length must be REPARSE_DATA_BUFFER_HEADER_SIZE + sizeof(MountPointReparseBuffer) - sizeof(WCHAR) + filenames
-                    // - ReparseDataLength + REPARSE_DATA_BUFFER_HEADER_SIZE must be equal to total data length
-                    // - There must be both NT name and DOS name. Both names will be zero-terminated
-                    //
+                              SubstName.Length + sizeof(WCHAR) + cbPrintName + sizeof(WCHAR);
 
-                    ReparseData->ReparseTag        = IO_REPARSE_TAG_SYMLINK;
-                    ReparseData->ReparseDataLength = (USHORT)(TotalLength - REPARSE_DATA_BUFFER_HEADER_SIZE);
-                    ReparseData->SymbolicLinkReparseBuffer.SubstituteNameOffset = 0;
-                    ReparseData->SymbolicLinkReparseBuffer.SubstituteNameLength = SubstName.Length;
-                    ReparseData->SymbolicLinkReparseBuffer.PrintNameOffset = SubstName.Length + sizeof(WCHAR);
-                    ReparseData->SymbolicLinkReparseBuffer.PrintNameLength = cbPrintName;
-                    pbTargetPtr = (LPBYTE)ReparseData->SymbolicLinkReparseBuffer.PathBuffer;
-                }
-                break;
+                // Set the tag and total data size
+                ReparseData->ReparseTag = IO_REPARSE_TAG_SYMLINK;
+                ReparseData->ReparseDataLength = (USHORT)(TotalLength - REPARSE_DATA_BUFFER_HEADER_SIZE);
 
-            default:
-                return NULL;
-        }
+                // Set both names
+                PrepareReparseNames(ReparseData,
+                                    ReparseData->SymbolicLinkReparseBuffer.PathBuffer,
+                                   &SubstName,
+                                    szPrintName,
+                                    cbPrintName);
+                FreeFileNameString(&SubstName);
+            }
+            break;
 
-        // Copy the substitute name
-        memcpy(pbTargetPtr, SubstName.Buffer, SubstName.Length);
-        pbTargetPtr += SubstName.Length + sizeof(WCHAR);
-
-        // Copy the printable name
-        memcpy(pbTargetPtr, szPrintName, cbPrintName);
-
-        // Give the total length
-        if(pTotalLength != NULL)
-            *pTotalLength = TotalLength;
-        FreeFileNameString(&SubstName);
+        default:    // Not supported
+            Status = STATUS_NOT_SUPPORTED;
+            break;
     }
-    return ReparseData;
+
+    // If something went wrong, free the data
+    if(!NT_SUCCESS(Status))
+    {
+        HeapFree(g_hHeap, 0, ReparseData);
+        ReparseData = NULL;
+        TotalLength = 0;
+    }
+
+    // Give the buffer and the total length
+    if(PtrReparseData != NULL)
+        PtrReparseData[0] = ReparseData;
+    if(PtrTotalLength != NULL)
+        PtrTotalLength[0] = TotalLength;
+    return Status;
 }
 
 static void ReparseData2Dlg(HWND hDlg, PREPARSE_DATA_BUFFER ReparseData)
 {
-    TCHAR szNameBuffer[MAX_PATH];
+    TCHAR szSubstName[MAX_PATH];
+    TCHAR szPrintName[MAX_PATH];
     PBYTE pbNameBuffer;
-    PWSTR szSubstName = NULL;
-    PWSTR szPrintName = NULL;
-    USHORT SubstituteNameLength = 0;
-    USHORT PrintNameLength = 0;
     HWND hWndChild = GetDlgItem(hDlg, IDC_JUNCTION_TYPE);
     int ReparseTagIndex = -1;
 
+    // Prepare both buffers
+    memset(szSubstName, 0, sizeof(szSubstName));
+    memset(szPrintName, 0, sizeof(szPrintName));
+
+    // Fill all by the reparse point tag
     switch(ReparseData->ReparseTag)
     {
         case IO_REPARSE_TAG_MOUNT_POINT:
             
             // Get the pointer to name buffer
             pbNameBuffer = (PBYTE)(ReparseData->MountPointReparseBuffer.PathBuffer);
-            szSubstName  = (PWSTR)(pbNameBuffer + ReparseData->MountPointReparseBuffer.SubstituteNameOffset);
-            SubstituteNameLength = ReparseData->MountPointReparseBuffer.SubstituteNameLength;
-            szPrintName  = (PWSTR)(pbNameBuffer + ReparseData->MountPointReparseBuffer.PrintNameOffset);
-            PrintNameLength = ReparseData->MountPointReparseBuffer.PrintNameLength;
+            StringCchCopyNW(szSubstName, _countof(szSubstName), (PWSTR)(pbNameBuffer + ReparseData->MountPointReparseBuffer.SubstituteNameOffset),
+                                                                        ReparseData->MountPointReparseBuffer.SubstituteNameLength / sizeof(WCHAR));
+            StringCchCopyNW(szPrintName, _countof(szPrintName), (PWSTR)(pbNameBuffer + ReparseData->MountPointReparseBuffer.PrintNameOffset),
+                                                                        ReparseData->MountPointReparseBuffer.PrintNameLength / sizeof(WCHAR));
             ReparseTagIndex = 0;
             break;
 
@@ -146,43 +195,30 @@ static void ReparseData2Dlg(HWND hDlg, PREPARSE_DATA_BUFFER ReparseData)
 
             // Get the pointer to name buffer
             pbNameBuffer = (PBYTE)(ReparseData->SymbolicLinkReparseBuffer.PathBuffer);
-            szSubstName  = (PWSTR)(pbNameBuffer + ReparseData->SymbolicLinkReparseBuffer.SubstituteNameOffset);
-            SubstituteNameLength = ReparseData->SymbolicLinkReparseBuffer.SubstituteNameLength;
-            szPrintName  = (PWSTR)(pbNameBuffer + ReparseData->SymbolicLinkReparseBuffer.PrintNameOffset);
-            PrintNameLength = ReparseData->SymbolicLinkReparseBuffer.PrintNameLength;
+            StringCchCopyNW(szSubstName, _countof(szSubstName), (PWSTR)(pbNameBuffer + ReparseData->SymbolicLinkReparseBuffer.SubstituteNameOffset),
+                                                                        ReparseData->SymbolicLinkReparseBuffer.SubstituteNameLength / sizeof(WCHAR));
+            StringCchCopyNW(szPrintName, _countof(szPrintName), (PWSTR)(pbNameBuffer + ReparseData->SymbolicLinkReparseBuffer.PrintNameOffset),
+                                                                        ReparseData->SymbolicLinkReparseBuffer.PrintNameLength / sizeof(WCHAR));
             ReparseTagIndex = 1;
             break;
+
+        case IO_REPARSE_TAG_WIM:
+            BinaryToString(ReparseData->GenericReparseBuffer.DataBuffer, ReparseData->ReparseDataLength, szSubstName, _countof(szSubstName));
+            ReparseTagIndex = 2;
+            break;
+
+        default:
+            StringCchPrintf(szSubstName, _countof(szSubstName), _T("Unknown reparse tag: %08lX"), ReparseData->ReparseTag);
+            ReparseTagIndex = 3;
     }
 
-    // Did we manage to extract something from the buffer?
+    // Select the reparse point index
     if(ReparseTagIndex != -1)
-    {
-        // Set the reparse point type
         ComboBox_SetCurSel(hWndChild, ReparseTagIndex);
 
-        // Set the substitute name
-        if(szSubstName != NULL)
-        {
-            StringCchCopyNW(szNameBuffer, _countof(szNameBuffer), szSubstName, SubstituteNameLength / sizeof(WCHAR));
-            szNameBuffer[SubstituteNameLength / sizeof(WCHAR)] = 0;
-            SetDlgItemText(hDlg, IDC_SUBST_NAME, szNameBuffer);
-        }
-
-        // Set the printable name
-        if(szPrintName != NULL)
-        {
-            StringCchCopyNW(szNameBuffer, _countof(szNameBuffer), szPrintName, PrintNameLength / sizeof(WCHAR));
-            szNameBuffer[PrintNameLength / sizeof(WCHAR)] = 0;
-            SetDlgItemText(hDlg, IDC_PRINT_NAME, szNameBuffer);
-        }
-    }
-    else
-    {
-        ComboBox_SetCurSel(hWndChild, 2);
-        StringCchPrintf(szNameBuffer, _countof(szNameBuffer), _T("Unknown reparse tag: %08lX"), ReparseData->ReparseTag);
-        SetDlgItemText(hDlg, IDC_SUBST_NAME, szNameBuffer);
-        SetDlgItemText(hDlg, IDC_PRINT_NAME, _T(""));
-    }
+    // Set the substitute and printable name
+    SetDlgItemText(hDlg, IDC_SUBST_NAME, szSubstName);
+    SetDlgItemText(hDlg, IDC_PRINT_NAME, szPrintName);
 }
 
 LPTSTR GetFullHardLinkName(PFILE_LINK_ENTRY_INFORMATION pLinkInfo, LPTSTR szFileName)
@@ -692,7 +728,7 @@ static int OnReparseCreate(HWND hDlg)
     TCHAR szTargetName[MAX_PATH];
     ULONG CreateOptions = FILE_SYNCHRONOUS_IO_ALERT | FILE_OPEN_REPARSE_POINT;
     ULONG FileAttributes;
-    ULONG Length;
+    ULONG Length = 0;
 
     // Get the name of the reparse point
     GetDlgItemText(hDlg, IDC_REPARSE, szReparseName, _maxchars(szReparseName));
@@ -725,8 +761,8 @@ static int OnReparseCreate(HWND hDlg)
     // Set the reparse point
     if(NT_SUCCESS(Status))
     {
-        pReparseData = Dlg2ReparseData(hDlg, &Length);
-        if(pReparseData != NULL)
+        Status = Dlg2ReparseData(hDlg, &pReparseData, &Length);
+        if(NT_SUCCESS(Status))
         {
             // Fire the IOCTL
             Status = NtFsControlFile(hReparse,
@@ -741,10 +777,6 @@ static int OnReparseCreate(HWND hDlg)
                                      0);
 
             HeapFree(g_hHeap, 0, pReparseData);
-        }
-        else
-        {
-            Status = STATUS_INSUFFICIENT_RESOURCES;
         }
 
         NtClose(hReparse);
@@ -827,11 +859,11 @@ static int OnReparseDelete(HWND hDlg)
     GetDlgItemText(hDlg, IDC_REPARSE, szReparseName, _maxchars(szReparseName));
 
     // Open the reparse point
-    InitializeObjectAttributes(&ObjAttr, &FileName, OBJ_CASE_INSENSITIVE, NULL, NULL);
     Status = FileNameToUnicodeString(&FileName, szReparseName);
     if(NT_SUCCESS(Status))
     {
-        Status = NtDeleteReparsePoint(&FileName);
+        InitializeObjectAttributes(&ObjAttr, &FileName, OBJ_CASE_INSENSITIVE, NULL, NULL);
+        Status = NtDeleteReparsePoint(&ObjAttr);
         FreeFileNameString(&FileName);
     }
 

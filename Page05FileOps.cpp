@@ -163,54 +163,278 @@ static bool IsDotDirectoryName(PFILE_DIRECTORY_INFORMATION pDirInfo)
     return false;
 }
 
-static NTSTATUS NtRemoveSingleFile(PUNICODE_STRING PathName)
+// Takes ownership on handle (file or registry key).
+// The handle must be open for WRITE_OWNER access
+static NTSTATUS NtTakeOwnershipObject(HANDLE ObjectHandle)
 {
-    OBJECT_ATTRIBUTES ObjAttr;
-    NTSTATUS PrevStatus = 0xFFFFFFFF;
+    SECURITY_DESCRIPTOR sd;
+    PTOKEN_USER pTokenUser = NULL;
     NTSTATUS Status;
+    HANDLE TokenHandle = NULL;
+    ULONG cbTokenUser = 0;
 
-    // Initialize object attributes for the file name
-    InitializeObjectAttributes(&ObjAttr, PathName, OBJ_CASE_INSENSITIVE, NULL, 0);
-
-__TryDeleteFile:
-    Status = NtDeleteFile(&ObjAttr);
-
-    // Happens when deleting the "desktop.ini" in Windows 10 preinstallation directory
-    if(Status == STATUS_IO_REPARSE_TAG_NOT_HANDLED && PrevStatus != STATUS_IO_REPARSE_TAG_NOT_HANDLED)
+    // Open the token of the current process
+    Status = NtOpenProcessToken(NtCurrentProcess(),
+                                TOKEN_QUERY,
+                               &TokenHandle);
+    if(NT_SUCCESS(Status))
     {
-        // Remember the previous error status
-        PrevStatus = Status;
+        NtQueryInformationToken(TokenHandle, 
+                                TokenUser,
+                                pTokenUser,
+                                cbTokenUser,
+                               &cbTokenUser);
+        if(cbTokenUser == 0)
+        {
+            NtClose(TokenHandle);
+            return STATUS_UNSUCCESSFUL;
+        }
 
-        // Delete the reparse point first
-        Status = NtDeleteReparsePoint(PathName);
+        pTokenUser = (PTOKEN_USER)RtlAllocateHeap(RtlProcessHeap(), 0, cbTokenUser);
+        if(pTokenUser != NULL)
+        {
+            Status = NtQueryInformationToken(TokenHandle, 
+                                             TokenUser,
+                                             pTokenUser,
+                                             cbTokenUser,
+                                            &cbTokenUser);
+        }
+        else
+        {
+            Status = STATUS_NO_MEMORY;
+        }
+    }
+
+    // Initialize the blank security descriptor
+    if(NT_SUCCESS(Status))
+    {
+        Status = RtlCreateSecurityDescriptor(&sd, SECURITY_DESCRIPTOR_REVISION);
+    }
+
+    // Set the owner to the security descriptor
+    if(NT_SUCCESS(Status))
+    {
+        Status = RtlSetOwnerSecurityDescriptor(&sd, pTokenUser->User.Sid, FALSE);
+    }
+
+    // Apply the owner to the object handle
+    if(NT_SUCCESS(Status))
+    {
+        Status = NtSetSecurityObject(ObjectHandle, OWNER_SECURITY_INFORMATION, &sd);
+    }
+
+    // Free buffers
+    if(pTokenUser != NULL)
+        RtlFreeHeap(RtlProcessHeap(), 0, pTokenUser);
+    if(TokenHandle != NULL)
+        NtClose(TokenHandle);
+    return Status;
+}
+
+// Sets the access-control list for a handle to "Everyone:AccessMask"
+// The handle must be open for WRITE_DAC access
+static NTSTATUS NtSetObjectAccessForEveryone(
+    IN HANDLE ObjectHandle,
+    IN ACCESS_MASK AccessMask)
+{
+    SID_IDENTIFIER_AUTHORITY SiaEveryone = SECURITY_WORLD_SID_AUTHORITY;
+    SECURITY_DESCRIPTOR sd;
+    NTSTATUS Status;
+    ULONG cbAclLength = 0;
+    PSID pSidEveryone = NULL; 
+    PACL pAcl = NULL;
+
+    // Get the SID of Everyone
+    Status = RtlAllocateAndInitializeSid(&SiaEveryone, 1, 0, 0, 0, 0, 0, 0, 0, 0, &pSidEveryone);
+
+    // Allocate space for ACL
+    if(NT_SUCCESS(Status))
+    {
+        ULONG dwSidLength = RtlLengthSid(pSidEveryone);
+
+        // Create ACL for full access to the file
+        cbAclLength = sizeof(ACL) + sizeof(ACCESS_ALLOWED_ACE) + dwSidLength - sizeof(DWORD);
+        pAcl = (PACL)RtlAllocateHeap(RtlProcessHeap(), 0, cbAclLength);
+        if(pAcl == NULL)
+            Status = STATUS_INSUFFICIENT_RESOURCES;
+    }
+
+    // Create the Access control list with one ACE
+    if(NT_SUCCESS(Status))
+    {
+        Status = RtlCreateAcl(pAcl, cbAclLength, ACL_REVISION);
+    }
+
+    // Add the ACE to the ACL
+    if(NT_SUCCESS(Status))
+    {
+        Status = RtlAddAccessAllowedAce(pAcl, ACL_REVISION, AccessMask, pSidEveryone);
+    }
+
+    // Initialize the blank security descriptor
+    if(NT_SUCCESS(Status))
+    {
+        Status = RtlCreateSecurityDescriptor(&sd, SECURITY_DESCRIPTOR_REVISION);
+    }
+
+    // Set the ACL to the security descriptor
+    if(NT_SUCCESS(Status))
+    {
+        Status = RtlSetDaclSecurityDescriptor(&sd, TRUE, pAcl, FALSE);
+    }
+
+    // Apply the security information to the handle
+    if(NT_SUCCESS(Status))
+    {
+        Status = NtSetSecurityObject(ObjectHandle, DACL_SECURITY_INFORMATION, &sd);
+    }
+
+    // Free buffers
+    if(pAcl != NULL)
+        RtlFreeHeap(RtlProcessHeap(), 0, pAcl);
+    if(pSidEveryone != NULL)
+        RtlFreeSid(pSidEveryone);
+    return Status;
+}
+
+static NTSTATUS NtSetFileAccessToEveryone(POBJECT_ATTRIBUTES ObjAttr, ACCESS_MASK AccessMask)
+{
+    IO_STATUS_BLOCK IoStatus;
+    NTSTATUS Status;
+    HANDLE FileHandle;
+    ULONG OpenOptions = FILE_OPEN_REPARSE_POINT;
+
+    // Attempt to set the file's security. If this fails, it either means that
+    // the current user doesn't have WRITE_DAC access or the current user
+    // is not the owner of the file
+    Status = NtOpenFile(&FileHandle,
+                         WRITE_DAC,
+                         ObjAttr,
+                        &IoStatus,
+                         FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                         OpenOptions);
+    if(Status == STATUS_ACCESS_DENIED)
+    {
+        // Write the owner to the file.
+        Status = NtOpenFile(&FileHandle,
+                             WRITE_OWNER,
+                             ObjAttr,
+                            &IoStatus,
+                             FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                             OpenOptions);
         if(NT_SUCCESS(Status))
-            goto __TryDeleteFile;
+        {
+            NtTakeOwnershipObject(FileHandle);
+            NtClose(FileHandle);
+        }
+
+        // After writing ownership, attempt to set the file access again
+        Status = NtOpenFile(&FileHandle,
+                             WRITE_DAC,
+                             ObjAttr,
+                            &IoStatus,
+                             FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                             OpenOptions);
+    }
+
+    // If succeeded, write the file security
+    if(NT_SUCCESS(Status))
+    {
+        Status = NtSetObjectAccessForEveryone(FileHandle, AccessMask);
+        NtClose(FileHandle);
+    }
+
+    // If the file access also includes WRITE, we also clear all attributes
+    if(AccessMask & (GENERIC_ALL | GENERIC_WRITE | FILE_WRITE_DATA | DELETE))
+    {
+        FILE_BASIC_INFORMATION BasicInfo;
+
+        Status = NtOpenFile(&FileHandle,
+                             FILE_WRITE_ATTRIBUTES,
+                             ObjAttr,
+                            &IoStatus,
+                             FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                             OpenOptions);
+        if(NT_SUCCESS(Status))
+        {
+            memset(&BasicInfo, 0xFF, sizeof(FILE_BASIC_INFORMATION));
+            BasicInfo.FileAttributes = FILE_ATTRIBUTE_NORMAL;
+            NtSetInformationFile(FileHandle,
+                                &IoStatus,
+                                &BasicInfo,
+                                 sizeof(FILE_BASIC_INFORMATION), 
+                                 FileBasicInformation);
+            NtClose(FileHandle);
+        }
     }
 
     return Status;
 }
 
-static NTSTATUS NtRemoveDirectoryTree(PUNICODE_STRING PathName)
+static NTSTATUS NtRemoveSingleFile(POBJECT_ATTRIBUTES PtrObjectAttributes)
+{
+    NTSTATUS Status = STATUS_SUCCESS;
+    ULONG TryCount = 0;
+
+    // Attempt to delete the file
+    __TryDeleteFile:
+    Status = NtDeleteFile(PtrObjectAttributes);
+
+    // If STATUS_ACCESS_DENIED, try to rewrite the security descriptor
+    if(Status == STATUS_ACCESS_DENIED && TryCount == 0)
+    {
+        Status = NtSetFileAccessToEveryone(PtrObjectAttributes, GENERIC_ALL | DELETE);
+        if(NT_SUCCESS(Status))
+        {
+            TryCount++;
+            goto __TryDeleteFile;
+        }
+    }
+
+    return Status;
+}
+
+static NTSTATUS NtRemoveDirectoryTree(POBJECT_ATTRIBUTES PtrObjectAttributes)
 {
     PFILE_DIRECTORY_INFORMATION pDirInfo;
-    OBJECT_ATTRIBUTES ObjAttr;
+    OBJECT_ATTRIBUTES ChildAttr;
     IO_STATUS_BLOCK IoStatus;
     UNICODE_STRING ChildPath;
+    NTSTATUS DelStatus;
     NTSTATUS Status;
     HANDLE DirHandle = NULL;
+    ULONG TryCount = 0;
     BYTE DirBuffer[0x300];
 
-    // Open the directory for enumeration
-    InitializeObjectAttributes(&ObjAttr, PathName, OBJ_CASE_INSENSITIVE, NULL, NULL);
+    // Open the directory for enumeration+delete
+    // Use FILE_OPEN_REPARSE_POINT, because the directory can be
+    // a reparse point (even an invalid one) and still contain files/subdirs
+    __TryOpenDirectory:
     Status = NtOpenFile(&DirHandle,
-                         FILE_LIST_DIRECTORY | SYNCHRONIZE,
-                        &ObjAttr,
+                         FILE_LIST_DIRECTORY | DELETE | SYNCHRONIZE,
+                         PtrObjectAttributes,
                         &IoStatus,
                          FILE_SHARE_READ,
-                         FILE_SYNCHRONOUS_IO_ALERT);
+                         FILE_SYNCHRONOUS_IO_ALERT | FILE_DELETE_ON_CLOSE | FILE_OPEN_REPARSE_POINT);
+    
+    // When the access is denied, we can try to reset the permissions
+    if(Status == STATUS_ACCESS_DENIED && TryCount == 0)
+    {
+        Status = NtSetFileAccessToEveryone(PtrObjectAttributes, GENERIC_ALL | DELETE);
+        if(NT_SUCCESS(Status))
+        {
+            TryCount++;
+            goto __TryOpenDirectory;
+        }
+    }
+
     if(NT_SUCCESS(Status))
     {
+        // Prepare the child object attributes and the pointer to directory entry
+        InitializeObjectAttributes(&ChildAttr, &ChildPath, OBJ_CASE_INSENSITIVE, DirHandle, NULL);
         pDirInfo = (PFILE_DIRECTORY_INFORMATION)DirBuffer;
+
+        // Work as long as we have something
         while(Status == STATUS_SUCCESS)
         {
             // Query a single item
@@ -227,72 +451,63 @@ static NTSTATUS NtRemoveDirectoryTree(PUNICODE_STRING PathName)
                                           FALSE);
             if(Status == STATUS_SUCCESS && !IsDotDirectoryName(pDirInfo))
             {
-                // Copy the dir to the child path
-                ChildPath = *PathName;
-                
-                // Append the backslash
-                ChildPath.Buffer[ChildPath.Length / 2] = L'\\';
-                ChildPath.Length += sizeof(WCHAR);
+                // Create the child path
+                ChildPath.MaximumLength =
+                ChildPath.Length = (USHORT)pDirInfo->FileNameLength;
+                ChildPath.Buffer = pDirInfo->FileName;
 
-                // Append subdir/file
-                memcpy(ChildPath.Buffer + ChildPath.Length / 2, pDirInfo->FileName, pDirInfo->FileNameLength);
-                ChildPath.Length = (USHORT)(ChildPath.Length + pDirInfo->FileNameLength);
+                // If the entry is a reparse point, we need to delete the reparse first
+                if(pDirInfo->FileAttributes & FILE_ATTRIBUTE_REPARSE_POINT)
+                {
+                    Status = NtDeleteReparsePoint(&ChildAttr);
+                    if(!NT_SUCCESS(Status))
+                        break;
+                }
+
+                // If the entry has the FILE_ATTRIBUTE_READONLY (both file/subdir),
+                // we need to clear it first
+                if(pDirInfo->FileAttributes & FILE_ATTRIBUTE_READONLY)
+                {
+                    Status = NtSetFileAccessToEveryone(&ChildAttr, GENERIC_ALL | DELETE);
+                    if(!NT_SUCCESS(Status))
+                        break;
+                }
 
                 // If this is a directory, we need to delete the directory
                 if(pDirInfo->FileAttributes & FILE_ATTRIBUTE_DIRECTORY)
                 {
-                    Status = NtRemoveDirectoryTree(&ChildPath);
+                    Status = NtRemoveDirectoryTree(&ChildAttr);
                 }
                 else
                 {
-                    Status = NtRemoveSingleFile(&ChildPath);
+                    Status = NtRemoveSingleFile(&ChildAttr);
                 }
-
-                // Terminate the substring with zero, just for the sake of readability
-                ChildPath.Buffer[ChildPath.Length / 2] = 0;
             }
         }
 
-        // Close the directory handle
-        NtClose(DirHandle);
+        // Close the directory handle, (also) performing the delete
+        DelStatus = NtClose(DirHandle);
+        if(NT_SUCCESS(Status) || Status == STATUS_NO_MORE_FILES)
+            Status = DelStatus;
     }
 
-    // Open the directory for enumeration
-    InitializeObjectAttributes(&ObjAttr, PathName, OBJ_CASE_INSENSITIVE, NULL, NULL);
-    return NtDeleteFile(&ObjAttr);
+    // Return the result
+    return Status;
 }
 
 static int RemoveDirectoryTree(LPCTSTR szDirName)
 {
+    OBJECT_ATTRIBUTES ObjAttr;
     UNICODE_STRING PathName;
-    UNICODE_STRING TempName;
     NTSTATUS Status;
 
     // Convert to UNICODE_STRING
-    Status = FileNameToUnicodeString(&TempName, szDirName);
+    Status = FileNameToUnicodeString(&PathName, szDirName);
     if(NT_SUCCESS(Status))
     {
-        // Reallocate the UNICODE_STRING
-        PathName.MaximumLength = 0xFFFE;
-        PathName.Length = TempName.Length;
-        PathName.Buffer = (PWSTR)RtlAllocateHeap(RtlProcessHeap(),
-                                                 HEAP_ZERO_MEMORY,
-                                                 PathName.MaximumLength);
-        if(PathName.Buffer != NULL)
-        {
-            // Copy the string
-            memcpy(PathName.Buffer, TempName.Buffer, TempName.Length);
-            Status = NtRemoveDirectoryTree(&PathName);
-
-            // Free the path name
-            RtlFreeHeap(RtlProcessHeap(), 0, PathName.Buffer);
-        }
-        else
-        {
-            Status = STATUS_INSUFFICIENT_RESOURCES;
-        }
-
-        FreeFileNameString(&TempName);
+        InitializeObjectAttributes(&ObjAttr, &PathName, OBJ_CASE_INSENSITIVE, NULL, NULL);
+        Status = NtRemoveDirectoryTree(&ObjAttr);
+        FreeFileNameString(&PathName);
     }
 
     return RtlNtStatusToDosError(Status);

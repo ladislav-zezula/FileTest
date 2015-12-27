@@ -296,6 +296,10 @@ typedef struct _REPARSE_DATA_BUFFER {
 
 #define REPARSE_DATA_BUFFER_HEADER_SIZE   FIELD_OFFSET(REPARSE_DATA_BUFFER, GenericReparseBuffer)
 
+#ifndef IO_REPARSE_TAG_WIM
+#define IO_REPARSE_TAG_WIM      (0x80000008L)
+#endif
+
 //-----------------------------------------------------------------------------
 // Structures
 
@@ -654,7 +658,7 @@ int  StringToFileID(LPCTSTR szFileOrObjId, LPTSTR szVolume, PVOID pvFileObjId, P
 int ExecuteContextMenu(HWND hWndParent, UINT nIDMenu, LPARAM lParam);
 int ExecuteContextMenuForDlgItem(HWND hDlg, UINT nIDCtrl, UINT nIDMenu);
 
-NTSTATUS NtDeleteReparsePoint(PUNICODE_STRING PathName);
+NTSTATUS NtDeleteReparsePoint(POBJECT_ATTRIBUTES PtrObjectAttributes);
 
 //-----------------------------------------------------------------------------
 // Conversion of FILETIME to text and back

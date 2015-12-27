@@ -1469,10 +1469,9 @@ int ExecuteContextMenuForDlgItem(HWND hDlg, UINT nIDCtrl, UINT nIDMenu)
     return ExecuteContextMenu(hDlg, nIDMenu, lParam);
 }
 
-NTSTATUS NtDeleteReparsePoint(PUNICODE_STRING PathName)
+NTSTATUS NtDeleteReparsePoint(POBJECT_ATTRIBUTES PtrObjectAttributes)
 {
     PREPARSE_DATA_BUFFER pReparseData = NULL;
-    OBJECT_ATTRIBUTES ObjAttr;
     IO_STATUS_BLOCK IoStatus;
     ULONGLONG ReparseBuffer[0x100];         // ULONGLONG makes sure it's aligned to 8
     NTSTATUS Status;
@@ -1480,10 +1479,9 @@ NTSTATUS NtDeleteReparsePoint(PUNICODE_STRING PathName)
     ULONG Length = sizeof(ReparseBuffer);
 
     // Open the reparse point
-    InitializeObjectAttributes(&ObjAttr, PathName, OBJ_CASE_INSENSITIVE, NULL, NULL);
     Status = NtOpenFile(&FileHandle,
-                         FILE_WRITE_DATA,
-                        &ObjAttr,
+                         FILE_WRITE_ATTRIBUTES,
+                         PtrObjectAttributes,
                         &IoStatus,
                          0,
                          FILE_OPEN_REPARSE_POINT);
