@@ -680,15 +680,15 @@ static void OnClose(HWND hDlg)
         // Wait for the thread to exit. Not more than 5 second
         WaitForSingleObject(pData->hApcThread, 5000);
         CloseHandle(pData->hApcThread);
-
-        // Close the alert event handle
-        if(pData->hAlertEvent != NULL)
-            CloseHandle(pData->hAlertEvent);
-        pData->hAlertEvent = NULL;
-
-        // Delete the APC critical section
-        DeleteCriticalSection(&pData->ApcLock);
     }
+
+    // Close the alert event handle
+    if(pData->hAlertEvent != NULL)
+        CloseHandle(pData->hAlertEvent);
+    pData->hAlertEvent = NULL;
+
+    // Delete the APC critical section
+    DeleteCriticalSection(&pData->ApcLock);
 }
 
 static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
