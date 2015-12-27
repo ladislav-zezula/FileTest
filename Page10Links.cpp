@@ -12,41 +12,6 @@
 #include "resource.h"
 
 //-----------------------------------------------------------------------------
-// Local structures
-
-#define FSCTL_SET_REPARSE_POINT         CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 41, METHOD_BUFFERED, FILE_SPECIAL_ACCESS) // REPARSE_DATA_BUFFER,
-#define FSCTL_GET_REPARSE_POINT         CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 42, METHOD_BUFFERED, FILE_ANY_ACCESS) // REPARSE_DATA_BUFFER
-#define FSCTL_DELETE_REPARSE_POINT      CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 43, METHOD_BUFFERED, FILE_SPECIAL_ACCESS) // REPARSE_DATA_BUFFER,
-
-typedef struct _REPARSE_DATA_BUFFER {
-    ULONG  ReparseTag;
-    USHORT ReparseDataLength;
-    USHORT Reserved;
-    union {
-        struct {
-            USHORT SubstituteNameOffset;
-            USHORT SubstituteNameLength;
-            USHORT PrintNameOffset;
-            USHORT PrintNameLength;
-            ULONG Flags;
-            WCHAR PathBuffer[1];
-        } SymbolicLinkReparseBuffer;
-        struct {
-            USHORT SubstituteNameOffset;
-            USHORT SubstituteNameLength;
-            USHORT PrintNameOffset;
-            USHORT PrintNameLength;
-            WCHAR PathBuffer[1];
-        } MountPointReparseBuffer;
-        struct {
-            UCHAR  DataBuffer[1];
-        } GenericReparseBuffer;
-    } DUMMYUNIONNAME;
-} REPARSE_DATA_BUFFER, *PREPARSE_DATA_BUFFER;
-
-#define REPARSE_DATA_BUFFER_HEADER_SIZE   FIELD_OFFSET(REPARSE_DATA_BUFFER, GenericReparseBuffer)
-
-//-----------------------------------------------------------------------------
 // Helper functions
 
 static PREPARSE_DATA_BUFFER Dlg2ReparseData(HWND hDlg, PULONG pTotalLength)
@@ -853,14 +818,10 @@ static int OnReparseQuery(HWND hDlg)
 
 static int OnReparseDelete(HWND hDlg)
 {
-    PREPARSE_DATA_BUFFER pReparseData = NULL;
     OBJECT_ATTRIBUTES ObjAttr;
-    IO_STATUS_BLOCK IoStatus;
     UNICODE_STRING FileName;
     NTSTATUS Status;
-    HANDLE hFile = NULL;
     TCHAR szReparseName[MAX_PATH];
-    ULONG Length = 0x1000;
 
     // Get the name of the reparse point
     GetDlgItemText(hDlg, IDC_REPARSE, szReparseName, _maxchars(szReparseName));
@@ -870,54 +831,8 @@ static int OnReparseDelete(HWND hDlg)
     Status = FileNameToUnicodeString(&FileName, szReparseName);
     if(NT_SUCCESS(Status))
     {
-        Status = NtOpenFile(&hFile,
-                             FILE_WRITE_DATA,
-                            &ObjAttr,
-                            &IoStatus,
-                             0,
-                             FILE_OPEN_REPARSE_POINT);
+        Status = NtDeleteReparsePoint(&FileName);
         FreeFileNameString(&FileName);
-    }
-
-    if(NT_SUCCESS(Status))
-    {
-        // Allocate buffer for the reparse data
-        pReparseData = (PREPARSE_DATA_BUFFER)HeapAlloc(g_hHeap, HEAP_ZERO_MEMORY, Length);
-        if(pReparseData != NULL)
-        {
-            // Query the reparse point 
-            Status = NtFsControlFile(hFile, 
-                                     NULL,
-                                     NULL,
-                                     NULL,
-                                    &IoStatus,
-                                     FSCTL_GET_REPARSE_POINT,
-                                     NULL,
-                                     0,
-                                     pReparseData,
-                                     Length);
-            // ... and delete it
-            if(NT_SUCCESS(Status))
-            {
-                pReparseData->ReparseDataLength = 0;
-                Status = NtFsControlFile(hFile,
-                                         NULL,
-                                         NULL,
-                                         NULL,
-                                        &IoStatus,
-                                         FSCTL_DELETE_REPARSE_POINT,
-                                         pReparseData,
-                                         REPARSE_GUID_DATA_BUFFER_HEADER_SIZE,
-                                         NULL,
-                                         0);
-            }
-            HeapFree(g_hHeap, 0, pReparseData);
-        }
-        else
-        {
-            Status = STATUS_INSUFFICIENT_RESOURCES;
-        }
-        NtClose(hFile);
     }
 
     SetResultInfo(hDlg, Status);

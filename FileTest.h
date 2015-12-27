@@ -262,6 +262,41 @@ typedef BOOL (WINAPI * ADDMANDATORYACE)(PACL pAcl,
                                         PSID pLabelSid);
 
 //-----------------------------------------------------------------------------
+// Defines for the reparse point
+
+#define FSCTL_SET_REPARSE_POINT         CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 41, METHOD_BUFFERED, FILE_SPECIAL_ACCESS) // REPARSE_DATA_BUFFER,
+#define FSCTL_GET_REPARSE_POINT         CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 42, METHOD_BUFFERED, FILE_ANY_ACCESS) // REPARSE_DATA_BUFFER
+#define FSCTL_DELETE_REPARSE_POINT      CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 43, METHOD_BUFFERED, FILE_SPECIAL_ACCESS) // REPARSE_DATA_BUFFER,
+
+typedef struct _REPARSE_DATA_BUFFER {
+    ULONG  ReparseTag;
+    USHORT ReparseDataLength;
+    USHORT Reserved;
+    union {
+        struct {
+            USHORT SubstituteNameOffset;
+            USHORT SubstituteNameLength;
+            USHORT PrintNameOffset;
+            USHORT PrintNameLength;
+            ULONG Flags;
+            WCHAR PathBuffer[1];
+        } SymbolicLinkReparseBuffer;
+        struct {
+            USHORT SubstituteNameOffset;
+            USHORT SubstituteNameLength;
+            USHORT PrintNameOffset;
+            USHORT PrintNameLength;
+            WCHAR PathBuffer[1];
+        } MountPointReparseBuffer;
+        struct {
+            UCHAR  DataBuffer[1];
+        } GenericReparseBuffer;
+    } DUMMYUNIONNAME;
+} REPARSE_DATA_BUFFER, *PREPARSE_DATA_BUFFER;
+
+#define REPARSE_DATA_BUFFER_HEADER_SIZE   FIELD_OFFSET(REPARSE_DATA_BUFFER, GenericReparseBuffer)
+
+//-----------------------------------------------------------------------------
 // Structures
 
 #define FLAG_INFO_CTRLID(flag)          {{(LPCTSTR)IDC_##flag}, flag, flag}
@@ -618,6 +653,8 @@ int  StringToFileID(LPCTSTR szFileOrObjId, LPTSTR szVolume, PVOID pvFileObjId, P
 
 int ExecuteContextMenu(HWND hWndParent, UINT nIDMenu, LPARAM lParam);
 int ExecuteContextMenuForDlgItem(HWND hDlg, UINT nIDCtrl, UINT nIDMenu);
+
+NTSTATUS NtDeleteReparsePoint(PUNICODE_STRING PathName);
 
 //-----------------------------------------------------------------------------
 // Conversion of FILETIME to text and back

@@ -1468,3 +1468,59 @@ int ExecuteContextMenuForDlgItem(HWND hDlg, UINT nIDCtrl, UINT nIDMenu)
     // Execute the context menu
     return ExecuteContextMenu(hDlg, nIDMenu, lParam);
 }
+
+NTSTATUS NtDeleteReparsePoint(PUNICODE_STRING PathName)
+{
+    PREPARSE_DATA_BUFFER pReparseData = NULL;
+    OBJECT_ATTRIBUTES ObjAttr;
+    IO_STATUS_BLOCK IoStatus;
+    ULONGLONG ReparseBuffer[0x100];         // ULONGLONG makes sure it's aligned to 8
+    NTSTATUS Status;
+    HANDLE FileHandle = NULL;
+    ULONG Length = sizeof(ReparseBuffer);
+
+    // Open the reparse point
+    InitializeObjectAttributes(&ObjAttr, PathName, OBJ_CASE_INSENSITIVE, NULL, NULL);
+    Status = NtOpenFile(&FileHandle,
+                         FILE_WRITE_DATA,
+                        &ObjAttr,
+                        &IoStatus,
+                         0,
+                         FILE_OPEN_REPARSE_POINT);
+
+    if(NT_SUCCESS(Status))
+    {
+        // Query the reparse point 
+        pReparseData = (PREPARSE_DATA_BUFFER)ReparseBuffer;
+        Status = NtFsControlFile(FileHandle, 
+                                 NULL,
+                                 NULL,
+                                 NULL,
+                                &IoStatus,
+                                 FSCTL_GET_REPARSE_POINT,
+                                 NULL,
+                                 0,
+                                 pReparseData,
+                                 Length);
+
+        // ... and delete it
+        if(NT_SUCCESS(Status))
+        {
+            pReparseData->ReparseDataLength = 0;
+            Status = NtFsControlFile(FileHandle,
+                                     NULL,
+                                     NULL,
+                                     NULL,
+                                    &IoStatus,
+                                     FSCTL_DELETE_REPARSE_POINT,
+                                     pReparseData,
+                                     REPARSE_GUID_DATA_BUFFER_HEADER_SIZE,
+                                     NULL,
+                                     0);
+        }
+
+        NtClose(FileHandle);
+    }
+
+    return Status;
+}

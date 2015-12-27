@@ -163,6 +163,33 @@ static bool IsDotDirectoryName(PFILE_DIRECTORY_INFORMATION pDirInfo)
     return false;
 }
 
+static NTSTATUS NtRemoveSingleFile(PUNICODE_STRING PathName)
+{
+    OBJECT_ATTRIBUTES ObjAttr;
+    NTSTATUS PrevStatus = 0xFFFFFFFF;
+    NTSTATUS Status;
+
+    // Initialize object attributes for the file name
+    InitializeObjectAttributes(&ObjAttr, PathName, OBJ_CASE_INSENSITIVE, NULL, 0);
+
+__TryDeleteFile:
+    Status = NtDeleteFile(&ObjAttr);
+
+    // Happens when deleting the "desktop.ini" in Windows 10 preinstallation directory
+    if(Status == STATUS_IO_REPARSE_TAG_NOT_HANDLED && PrevStatus != STATUS_IO_REPARSE_TAG_NOT_HANDLED)
+    {
+        // Remember the previous error status
+        PrevStatus = Status;
+
+        // Delete the reparse point first
+        Status = NtDeleteReparsePoint(PathName);
+        if(NT_SUCCESS(Status))
+            goto __TryDeleteFile;
+    }
+
+    return Status;
+}
+
 static NTSTATUS NtRemoveDirectoryTree(PUNICODE_STRING PathName)
 {
     PFILE_DIRECTORY_INFORMATION pDirInfo;
@@ -218,8 +245,7 @@ static NTSTATUS NtRemoveDirectoryTree(PUNICODE_STRING PathName)
                 }
                 else
                 {
-                    InitializeObjectAttributes(&ObjAttr, &ChildPath, OBJ_CASE_INSENSITIVE, NULL, 0);
-                    Status = NtDeleteFile(&ObjAttr);
+                    Status = NtRemoveSingleFile(&ChildPath);
                 }
 
                 // Terminate the substring with zero, just for the sake of readability
