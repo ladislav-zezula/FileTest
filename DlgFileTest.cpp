@@ -153,6 +153,23 @@ static void AlertApcThread(TWindowData * pData, DWORD dwAlertReason)
     }
 }
 
+static void GetFileTestAppTitle(LPTSTR szTitle, int nMaxChars)
+{
+    TCHAR szUserName[256] = _T("");
+    DWORD dwSize = _maxchars(szUserName);
+    UINT nIDTitle = IDS_APP_TITLE;
+    BOOL bElevated = FALSE;
+
+    // Get the elevation flags. Note that this returns FALSE on pre-Vista
+    if(GetTokenElevation(&bElevated))
+    {
+        nIDTitle = bElevated ? IDS_APP_TITLE_VISTA1 : IDS_APP_TITLE_VISTA2;
+    }
+
+    GetUserName(szUserName, &dwSize);
+    rsprintf(szTitle, nMaxChars, nIDTitle, szUserName);
+}
+
 //-----------------------------------------------------------------------------
 // Local functions
 
@@ -244,6 +261,10 @@ static void InitializeTabControl(HWND hDlg, TWindowData * pData)
     psp[nPages].pfnDlgProc  = PageProc05;
     psp[nPages].lParam      = (LPARAM)pData;
     nPages++;
+
+#ifdef _DEBUG
+//  psh.nStartPage = nPages - 1; // Set the "FileOps" as starting page for debug purposes
+#endif
 
     // Fill the "NtFileInfo" page
     ZeroMemory(&psp[nPages], sizeof(PROPSHEETPAGE));

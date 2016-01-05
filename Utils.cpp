@@ -437,102 +437,79 @@ HTREEITEM InsertTreeItem(HWND hTreeView, HTREEITEM hParentItem, LPCTSTR szText, 
 //-----------------------------------------------------------------------------
 // Virtualization for the current process
 
-#define TOKEN_ELEVATION_TYPE_LIMITED_USER   0x00000001
-#define TOKEN_ELEVATION_TYPE_ADMINISTRATOR  0x00000002
-
-static BOOL GetTokenFlags(PDWORD PtrFlags, DWORD TokenInfoType)
+BOOL GetTokenElevation(PBOOL pbElevated)
 {
+    TOKEN_ELEVATION Elevation;
     HANDLE hToken;
     DWORD dwLength = 0;
-    DWORD dwFlags = 0;
+    DWORD dwValue = 0;
     BOOL bResult = FALSE;
 
     if(OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken))
     {
-        bResult = GetTokenInformation(hToken,
-             (TOKEN_INFORMATION_CLASS)TokenInfoType,
-                                     &dwFlags,
-                                      sizeof(dwFlags),
-                                     &dwLength);
+        // Step1: Query the elevation type
+        bResult = GetTokenInformation(hToken, TokenElevationType, &dwValue, sizeof(dwValue), &dwLength);
+        if(bResult)
+        {
+            switch((TOKEN_ELEVATION_TYPE)dwValue)
+            {
+                case TokenElevationTypeDefault:
+                    bResult = GetTokenInformation(hToken, TokenElevation, &Elevation, sizeof(Elevation), &dwLength);
+                    if(bResult)
+                        pbElevated[0] = Elevation.TokenIsElevated ? TRUE : FALSE;
+                    break;
+
+                case TokenElevationTypeFull:
+                    pbElevated[0] = TRUE;
+                    break;
+
+                case TokenElevationTypeLimited:
+                    pbElevated[0] = FALSE;
+                    break;
+            }
+        }
+
         CloseHandle(hToken);
     }
 
-    if(PtrFlags != NULL)
-        PtrFlags[0] = dwFlags;
     return bResult;
 }
 
-static BOOL SetTokenFlags(DWORD dwFlags, DWORD TokenInfoType)
+BOOL GetTokenVirtualizationEnabled(PBOOL pbEnabled)
 {
     HANDLE hToken;
+    DWORD dwEnabled = 0;
+    DWORD dwLength = 0;
+    BOOL bResult = FALSE;
+
+    if(OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken))
+    {
+        bResult = GetTokenInformation(hToken, TokenVirtualizationEnabled, &dwEnabled, sizeof(dwEnabled), &dwLength);
+        if(bResult && pbEnabled)
+            pbEnabled[0] = dwEnabled ? TRUE : FALSE;
+
+        CloseHandle(hToken);
+    }
+
+    return bResult;
+}
+
+BOOL SetTokenVirtualizationEnabled(BOOL bEnabled)
+{
+    HANDLE hToken;
+    DWORD dwEnabled = bEnabled;
     BOOL bResult = FALSE;
 
     if(OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_DEFAULT, &hToken))
     {
         bResult = SetTokenInformation(hToken,
-             (TOKEN_INFORMATION_CLASS)TokenInfoType,
-                                     &dwFlags,
-                                      sizeof(dwFlags));
+                                      TokenVirtualizationEnabled,
+                                     &dwEnabled,
+                                      sizeof(dwEnabled));
         CloseHandle(hToken);
     }
 
     return bResult;
-}
-
-BOOL IsLUAEnabled()
-{
-    LPCTSTR szKeyName = _T("Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\System");
-    DWORD dwLuaEnabled = 0;
-    DWORD dwLength = 0;
-    HKEY hSubKey = NULL;
-
-    // First, check if LUA is enabled at all
-    if(!RegOpenKeyEx(HKEY_LOCAL_MACHINE, szKeyName, 0, KEY_QUERY_VALUE, &hSubKey))
-    {
-        dwLuaEnabled = 0;        
-        dwLength = sizeof(dwLuaEnabled);
-        RegQueryValueEx(hSubKey, _T("EnableLUA"), NULL, NULL, (LPBYTE)&dwLuaEnabled, &dwLength);
-        RegCloseKey(hSubKey);
-    }
-
-    return (BOOL)dwLuaEnabled;
-}
-
-// Returns TRUE if the program runs as restricted or elevated.
-BOOL GetElevationFlags(PDWORD PtrFlags)
-{
-    // TokenElevationType, not defined in pre-Vista SDKs
-    return GetTokenFlags(PtrFlags, 0x12);   
-}
-
-BOOL GetVirtualizationFlags(PDWORD PtrFlags)
-{
-    // TokenVirtualizationEnabled, not defined in pre-Vista SDKs
-    return GetTokenFlags(PtrFlags, 0x18);
-}
-
-BOOL SetVirtualizationFlags(DWORD dwFlags)
-{
-    // TokenVirtualizationEnabled, not defined in pre-Vista SDKs
-    return SetTokenFlags(dwFlags, 0x18);
-}
-
-//-----------------------------------------------------------------------------
-// Application title
-
-void GetFileTestAppTitle(LPTSTR szTitle, int nMaxChars)
-{
-    TCHAR szUserName[256] = _T("");
-    DWORD dwElevationFlags = 0;
-    DWORD dwSize = _maxchars(szUserName);
-    UINT nIDTitle = IDS_APP_TITLE;
-
-    // Get the elevation flags. Note that this returns FALSE on pre-Vista
-    if(GetElevationFlags(&dwElevationFlags))
-        nIDTitle = (dwElevationFlags & TOKEN_ELEVATION_TYPE_ADMINISTRATOR) ? IDS_APP_TITLE_VISTA2 : IDS_APP_TITLE_VISTA1;
-
-    GetUserName(szUserName, &dwSize);
-    rsprintf(szTitle, nMaxChars, nIDTitle, szUserName);
 }
 
 //-----------------------------------------------------------------------------

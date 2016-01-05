@@ -42,9 +42,8 @@ static int OnInitDialog(HWND hDlg, LPARAM /* lParam */)
     TCHAR szMyName[MAX_PATH + 1];
     HWND hWndChild;
 
-#ifdef IDI_MAIN_ICON
-    SetDialogIcon(hDlg, IDI_MAIN_ICON);
-#endif
+    // Set the dialog icon
+    SetDialogIcon(hDlg, IDI_FILE_TEST);
 
     // Parse all child windows
     // If there is IDC_VERSION static text, supply the 4-digit version from resources

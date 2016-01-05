@@ -2,6 +2,11 @@
   FileTest history
   ================
 
+ Version 2.6.0.520
+
+ - Improved the "Copy File" command. Now can copy volumes, too.
+ - Fixed invalid determining whether running under restricted token.
+
  Version 2.6.0.506
 
  - Improved the "Delete Dir" command. Now can delete folders even with reparse points.

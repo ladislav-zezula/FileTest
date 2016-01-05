@@ -252,7 +252,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="PostBuild.exe $(OutDir)\$(ProjectName).exe FileTest.rc  /subsystem4 /tools"
+				CommandLine=""
 			/>
 		</Configuration>
 		<Configuration
@@ -332,7 +332,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="PostBuild.exe $(OutDir)\$(ProjectName).exe /subsystem4 /tools"
+				CommandLine=""
 			/>
 		</Configuration>
 	</Configurations>
@@ -346,6 +346,10 @@
 			>
 			<File
 				RelativePath=".\DateTime.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\DlgCopyFile.cpp"
 				>
 			</File>
 			<File

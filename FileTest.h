@@ -54,12 +54,15 @@
 #define OSVER_WINDOWS_SEVEN         0x0601
 #define OSVER_WINDOWS_8             0x0602
 #define OSVER_WINDOWS_8_1           0x0603          // Make sure you have proper manifest to see this
+#define OSVER_WINDOWS_10            0x0A00          // Make sure you have proper manifest to see this
 
 #define WM_SHOW_HARDLINKS           (WM_USER + 0x1000)
 #define WM_TIMER_BLINK              (WM_USER + 0x1001)
 #define WM_TIMER_TOOLTIP            (WM_USER + 0x1002)
 #define WM_TIMER_CHECK_MOUSE        (WM_USER + 0x1003)
 #define WM_APC                      (WM_USER + 0x1004)
+#define WM_START_WORK               (WM_USER + 0x1005)
+#define WM_WORK_COMPLETE            (WM_USER + 0x1006)
 
 #define STATUS_INVALID_DATA_FORMAT  0xC1110001
 #define STATUS_CANNOT_EDIT_THIS     0xC1110002
@@ -68,16 +71,28 @@
 
 #define SEVERITY_PENDING            2
 
-#define APC_TYPE_NONE                   0
-#define APC_TYPE_READ_WRITE             1
-#define APC_TYPE_FSCTL                  2
+#define APC_TYPE_NONE               0
+#define APC_TYPE_READ_WRITE         1
+#define APC_TYPE_FSCTL              2
+
+#define COPY_FILE_SKIP_IO_ERRORS    0x40000000      // On I/O errors, replace loaded data with zeros if failed
+#define COPY_FILE_USE_READ_WRITE    0x80000000      // Artificial value for file copy - copy by hand
+
+#ifndef SECTOR_SIZE
+#define SECTOR_SIZE                 0x200           // Sector size for disk drives
+#endif
 
 //-----------------------------------------------------------------------------
 // Defines for the mandatory label ACEs.
 // Several symbols are not defined in the pre-Vista SDKs
 
-#ifndef SYSTEM_MANDATORY_LABEL_ACE_TYPE
+#ifndef TokenElevationType
+#define TokenElevationType         (TOKEN_INFORMATION_CLASS)0x12
+#define TokenElevation             (TOKEN_INFORMATION_CLASS)0x14
+#define TokenVirtualizationEnabled (TOKEN_INFORMATION_CLASS)0x18
+#endif
 
+#ifndef SYSTEM_MANDATORY_LABEL_ACE_TYPE
 #define SYSTEM_MANDATORY_LABEL_ACE_TYPE         (0x11)
 
 // Access mask for the mandatory label ACE
@@ -121,7 +136,6 @@ typedef struct _TOKEN_MANDATORY_LABEL
 
 #define SE_GROUP_INTEGRITY                 (0x00000020L)
 #define SE_GROUP_INTEGRITY_ENABLED         (0x00000040L)
-
 #endif // SYSTEM_MANDATORY_LABEL_ACE_TYPE
 
 #ifndef LABEL_SECURITY_INFORMATION
@@ -415,6 +429,7 @@ struct TFileTestData : public TWindowData
     ULONG         dwSectAllocType;          // AllocationType for NtMapViewOfSection
     ULONG         dwSectWin32Protect;       // Win32Protect for NtMapViewOfSection
 
+    ULONG         dwCopyFileFlags;          // For file copying
     ULONG         dwMoveFileFlags;          // For MoveFileEx
     ULONG         dwOplockLevel;            // For requesting Win7 oplock
     BOOL          bTransactionActive;
@@ -631,12 +646,9 @@ DWORD TreeView_GetChildCount(HWND hTreeView, HTREEITEM hItem);
 HTREEITEM InsertTreeItem(HWND hTreeView, HTREEITEM hParentItem, HTREEITEM hInsertAfter, LPCTSTR szText, PVOID pParam);
 HTREEITEM InsertTreeItem(HWND hTreeView, HTREEITEM hParentItem, LPCTSTR szText, PVOID pParam);
 
-BOOL IsLUAEnabled();
-BOOL GetElevationFlags(PDWORD PtrFlags);
-BOOL GetVirtualizationFlags(PDWORD PtrFlags);
-BOOL SetVirtualizationFlags(DWORD dwFlags);
-
-void GetFileTestAppTitle(LPTSTR szTitle, int nMaxChars);
+BOOL GetTokenElevation(PBOOL pbElevated);
+BOOL GetTokenVirtualizationEnabled(PBOOL pbEnabled);
+BOOL SetTokenVirtualizationEnabled(BOOL bEnabled);
 
 void SetResultInfo(HWND hDlg, NTSTATUS Status, HANDLE hHandle = NULL, UINT_PTR ResultLength = 0, PLARGE_INTEGER pResultLength = NULL);
 
@@ -691,6 +703,7 @@ INT_PTR EaEditorDialog(HWND hParent, PFILE_FULL_EA_INFORMATION * pEaInfo);
 INT_PTR PrivilegesDialog(HWND hParent);
 INT_PTR ObjectIDActionDialog(HWND hParent);
 INT_PTR DirectoryActionDialog(HWND hParent);
+INT_PTR CopyFileDialog(HWND hParent, TFileTestData * pData);
 
 TApcEntry * CreateApcEntry(TWindowData * pData, UINT ApcType, size_t cbApcSize);
 bool InsertApcEntry(TWindowData * pData, TApcEntry * pApc);

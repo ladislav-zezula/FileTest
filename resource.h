@@ -41,6 +41,7 @@
 #define IDD_FLAGS_AND_ATTRS             139
 #define IDI_ICON1                       140
 #define IDI_ICON_WAIT                   140
+#define IDD_COPY_FILE                   140
 #define IDR_OPLOCK_PRE_WIN7             141
 #define IDC_FILE_ATTRIBUTE_READONLY     800
 #define IDC_FILE_ATTRIBUTE_HIDDEN       801
@@ -176,7 +177,6 @@
 #define IDC_FILE_NAME1_BROWSE           1076
 #define IDC_FILE_NAME2_BROWSE           1077
 #define IDC_COPY_FILE                   1078
-#define IDC_USE_COPYAPI                 1079
 #define IDC_INCREASE_FILEPOS            1080
 #define IDC_MOVE_FILE                   1080
 #define IDC_DELETE_FILE                 1082
@@ -283,6 +283,7 @@
 #define IDC_SYMLINK                     1162
 #define IDC_GET_OBJECT_ID               1162
 #define IDC_SINGLE_DIRECTORY            1162
+#define IDC_COPY_OPTIONS                1162
 #define IDC_SYMLINK_TARGET              1163
 #define IDC_SET_OBJECT_ID               1163
 #define IDC_SYMLINK_QUERY               1164
@@ -349,7 +350,10 @@
 #define IDC_READ_SYNC                   1218
 #define IDC_READ_ASYNC                  1219
 #define IDC_RDWR_SYNC                   1220
+#define IDC_COPY_PROGRESS               1220
 #define IDC_RDWR_ASYNC                  1221
+#define IDC_COPY_INFO                   1222
+#define IDC_COPY_METHOD                 1223
 #define IDS_FLUSH_FILE_BUFFERS_TIP      4000
 #define IDS_SET_SPARSE_TIP              4001
 #define IDS_OPLOCK_BROKE                4002
@@ -431,6 +435,9 @@
 #define IDS_HELP_ABOUT                  4083
 #define IDS_WANT_TRIM_DATA              4084
 #define IDS_ACE_TYPE_NOT_SUPPORTED      4085
+#define IDS_COPYFILE_FLAGS              4085
+#define IDS_COPY_PROGRESS               4086
+#define IDS_COPY_CANCELLED              4087
 #define ID_EDIT_LABEL                   40001
 #define ID_NEW_ACE_BEFORE               40008
 #define ID_NEW_ACE_AFTER                40009
@@ -461,7 +468,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        142
 #define _APS_NEXT_COMMAND_VALUE         40045
-#define _APS_NEXT_CONTROL_VALUE         1218
+#define _APS_NEXT_CONTROL_VALUE         1223
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

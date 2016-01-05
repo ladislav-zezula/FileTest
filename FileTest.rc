@@ -108,8 +108,8 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 2,6,0,507
- PRODUCTVERSION 2,6,0,507
+ FILEVERSION 2,6,0,517
+ PRODUCTVERSION 2,6,0,517
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -126,13 +126,13 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Ladislav Zezula"
             VALUE "FileDescription", "Interactive File System API Test"
-            VALUE "FileVersion", "2, 6, 0, 507\0"
+            VALUE "FileVersion", "2, 6, 0, 517\0"
             VALUE "InternalName", "FileTest"
             VALUE "LegalCopyright", "Copyright © 2004 - 2014 Ladislav Zezula"
             VALUE "LegalTrademarks", "http://www.zezula.net"
             VALUE "OriginalFilename", "FileTest.exe"
             VALUE "ProductName", "FileTest"
-            VALUE "ProductVersion", "2, 6, 0, 507\0"
+            VALUE "ProductVersion", "2, 6, 0, 517\0"
         END
     END
     BLOCK "VarFileInfo"
@@ -372,11 +372,11 @@ BEGIN
     LTEXT           "File2:",IDC_STATIC,12,33,60,14,SS_CENTERIMAGE
     EDITTEXT        IDC_FILE_NAME2,73,33,201,14,ES_AUTOHSCROLL
     PUSHBUTTON      "...",IDC_FILE_NAME2_BROWSE,278,33,15,14
-    PUSHBUTTON      "CopyFile (F1 => F2)",IDC_COPY_FILE,11,53,74,14,WS_GROUP
+    PUSHBUTTON      "CopyFileEx (F1, F2)",IDC_COPY_FILE,11,53,74,14,WS_GROUP
     PUSHBUTTON      "MoveFileEx (F1, F2)",IDC_MOVE_FILE,115,53,74,14
     PUSHBUTTON      "DeleteFile (F1)",IDC_DELETE_FILE,219,53,74,14
-    CONTROL         "Use CopyFile() API",IDC_USE_COPYAPI,"Button",BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP,11,73,74,8
-    PUSHBUTTON      "Options ...",IDC_MOVE_OPTIONS,115,71,74,12,BS_FLAT
+    PUSHBUTTON      "Copy Options ...",IDC_COPY_OPTIONS,11,71,74,14
+    PUSHBUTTON      "Move Options ...",IDC_MOVE_OPTIONS,115,71,74,14
     PUSHBUTTON      "Delete dir (F1)",IDC_DELETE_DIRECTORY,219,71,74,14
     GROUPBOX        " File ID and Object ID (if supported)",IDC_FILEID_FRAME,7,93,293,51,WS_GROUP
     PUSHBUTTON      "Get File ID",IDC_FILE_ID_GET,11,106,74,14
@@ -797,6 +797,17 @@ BEGIN
     DEFPUSHBUTTON   "OK",IDOK,365,216,50,14
 END
 
+IDD_COPY_FILE DIALOGEX 0, 0, 250, 71
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Copy File Progress"
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    LTEXT           "Copying using %s ...",IDC_COPY_METHOD,8,8,234,10,SS_CENTERIMAGE
+    CONTROL         "",IDC_COPY_PROGRESS,"msctls_progress32",WS_BORDER,7,21,235,11
+    LTEXT           "",IDC_COPY_INFO,8,35,234,10,SS_CENTERIMAGE
+    DEFPUSHBUTTON   "Cancel",IDCANCEL,100,50,50,14
+END
+
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -988,6 +999,14 @@ BEGIN
         RIGHTMARGIN, 415
         TOPMARGIN, 7
         BOTTOMMARGIN, 230
+    END
+
+    IDD_COPY_FILE, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 243
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 64
     END
 END
 #endif    // APSTUDIO_INVOKED
@@ -1198,6 +1217,8 @@ BEGIN
     IDS_OPLOCK_FLAGS        "Oplock Flags"
     IDS_HELP_ABOUT          "About FileTest ..."
     IDS_WANT_TRIM_DATA      "Data was pasted to the editor.\nDo you want to trim the data length?"
+    IDS_COPYFILE_FLAGS      "Flags for CopyFileEx"
+    IDS_COPY_CANCELLED      "Cancelling ..."
 END
 
 #endif    // English (U.S.) resources

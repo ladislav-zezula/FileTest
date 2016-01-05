@@ -231,6 +231,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="DateTime.cpp" />
+    <ClCompile Include="DlgCopyFile.cpp" />
     <ClCompile Include="DlgDataEditor.cpp" />
     <ClCompile Include="DlgEaEditor.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

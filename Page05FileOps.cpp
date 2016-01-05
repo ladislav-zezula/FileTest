@@ -14,6 +14,17 @@
 //-----------------------------------------------------------------------------
 // Flags
 
+static TFlagInfo CopyFileFlags[] =
+{
+    FLAG_INFO_ENTRY(COPY_FILE_FAIL_IF_EXISTS),
+    FLAG_INFO_ENTRY(COPY_FILE_RESTARTABLE),
+    FLAG_INFO_ENTRY(COPY_FILE_OPEN_SOURCE_FOR_WRITE),
+    FLAG_INFO_ENTRY(COPY_FILE_ALLOW_DECRYPTED_DESTINATION),
+    {{_T("Skip I/O errors")}, COPY_FILE_SKIP_IO_ERRORS, COPY_FILE_SKIP_IO_ERRORS},
+    {{_T("Copy using ReadFile+WriteFile (ignores other flags)")}, COPY_FILE_USE_READ_WRITE, COPY_FILE_USE_READ_WRITE},
+    FLAG_INFO_END
+};
+
 static TFlagInfo MoveFileFlags[] =
 {
     FLAG_INFO_ENTRY(MOVEFILE_REPLACE_EXISTING),
@@ -57,100 +68,6 @@ static LPTSTR FormatOplockTypeWindows7(LPTSTR szBuffer, size_t cchBuffer, DWORD 
     szBuffer[nIndex] = 0;
 
     return szBuffer;
-}
-
-static BOOL CopyFileByHand(const TCHAR * szOrigFile, const TCHAR * szNewFile)
-{
-    FILETIME ft1;
-    FILETIME ft2;
-    FILETIME ft3;
-    HANDLE hFile1 = INVALID_HANDLE_VALUE;
-    HANDLE hFile2 = INVALID_HANDLE_VALUE;
-    bool bHasFileTime = false;
-    int nError = ERROR_SUCCESS;
-
-    // Open the original file
-    if(nError == ERROR_SUCCESS)
-    {
-        hFile1 = CreateFile(szOrigFile, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
-        if(IsHandleInvalid(hFile1))
-            nError = GetLastError();
-    }
-
-    // (Re)create the new file
-    if(nError == ERROR_SUCCESS)
-    {
-        hFile2 = CreateFile(szNewFile, GENERIC_READ | GENERIC_WRITE | DELETE | WRITE_DAC, 0, NULL, OPEN_ALWAYS, 0, NULL);
-        if(IsHandleInvalid(hFile2))
-            nError = GetLastError();
-    }
-
-    // Get the file time of the original file
-    // Note that the SetFileTime can fail if the second file
-    // is actually a volume (\\.\GlobalRoot\Device\HarddiskVolume15)
-    // Do not report the error
-    if(nError == ERROR_SUCCESS)
-    {
-        if(GetFileTime(hFile1, &ft1, &ft2, &ft3))
-            bHasFileTime = true;
-    }
-
-    // Copy the content
-    if(nError == ERROR_SUCCESS)
-    {
-        BYTE  * pbBuffer = NULL;
-        DWORD dwBufferSize = 0x10000;
-
-        // Allocate buffer
-        pbBuffer = (LPBYTE)HeapAlloc(g_hHeap, 0, dwBufferSize);
-        if(pbBuffer != NULL)
-        {
-            // Perform the copy
-            for(;;)
-            {
-                DWORD dwTransferred = 0;
-
-                // Read the source file/drive
-                if(!ReadFile(hFile1, pbBuffer, dwBufferSize, &dwTransferred, NULL))
-                {
-                    nError = GetLastError();
-                    break;
-                }
-
-                // If nothing was read, stop it
-                if(dwTransferred == 0)
-                    break;
-
-                if(!WriteFile(hFile2, pbBuffer, dwTransferred, &dwTransferred, NULL))
-                    break;
-            }
-
-            // Free the buffer
-            HeapFree(g_hHeap, 0, pbBuffer);
-        }
-    }
-
-    // Set the file time of the copied file
-    // Note that the SetFileTime can fail if the second file
-    // is actually a volume (\\.\GlobalRoot\Device\HarddiskVolume15)
-    // Do not report the error
-    if(nError == ERROR_SUCCESS && bHasFileTime)
-    {
-        SetFileTime(hFile2, &ft1, &ft2, &ft3);
-    }
-
-    // Close both files
-    if(IsHandleValid(hFile2))
-        CloseHandle(hFile2);
-    if(IsHandleValid(hFile1))
-        CloseHandle(hFile1);
-    
-    if(nError != ERROR_SUCCESS)
-    {
-        SetLastError(nError);
-        return FALSE;
-    }
-    return TRUE;
 }
 
 static bool IsDotDirectoryName(PFILE_DIRECTORY_INFORMATION pDirInfo)
@@ -597,7 +514,6 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
     g_Tooltip.AddToolTip(hDlg, IDC_FLUSH_FILE_BUFFERS,       IDS_FLUSH_FILE_BUFFERS_TIP);
     g_Tooltip.AddToolTip(hDlg, IDC_SET_SPARSE,               IDS_SET_SPARSE_TIP);
 
-    Button_SetCheck(GetDlgItem(hDlg, IDC_USE_COPYAPI), BST_CHECKED);
     Hex2DlgText64(hDlg, IDC_BYTE_OFFSET, 0);
     Hex2DlgText32(hDlg, IDC_LENGTH, 0x10000);
     return TRUE;
@@ -674,28 +590,14 @@ static int OnDeltaPos(HWND hDlg, NMUPDOWN * pNMHDR)
 static int OnCopyFileClick(HWND hDlg)
 {
     TFileTestData * pData = GetDialogData(hDlg);
-    BOOL  bUseCopyFile = FALSE;
-    BOOL  bResult = FALSE;
-    int nError = ERROR_SUCCESS;
+    int nError;
 
-    // Decide whether we have to copy by hand or not
-    SaveDialog(hDlg);
-    bUseCopyFile = (Button_GetCheck(GetDlgItem(hDlg, IDC_USE_COPYAPI)) == BST_CHECKED);
+    // Get the source and target file
+    GetDlgItemText(hDlg, IDC_FILE_NAME1, pData->szFileName1, _maxchars(pData->szFileName1));
+    GetDlgItemText(hDlg, IDC_FILE_NAME2, pData->szFileName2, _maxchars(pData->szFileName2));
 
-    // Perform the copy
-    if(nError == ERROR_SUCCESS)
-    {
-        GetDlgItemText(hDlg, IDC_FILE_NAME1, pData->szFileName1, _maxchars(pData->szFileName1));
-        GetDlgItemText(hDlg, IDC_FILE_NAME2, pData->szFileName2, _maxchars(pData->szFileName2));
-
-        if(bUseCopyFile)
-            bResult = CopyFile(pData->szFileName1, pData->szFileName2, FALSE);
-        else
-            bResult = CopyFileByHand(pData->szFileName1, pData->szFileName2);
-
-        if(bResult == FALSE)
-            nError = GetLastError();
-    }
+    // Run the copy file dialog
+    nError = (int)CopyFileDialog(hDlg, pData);
 
     // Set the result
     SetResultInfo(hDlg, nError);
@@ -715,6 +617,14 @@ static int OnMoveFileClick(HWND hDlg)
 
     // Set the result
     SetResultInfo(hDlg, nError);
+    return TRUE;
+}
+
+static int OnCopyOptions(HWND hDlg)
+{
+    TFileTestData * pData = GetDialogData(hDlg);
+
+    FlagsDialog(hDlg, &pData->dwCopyFileFlags, IDS_COPYFILE_FLAGS, CopyFileFlags);
     return TRUE;
 }
 
@@ -1307,6 +1217,9 @@ static int OnCommand(HWND hDlg, UINT nNotify, UINT nIDCtrl)
 
             case IDC_MOVE_FILE:
                 return OnMoveFileClick(hDlg);
+
+            case IDC_COPY_OPTIONS:
+                return OnCopyOptions(hDlg);
 
             case IDC_MOVE_OPTIONS:
                 return OnMoveOptions(hDlg);

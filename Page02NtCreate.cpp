@@ -284,7 +284,7 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
     g_Tooltip.AddToolTip(hDlg, IDC_CREATE_OPTIONS, CreateOptionsValues);
 
     // On post-Vista, enable the virtualization button
-    if(GetVirtualizationFlags(NULL))
+    if(GetTokenVirtualizationEnabled(NULL))
         EnableDlgItems(hDlg, TRUE, IDC_VIRTUALIZATION, 0);
 
     return TRUE;
@@ -294,7 +294,6 @@ static int OnSetActive(HWND hDlg)
 {
     TFileTestData * pData = GetDialogData(hDlg);
     TCHAR szEaInfo[128];
-    DWORD dwVirtFlags = 0;
     BOOL bEnabled;
     int nChecked;
 
@@ -326,7 +325,7 @@ static int OnSetActive(HWND hDlg)
     CheckDlgButton(hDlg, IDC_TRANSACTED, nChecked);
 
     // Check/uncheck virtualization
-    nChecked = (GetVirtualizationFlags(&dwVirtFlags) && dwVirtFlags) ? BST_CHECKED : BST_UNCHECKED;
+    nChecked = (GetTokenVirtualizationEnabled(&bEnabled) && bEnabled) ? BST_CHECKED : BST_UNCHECKED;
     CheckDlgButton(hDlg, IDC_VIRTUALIZATION, nChecked);
 
     // Enable/disable "NtClose"
@@ -464,9 +463,9 @@ static int OnEditEaClick(HWND hDlg)
 
 static int OnVirtualization(HWND hDlg)
 {
-    DWORD dwNewValue = (IsDlgButtonChecked(hDlg, IDC_VIRTUALIZATION) == BST_CHECKED) ? 1 : 0;
+    BOOL bEnabled = (IsDlgButtonChecked(hDlg, IDC_VIRTUALIZATION) == BST_CHECKED) ? TRUE : FALSE;
 
-    SetVirtualizationFlags(dwNewValue);
+    SetTokenVirtualizationEnabled(bEnabled);
     return TRUE;
 }
 
