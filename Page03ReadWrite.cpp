@@ -25,6 +25,7 @@ static int UpdateFileData(
     TFileTestData * pData = GetDialogData(hDlg);
     LONGLONG ByteOffset;
     LPBYTE WritePattern = (LPBYTE)"BAADF00D";
+    LPBYTE pbNewData;
     ULONG NewLength;
     ULONG i;
     size_t cchDataToFill = 0;
@@ -47,10 +48,20 @@ static int UpdateFileData(
     // If we need to increase the buffer size, do it
     if(NewLength > pData->cbFileDataMax)
     {
-        pData->pbFileData = (LPBYTE)HeapReAlloc(g_hHeap, HEAP_ZERO_MEMORY, pData->pbFileData, NewLength);
-        if(pData->pbFileData == NULL)
+        // Allocate new data
+        pbNewData = (LPBYTE)VirtualAlloc(NULL, NewLength, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+        if(pbNewData == NULL)
             return ERROR_NOT_ENOUGH_MEMORY;
+
+        // Copy and free old data
+        if(pData->pbFileData != NULL)
+        {
+            memcpy(pbNewData, pData->pbFileData, pData->cbFileData);
+            VirtualFree(pData->pbFileData, pData->cbFileDataMax, MEM_RELEASE);
+        }
         
+        // Assign the new data
+        pData->pbFileData = pbNewData;
         pData->cbFileDataMax = NewLength;
     }
 
@@ -178,10 +189,14 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
         pAnchors->AddAnchor(hDlg, IDC_IOSTATUS_INFO, akLeft | akRight | akBottom);
     }
 
-    // Allocate the initial data
+    // Allocate the initial data. Make them aligned to sector alignment
     pData->cbFileDataMax = INITIAL_DATA_BUFFER_SIZE;
-    pData->pbFileData = (LPBYTE)HeapAlloc(g_hHeap, HEAP_ZERO_MEMORY, pData->cbFileDataMax);
+    pData->pbFileData = (LPBYTE)VirtualAlloc(NULL, pData->cbFileDataMax, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
     pData->cbFileData = 0;
+
+    // Zero the data
+    if(pData->pbFileData != NULL)
+        memset(pData->pbFileData, 0, pData->cbFileDataMax);
 
     // If there's field for data obtained by ReadFile, sets it to 8 bytes per line
     hWndChild = GetDlgItem(hDlg, IDC_FILE_DATA);

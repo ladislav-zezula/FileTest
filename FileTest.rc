@@ -108,8 +108,8 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 2,6,0,517
- PRODUCTVERSION 2,6,0,517
+ FILEVERSION 2,6,0,518
+ PRODUCTVERSION 2,6,0,518
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -126,13 +126,13 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Ladislav Zezula"
             VALUE "FileDescription", "Interactive File System API Test"
-            VALUE "FileVersion", "2, 6, 0, 517\0"
+            VALUE "FileVersion", "2, 6, 0, 518\0"
             VALUE "InternalName", "FileTest"
             VALUE "LegalCopyright", "Copyright © 2004 - 2014 Ladislav Zezula"
             VALUE "LegalTrademarks", "http://www.zezula.net"
             VALUE "OriginalFilename", "FileTest.exe"
             VALUE "ProductName", "FileTest"
-            VALUE "ProductVersion", "2, 6, 0, 517\0"
+            VALUE "ProductVersion", "2, 6, 0, 518\0"
         END
     END
     BLOCK "VarFileInfo"
@@ -366,10 +366,10 @@ CAPTION "File Ops"
 FONT 8, "MS Shell Dlg", 0, 0, 0x0
 BEGIN
     GROUPBOX        " Win32 API File Operations ",IDC_MAIN_FRAME,7,7,293,83,WS_GROUP
-    LTEXT           "File1:",IDC_STATIC,12,18,60,14,SS_CENTERIMAGE
+    LTEXT           "Source File (F1):",IDC_STATIC,12,18,60,14,SS_CENTERIMAGE
     EDITTEXT        IDC_FILE_NAME1,73,18,201,14,ES_AUTOHSCROLL
     PUSHBUTTON      "...",IDC_FILE_NAME1_BROWSE,278,18,15,14
-    LTEXT           "File2:",IDC_STATIC,12,33,60,14,SS_CENTERIMAGE
+    LTEXT           "Target File (F2):",IDC_STATIC,12,33,60,14,SS_CENTERIMAGE
     EDITTEXT        IDC_FILE_NAME2,73,33,201,14,ES_AUTOHSCROLL
     PUSHBUTTON      "...",IDC_FILE_NAME2_BROWSE,278,33,15,14
     PUSHBUTTON      "CopyFileEx (F1, F2)",IDC_COPY_FILE,11,53,74,14,WS_GROUP
@@ -377,7 +377,7 @@ BEGIN
     PUSHBUTTON      "DeleteFile (F1)",IDC_DELETE_FILE,219,53,74,14
     PUSHBUTTON      "Copy Options ...",IDC_COPY_OPTIONS,11,71,74,14
     PUSHBUTTON      "Move Options ...",IDC_MOVE_OPTIONS,115,71,74,14
-    PUSHBUTTON      "Delete dir (F1)",IDC_DELETE_DIRECTORY,219,71,74,14
+    PUSHBUTTON      "Delete Dir (F1)",IDC_DELETE_DIRECTORY,219,71,74,14
     GROUPBOX        " File ID and Object ID (if supported)",IDC_FILEID_FRAME,7,93,293,51,WS_GROUP
     PUSHBUTTON      "Get File ID",IDC_FILE_ID_GET,11,106,74,14
     EDITTEXT        IDC_FILE_ID,89,106,170,14,ES_AUTOHSCROLL | ES_READONLY

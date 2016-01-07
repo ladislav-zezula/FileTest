@@ -117,6 +117,24 @@ DWORD StrToInt(LPCTSTR szString, LPTSTR * szEnd, int nRadix)
 }
 
 //-----------------------------------------------------------------------------
+// bool values support
+
+int Text2Bool(LPCTSTR szText, bool * pValue)
+{
+    bool bNewValue = false;
+
+    if(_tcsicmp(szText, _T("true")))
+        bNewValue = true;
+    else if(_tcsicmp(szText, _T("on")))
+        bNewValue = true;
+    else if(_tcsicmp(szText, _T("1")))
+        bNewValue = true;
+
+    pValue[0] = bNewValue;
+    return ERROR_SUCCESS;
+}
+
+//-----------------------------------------------------------------------------
 // 32-bit values support
 
 int Text2Hex32(LPCTSTR szText, PDWORD pValue)

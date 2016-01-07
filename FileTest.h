@@ -622,6 +622,8 @@ void FreeNtStatusTree();
 
 DWORD StrToInt(LPCTSTR ptr, LPTSTR * szEnd, int nRadix);
 
+int  Text2Bool(LPCTSTR szText, bool * pValue);
+
 int  Text2Hex32(LPCTSTR szText, PDWORD pValue);
 int  DlgText2Hex32(HWND hDlg, UINT nIDCtrl, PDWORD pValue);
 void Hex2Text32(LPTSTR szBuffer, DWORD Value);

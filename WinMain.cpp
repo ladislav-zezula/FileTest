@@ -94,6 +94,8 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
     TFileTestData * pData;
     DWORD dwDesiredAccess = GENERIC_READ;
     DWORD dwShareAccess = FILE_SHARE_READ;
+    DWORD dwCopyFileFlags = 0;
+    DWORD dwMoveFileFlags = 0;
     bool bAsynchronousOpen = false;
     int nFileNameIndex = 0;
 
@@ -137,16 +139,22 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
             LPCTSTR szArg = __targv[i] + 1;
 
             // Check for default read+write access
-            if(!_tcsicmp(szArg, _T("rw")))
-                dwDesiredAccess = GENERIC_READ | GENERIC_WRITE;
+            if(!_tcsnicmp(szArg, _T("DesiredAccess:"), 14))
+                Text2Hex32(szArg+14, &dwDesiredAccess);
             
             // Check for default share read+write
-            if(!_tcsicmp(szArg, _T("shrw")))
-                dwShareAccess = FILE_SHARE_READ | FILE_SHARE_WRITE;
-            
+            if(!_tcsnicmp(szArg, _T("ShareAccess:"), 12))
+                Text2Hex32(szArg+12, &dwShareAccess);
+
+            if(!_tcsnicmp(szArg, _T("CopyFileFlags:"), 14))
+                Text2Hex32(szArg+14, &dwCopyFileFlags);
+
+            if(!_tcsnicmp(szArg, _T("MoveFileFlags:"), 14))
+                Text2Hex32(szArg+14, &dwMoveFileFlags);
+
             // Check for asynchronous open
-            if(!_tcsicmp(szArg, _T("async")))
-                bAsynchronousOpen = true;
+            if(!_tcsnicmp(szArg, _T("AsyncOpen:"), 10))
+                Text2Bool(szArg+10, &bAsynchronousOpen);
         }
     }
 
@@ -212,6 +220,8 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
     pData->dwObjAttrFlags        = OBJ_CASE_INSENSITIVE;
     pData->dwMoveFileFlags       = MOVEFILE_COPY_ALLOWED;
     pData->dwOplockLevel         = OPLOCK_LEVEL_CACHE_READ | OPLOCK_LEVEL_CACHE_WRITE;
+    pData->dwCopyFileFlags       = dwCopyFileFlags;
+    pData->dwMoveFileFlags       = dwMoveFileFlags;
 
     // Modify for synchronous open, if required
     if(bAsynchronousOpen == false)
@@ -232,6 +242,8 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
     // Cleanup the TFileTestData structure and exit
     if(pData->pFileEa != NULL)
         delete [] pData->pFileEa;
+    if(pData->pbFileData != NULL)
+        VirtualFree(pData->pbFileData, pData->cbFileDataMax, MEM_RELEASE);
     if(pData->pbNtInfoBuff != NULL)
         HeapFree(g_hHeap, 0, pData->pbNtInfoBuff);
     HeapFree(g_hHeap, 0, pData);

@@ -14,7 +14,8 @@
 //-----------------------------------------------------------------------------
 // Local structures
 
-#define COPY_BLOCK_SIZE 0x100000
+#define COPY_BLOCK_SIZE             0x00100000
+#define CALLBACK_READ_BAD_SECTOR    0x80000001
 
 typedef BOOL (WINAPI * COPYFILEEX)(LPCTSTR lpExistingFileName, LPCTSTR lpNewFileName, LPPROGRESS_ROUTINE lpProgressRoutine, LPVOID lpData, LPBOOL pbCancel, DWORD dwCopyFlags);
 typedef BOOL (WINAPI * COPYFILE)(LPCTSTR lpExistingFileName, LPCTSTR lpNewFileName, BOOL bFailIfExists);
@@ -38,17 +39,34 @@ struct TDialogData
 //-----------------------------------------------------------------------------
 // Copy worker
 
-static HANDLE OpenSourceFile(LPCTSTR lpFileName)
+static HANDLE OpenSourceFile(LPCTSTR lpFileName, ULONG dwCopyFlags)
 {
     HANDLE hFile;
+    DWORD dwFlagsAndAttributes = 0;
+
+    // If we are supposed to skip I/O errors, open the source with no buffering
+    // in order to be able to read sector-by-sector
+    dwFlagsAndAttributes |= (dwCopyFlags & COPY_FILE_SKIP_IO_ERRORS) ? FILE_FLAG_NO_BUFFERING : 0;
 
     // Try with FILE_SHARE_READ
-    hFile = CreateFile(lpFileName, FILE_READ_DATA | FILE_READ_ATTRIBUTES, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
+    hFile = CreateFile(lpFileName,
+                       FILE_READ_DATA | FILE_READ_ATTRIBUTES,
+                       FILE_SHARE_READ,
+                       NULL,
+                       OPEN_EXISTING,
+                       dwFlagsAndAttributes,
+                       NULL);
     if(hFile != INVALID_HANDLE_VALUE)
         return hFile;
 
     // Try with FILE_SHARE_READ+FILE_SHARE_WRITE
-    hFile = CreateFile(lpFileName, FILE_READ_DATA | FILE_READ_ATTRIBUTES, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
+    hFile = CreateFile(lpFileName,
+                       FILE_READ_DATA | FILE_READ_ATTRIBUTES,
+                       FILE_SHARE_READ | FILE_SHARE_WRITE,
+                       NULL,
+                       OPEN_EXISTING,
+                       dwFlagsAndAttributes,
+                       NULL);
     if(hFile != INVALID_HANDLE_VALUE)
         return hFile;
 
@@ -139,9 +157,16 @@ static DWORD CALLBACK CopyProgressRoutine(
     UNREFERENCED_PARAMETER(StreamSize);
     UNREFERENCED_PARAMETER(StreamBytesTransferred);
     UNREFERENCED_PARAMETER(dwStreamNumber);
-    UNREFERENCED_PARAMETER(dwCallbackReason);
     UNREFERENCED_PARAMETER(hSourceFile);
     UNREFERENCED_PARAMETER(hDestinationFile);
+
+    // If we are trying to recover a bad sector, show it
+    if(dwCallbackReason == CALLBACK_READ_BAD_SECTOR)
+    {
+        StringCchPrintf(szCopyInfo, _countof(szCopyInfo), _T("Reading damaged file at %I64u..."), TotalBytesTransferred.QuadPart);
+        SetWindowText(pData->hCopyInfo, szCopyInfo);
+        return PROGRESS_CONTINUE;
+    }
 
     // Initialize the progress, if not initialized yet
     if(TotalFileSize.QuadPart != 0 && pData->bProgressInitialized == FALSE)
@@ -175,6 +200,56 @@ static DWORD CALLBACK CopyProgressRoutine(
     return (pData->bCancelled) ? PROGRESS_STOP : PROGRESS_CONTINUE;
 }
 
+static BOOL ReadFileSkipErrors(
+    TDialogData * pData,
+    HANDLE hFile,
+    LARGE_INTEGER & SrcByteOffset,
+    LPBYTE pbCopyBuffer,
+    DWORD cbBlockSize,
+    PDWORD pcbTransferred)
+{
+    LARGE_INTEGER ByteOffset = SrcByteOffset;
+    OVERLAPPED Overlapped = {0};
+    DWORD dwBytesTransferred = 0;
+    DWORD dwBytesToRead;
+    DWORD dwBytesRead;
+
+    // First, reset the entire buffer with zeros
+    memset(pbCopyBuffer, 0, cbBlockSize);
+
+    // Now try to read the file sector-by-sector
+    while(cbBlockSize > 0)
+    {
+        int nError = ERROR_SUCCESS;
+
+        // Inform the user that we are attempting to read a damaged sector
+        CopyProgressRoutine(ByteOffset, ByteOffset, ByteOffset, ByteOffset, 0, CALLBACK_READ_BAD_SECTOR, hFile, NULL, pData);
+
+        // Read the file, up to one sector
+        Overlapped.OffsetHigh = ByteOffset.HighPart;
+        Overlapped.Offset = ByteOffset.LowPart;
+        dwBytesToRead = min(cbBlockSize, SECTOR_SIZE);
+        if(!ReadFile(hFile, pbCopyBuffer, dwBytesToRead, &dwBytesRead, &Overlapped))
+        {
+            // Handle two cases which we know that can mean an end of file/drive
+            nError = GetLastError();
+            if(nError == ERROR_HANDLE_EOF || nError == ERROR_SECTOR_NOT_FOUND)
+                break;
+        }
+
+        // Move pointers
+        ByteOffset.QuadPart += dwBytesToRead;
+        dwBytesTransferred += dwBytesToRead;
+        pbCopyBuffer += dwBytesToRead;
+        cbBlockSize -= dwBytesToRead;
+    }
+
+    // Give the caller the number of bytes read
+    if(pcbTransferred != NULL)
+        pcbTransferred[0] = dwBytesTransferred;
+    return TRUE;
+}
+
 static int CopyLoop(
     TDialogData * pData,
     HANDLE hFile1,
@@ -182,7 +257,7 @@ static int CopyLoop(
     LPBYTE pbCopyBuffer,
     DWORD cbBlockSize,
     LARGE_INTEGER & TotalFileSize,
-    LARGE_INTEGER & BytesCopied,
+    LARGE_INTEGER & ByteOffset,
     DWORD dwCopyFlags)
 {
     OVERLAPPED Overlapped = {0};
@@ -196,17 +271,26 @@ static int CopyLoop(
         int nError = ERROR_SUCCESS;
 
         // Read the source file/drive
-        Overlapped.OffsetHigh = BytesCopied.HighPart;
-        Overlapped.Offset = BytesCopied.LowPart;
+        Overlapped.OffsetHigh = ByteOffset.HighPart;
+        Overlapped.Offset = ByteOffset.LowPart;
         if(!ReadFile(hFile1, pbCopyBuffer, cbBlockSize, &dwTransferred, &Overlapped))
         {
             switch(nError = GetLastError())
             {
-                case ERROR_IO_DEVICE:   // If we shall skip the I/O errors, fill the source with zeros
+                case ERROR_HANDLE_EOF:
+                    nError = ERROR_SUCCESS;
+                    break;
+
+                case ERROR_SECTOR_NOT_FOUND:    // Example: Reading 0x400 bytes from \\.\PhysicalDrive0, offset (end - 1 sector)
+                    ReadFileSkipErrors(pData, hFile1, ByteOffset, pbCopyBuffer, cbBlockSize, &dwTransferred);
+                    nError = ERROR_SUCCESS;
+                    break;
+
+                case ERROR_CRC:
+                case ERROR_IO_DEVICE:   
                     if(dwCopyFlags & COPY_FILE_SKIP_IO_ERRORS)
                     {
-                        memset(pbCopyBuffer, 0, cbBlockSize);
-                        dwTransferred = cbBlockSize;
+                        ReadFileSkipErrors(pData, hFile1, ByteOffset, pbCopyBuffer, cbBlockSize, &dwTransferred);
                         nError = ERROR_SUCCESS;
                     }
                     break;
@@ -225,13 +309,13 @@ static int CopyLoop(
             return GetLastError();
 
         // Report the copy progress
-        BytesCopied.QuadPart += dwTransferred;
+        ByteOffset.QuadPart += dwTransferred;
         dwProgressStep += dwTransferred;
 
         // Show the progress, but not too often
         if(dwProgressStep >= COPY_BLOCK_SIZE)
         {
-            dwRet = CopyProgressRoutine(TotalFileSize, BytesCopied, TotalFileSize, BytesCopied, 0, 0, hFile1, hFile2, pData);
+            dwRet = CopyProgressRoutine(TotalFileSize, ByteOffset, TotalFileSize, ByteOffset, 0, 0, hFile1, hFile2, pData);
             if(dwRet != PROGRESS_CONTINUE)
                 return ERROR_CANCELLED;
             dwProgressStep = 0;
@@ -245,7 +329,7 @@ static int CopyLoop(
 static void CopyFileWorker_ByHand(TDialogData * pData, LPCTSTR szFileName1, LPCTSTR szFileName2, DWORD dwCopyFlags)
 {
     LARGE_INTEGER TotalFileSize = {0};
-    LARGE_INTEGER BytesCopied = {0};
+    LARGE_INTEGER ByteOffset = {0};
     FILETIME ft1;
     FILETIME ft2;
     FILETIME ft3;
@@ -263,7 +347,7 @@ static void CopyFileWorker_ByHand(TDialogData * pData, LPCTSTR szFileName1, LPCT
     // Open the source file file
     if(nError == ERROR_SUCCESS)
     {
-        hFile1 = OpenSourceFile(szFileName1);
+        hFile1 = OpenSourceFile(szFileName1, dwCopyFlags);
         if(IsHandleInvalid(hFile1))
             nError = GetLastError();
     }
@@ -294,10 +378,11 @@ static void CopyFileWorker_ByHand(TDialogData * pData, LPCTSTR szFileName1, LPCT
     }
 
     // Allocate the buffer for holding copied data
+    // Use VirtualAlloc to ensure that the buffer is sector aligned 
     if(nError == ERROR_SUCCESS)
     {
         // Allocate buffer
-        pbCopyBuffer = (LPBYTE)HeapAlloc(g_hHeap, 0, cbCopyBuffer);
+        pbCopyBuffer = (LPBYTE)VirtualAlloc(NULL, cbCopyBuffer, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
         if(pbCopyBuffer == NULL)
             nError = ERROR_NOT_ENOUGH_MEMORY;
     }
@@ -305,19 +390,14 @@ static void CopyFileWorker_ByHand(TDialogData * pData, LPCTSTR szFileName1, LPCT
     // Perform the copy
     if(nError == ERROR_SUCCESS)
     {
-        nError = CopyLoop(pData, hFile1, hFile2, pbCopyBuffer, cbCopyBuffer, TotalFileSize, BytesCopied, 0);
-        switch(nError)
-        {
-            case ERROR_SUCCESS:
-            case ERROR_HANDLE_EOF:
-                nError = ERROR_SUCCESS;
-                break;
-
-            case ERROR_IO_DEVICE:                                                                               
-                if(dwCopyFlags & COPY_FILE_SKIP_IO_ERRORS)
-                    nError = CopyLoop(pData, hFile1, hFile2, pbCopyBuffer, SECTOR_SIZE, TotalFileSize, BytesCopied, dwCopyFlags);
-                break;
-        }
+        nError = CopyLoop(pData,
+                          hFile1,
+                          hFile2,
+                          pbCopyBuffer,
+                          cbCopyBuffer,
+                          TotalFileSize,
+                          ByteOffset,
+                          dwCopyFlags);
     }
 
     // Set the file time of the copied file
@@ -331,7 +411,7 @@ static void CopyFileWorker_ByHand(TDialogData * pData, LPCTSTR szFileName1, LPCT
 
     // Free resources
     if(pbCopyBuffer != NULL)
-        HeapFree(g_hHeap, 0, pbCopyBuffer);
+        VirtualFree(pbCopyBuffer, cbCopyBuffer, MEM_RELEASE);
     if(IsHandleValid(hFile2))
         CloseHandle(hFile2);
     if(IsHandleValid(hFile1))
