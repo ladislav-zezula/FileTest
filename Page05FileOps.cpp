@@ -20,8 +20,11 @@ static TFlagInfo CopyFileFlags[] =
     FLAG_INFO_ENTRY(COPY_FILE_RESTARTABLE),
     FLAG_INFO_ENTRY(COPY_FILE_OPEN_SOURCE_FOR_WRITE),
     FLAG_INFO_ENTRY(COPY_FILE_ALLOW_DECRYPTED_DESTINATION),
-    {{_T("Skip I/O errors")}, COPY_FILE_SKIP_IO_ERRORS, COPY_FILE_SKIP_IO_ERRORS},
-    {{_T("Copy using ReadFile+WriteFile (ignores other flags)")}, COPY_FILE_USE_READ_WRITE, COPY_FILE_USE_READ_WRITE},
+    FLAG_INFO_SEPARATOR(),
+    {{_T("Use Manual Copy (ReadFile+WriteFile)")}, COPY_FILE_USE_READ_WRITE, COPY_FILE_USE_READ_WRITE},
+    {{_T("Manual Copy: Skip Read Errors")},        COPY_FILE_SKIP_IO_ERRORS, COPY_FILE_SKIP_IO_ERRORS},
+    {{_T("Manual Copy: Log Read Errors")},         COPY_FILE_LOG_IO_ERRORS,  COPY_FILE_LOG_IO_ERRORS},
+    {{_T("Manual Copy: Copy per sector")},         COPY_FILE_PER_SECTOR,     COPY_FILE_PER_SECTOR},
     FLAG_INFO_END
 };
 

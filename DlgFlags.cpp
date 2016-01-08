@@ -133,36 +133,61 @@ static void CreateDialogLayout_Empty(TFlagDialogData * pData)
             // Increment the dialog height
             nDeltaY = nDeltaY + cy + 6;
 
-            // Create the checkbox
-            hWndChild = CreateWindowEx(dwExStyle,
-                                       WC_BUTTON,
-                                       NULL,
-                                       dwStyle | WS_VISIBLE,
-                                       CheckBoxRect.left,
-                                       CheckBoxRect.top + nDeltaY,
-                                       cx,
-                                       cy,
-                                       pData->hDlg,
-                                       0,
-                                       g_hInst,
-                                       NULL);
-            SendMessage(hWndChild, WM_SETFONT, (WPARAM)hFont, FALSE);
+            // Shall we create a separator?
+            if(pFlags->dwValue != FLAG_SEPARATOR)
+            {
+                // Create the checkbox
+                hWndChild = CreateWindowEx(dwExStyle,
+                                           WC_BUTTON,
+                                           NULL,
+                                           dwStyle | WS_VISIBLE,
+                                           CheckBoxRect.left,
+                                           CheckBoxRect.top + nDeltaY,
+                                           cx,
+                                           cy,
+                                           pData->hDlg,
+                                           0,
+                                           g_hInst,
+                                           NULL);
+            }
+            else
+            {
+                hWndChild = CreateWindowEx(WS_EX_LEFT | WS_EX_NOPARENTNOTIFY,
+                                           WC_STATIC,
+                                           NULL,
+                                           WS_CHILD | WS_VISIBLE | SS_SUNKEN,
+                                           CheckBoxRect.left,
+                                           CheckBoxRect.top + nDeltaY + (cy - 3) / 2,
+                                           cx,
+                                           3,
+                                           pData->hDlg,
+                                           0,
+                                           g_hInst,
+                                           NULL);
+            }
 
             // Set the checkbox's Z-order after the previous one
             SetWindowPos(hWndChild, hPrevChild, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+            SendMessage(hWndChild, WM_SETFONT, (WPARAM)hFont, FALSE);
             hPrevChild = hWndChild;
         }
 
-        // Set the window text
-        StringCchPrintf(szItemText, _countof(szItemText), _T("(%08X) %s"), pFlags->dwValue, pFlags->szFlagText);
-        SetWindowText(hWndChild, szItemText);
+        // If a separator, don't do anything more
+        if(pFlags->dwValue != FLAG_SEPARATOR)
+        {
+            // Set the window text
+            StringCchPrintf(szItemText, _countof(szItemText), _T("(%08X) %s"), pFlags->dwValue, pFlags->szFlagText);
+            SetWindowText(hWndChild, szItemText);
 
-        // Set the parametert to the flag pointer
-        SetWindowLongPtr(hWndChild, GWLP_USERDATA, (LONG_PTR)pFlags);
+            // Set the pointer to the flag info
+            SetWindowLongPtr(hWndChild, GWLP_USERDATA, (LONG_PTR)pFlags);
 
-        // Check/uncheck the box
-        nChecked = IS_FLAG_SET(pFlags, pData->dwFlags) ? BST_CHECKED : BST_UNCHECKED;
-        Button_SetCheck(hWndChild, nChecked);
+            // Check/uncheck the box
+            nChecked = IS_FLAG_SET(pFlags, pData->dwFlags) ? BST_CHECKED : BST_UNCHECKED;
+            Button_SetCheck(hWndChild, nChecked);
+        }
+
+        // Set hWndChild to NULL so the next child will be created new
         hWndChild = NULL;
     }
 

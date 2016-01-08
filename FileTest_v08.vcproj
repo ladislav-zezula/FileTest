@@ -224,10 +224,12 @@
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="../aaa/lib32"
 				GenerateManifest="false"
+				IgnoreDefaultLibraryNames=""
 				GenerateDebugInformation="true"
 				SubSystem="2"
 				OptimizeReferences="2"
 				EnableCOMDATFolding="2"
+				EntryPointSymbol=""
 				RandomizedBaseAddress="1"
 				DataExecutionPrevention="2"
 				TargetMachine="1"
@@ -548,6 +550,10 @@
 			</File>
 			<File
 				RelativePath=".\TToolTip.h"
+				>
+			</File>
+			<File
+				RelativePath=".\WinSDK.h"
 				>
 			</File>
 		</Filter>

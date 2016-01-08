@@ -108,8 +108,8 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 2,6,0,518
- PRODUCTVERSION 2,6,0,518
+ FILEVERSION 2,6,0,522
+ PRODUCTVERSION 2,6,0,522
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -126,13 +126,13 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Ladislav Zezula"
             VALUE "FileDescription", "Interactive File System API Test"
-            VALUE "FileVersion", "2, 6, 0, 518\0"
+            VALUE "FileVersion", "2, 6, 0, 522\0"
             VALUE "InternalName", "FileTest"
             VALUE "LegalCopyright", "Copyright © 2004 - 2014 Ladislav Zezula"
             VALUE "LegalTrademarks", "http://www.zezula.net"
             VALUE "OriginalFilename", "FileTest.exe"
             VALUE "ProductName", "FileTest"
-            VALUE "ProductVersion", "2, 6, 0, 518\0"
+            VALUE "ProductVersion", "2, 6, 0, 522\0"
         END
     END
     BLOCK "VarFileInfo"
@@ -804,7 +804,7 @@ FONT 8, "MS Shell Dlg", 0, 0, 0x1
 BEGIN
     LTEXT           "Copying using %s ...",IDC_COPY_METHOD,8,8,234,10,SS_CENTERIMAGE
     CONTROL         "",IDC_COPY_PROGRESS,"msctls_progress32",WS_BORDER,7,21,235,11
-    LTEXT           "",IDC_COPY_INFO,8,35,234,10,SS_CENTERIMAGE
+    LTEXT           "",IDC_COPY_INFO,8,34,234,10,SS_CENTERIMAGE
     DEFPUSHBUTTON   "Cancel",IDCANCEL,100,50,50,14
 END
 
@@ -1217,7 +1217,7 @@ BEGIN
     IDS_OPLOCK_FLAGS        "Oplock Flags"
     IDS_HELP_ABOUT          "About FileTest ..."
     IDS_WANT_TRIM_DATA      "Data was pasted to the editor.\nDo you want to trim the data length?"
-    IDS_COPYFILE_FLAGS      "Flags for CopyFileEx"
+    IDS_COPYFILE_FLAGS      "Flags for File Copy"
     IDS_COPY_CANCELLED      "Cancelling ..."
 END
 

@@ -28,7 +28,8 @@ static DWORD WINAPI MoveDialogThread(PVOID pParam)
     int nAddY;
 
     // Determine the direction
-    nAddY = (pData->nEndY > pData->nStartY) ? +1 : -1;
+    nAddY = (g_dwWinVer >= OSVER_WINDOWS_NT4) ? 1 : 5;
+    nAddY = (pData->nEndY > pData->nStartY) ? +nAddY : -nAddY;
 
     for(;;)
     {
@@ -263,7 +264,7 @@ static void InitializeTabControl(HWND hDlg, TWindowData * pData)
     nPages++;
 
 #ifdef _DEBUG
-//  psh.nStartPage = nPages - 1; // Set the "FileOps" as starting page for debug purposes
+    psh.nStartPage = nPages - 1; // Set the "FileOps" as starting page for debug purposes
 #endif
 
     // Fill the "NtFileInfo" page

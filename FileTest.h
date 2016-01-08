@@ -33,6 +33,7 @@
 #include "TAnchors.h"
 #include "TToolTip.h"
 #include "TDataEditor.h"
+#include "WinSDK.h"
 
 //-----------------------------------------------------------------------------
 // Defines
@@ -47,6 +48,7 @@
 #define MAX_NT_PATH                 32767           // Maximum path name length in NT is 32767
 #define MAX_FILEID_PATH             0x24            // Maximum path name length of File ID string (C:\################ or C:\################################)
 
+#define OSVER_WINDOWS_NT4           0x0400
 #define OSVER_WINDOWS_2000          0x0500
 #define OSVER_WINDOWS_XP            0x0501
 #define OSVER_WINDOWS_2003          0x0502
@@ -75,251 +77,23 @@
 #define APC_TYPE_READ_WRITE         1
 #define APC_TYPE_FSCTL              2
 
-#define COPY_FILE_SKIP_IO_ERRORS    0x40000000      // On I/O errors, replace loaded data with zeros if failed
-#define COPY_FILE_USE_READ_WRITE    0x80000000      // Artificial value for file copy - copy by hand
+#define COPY_FILE_USE_READ_WRITE    0x01000000      // Manual file copy - use ReadFile + WriteFile
+#define COPY_FILE_SKIP_IO_ERRORS    0x02000000      // On I/O errors, replace loaded data with zeros if failed
+#define COPY_FILE_LOG_IO_ERRORS     0x04000000      // Log the I/O errors to FileTest.log
+#define COPY_FILE_PER_SECTOR        0x08000000      // Copy sector-per-sector (512 bytes)
 
 #ifndef SECTOR_SIZE
 #define SECTOR_SIZE                 0x200           // Sector size for disk drives
 #endif
 
 //-----------------------------------------------------------------------------
-// Defines for the mandatory label ACEs.
-// Several symbols are not defined in the pre-Vista SDKs
-
-#ifndef TokenElevationType
-#define TokenElevationType         (TOKEN_INFORMATION_CLASS)0x12
-#define TokenElevation             (TOKEN_INFORMATION_CLASS)0x14
-#define TokenVirtualizationEnabled (TOKEN_INFORMATION_CLASS)0x18
-#endif
-
-#ifndef SYSTEM_MANDATORY_LABEL_ACE_TYPE
-#define SYSTEM_MANDATORY_LABEL_ACE_TYPE         (0x11)
-
-// Access mask for the mandatory label ACE
-#define SYSTEM_MANDATORY_LABEL_NO_WRITE_UP         0x1
-#define SYSTEM_MANDATORY_LABEL_NO_READ_UP          0x2
-#define SYSTEM_MANDATORY_LABEL_NO_EXECUTE_UP       0x4
-
-#define SYSTEM_MANDATORY_LABEL_VALID_MASK (SYSTEM_MANDATORY_LABEL_NO_WRITE_UP   | \
-                                           SYSTEM_MANDATORY_LABEL_NO_READ_UP    | \
-                                           SYSTEM_MANDATORY_LABEL_NO_EXECUTE_UP)
-
-// Structure of mandatory label ACE
-typedef struct _SYSTEM_MANDATORY_LABEL_ACE {
-    ACE_HEADER Header;
-    ACCESS_MASK Mask;
-    DWORD SidStart;
-} SYSTEM_MANDATORY_LABEL_ACE, *PSYSTEM_MANDATORY_LABEL_ACE;
-
-//
-// The SID in the SYSTEM_MANDATORY_LABEL_ACE has the following format:
-//
-// - IdentifierAuthority is set to SECURITY_MANDATORY_LABEL_AUTHORITY
-// - The last subauthority is set to one of the SECURITY_MANDATORY_XXXX values
-//           
-
-#define SECURITY_MANDATORY_LABEL_AUTHORITY          {0,0,0,0,0,16}
-#define SECURITY_MANDATORY_UNTRUSTED_RID            (0x00000000L)
-#define SECURITY_MANDATORY_LOW_RID                  (0x00001000L)
-#define SECURITY_MANDATORY_MEDIUM_RID               (0x00002000L)
-#define SECURITY_MANDATORY_HIGH_RID                 (0x00003000L)
-#define SECURITY_MANDATORY_SYSTEM_RID               (0x00004000L)
-#define SECURITY_MANDATORY_PROTECTED_PROCESS_RID    (0x00005000L)
-
-typedef struct _TOKEN_MANDATORY_LABEL
-{
-    SID_AND_ATTRIBUTES Label;
-
-} TOKEN_MANDATORY_LABEL, *PTOKEN_MANDATORY_LABEL;
-
-#define TokenIntegrityLevel  (TOKEN_INFORMATION_CLASS)25
-
-#define SE_GROUP_INTEGRITY                 (0x00000020L)
-#define SE_GROUP_INTEGRITY_ENABLED         (0x00000040L)
-#endif // SYSTEM_MANDATORY_LABEL_ACE_TYPE
-
-#ifndef LABEL_SECURITY_INFORMATION
-#define LABEL_SECURITY_INFORMATION       (0x00000010L)
-#endif
-
-#ifndef MOVEFILE_CREATE_HARDLINK
-#define MOVEFILE_CREATE_HARDLINK        0x00000010
-#endif
-
-#ifndef MOVEFILE_FAIL_IF_NOT_TRACKABLE
-#define MOVEFILE_FAIL_IF_NOT_TRACKABLE  0x00000020
-#endif
-
-#ifndef BS_COMMANDLINK
-#define BS_COMMANDLINK          0x0000000EL
-#define BS_DEFCOMMANDLINK       0x0000000FL
-#endif
-
-#ifndef FILE_FLAG_SESSION_AWARE
-#define FILE_FLAG_SESSION_AWARE             0x00800000
-#endif
-
-#ifndef FILE_SESSION_AWARE
-#define FILE_SESSION_AWARE                  0x00040000
-#endif
-
-#ifndef FILE_ATTRIBUTE_INTEGRITY_STREAM
-#define FILE_ATTRIBUTE_INTEGRITY_STREAM     0x00008000
-#define FILE_ATTRIBUTE_NO_SCRUB_DATA        0x00020000
-#define FILE_ATTRIBUTE_EA                   0x00040000
-#endif
-
-#ifndef FILE_ATTRIBUTE_VIRTUAL
-#define FILE_ATTRIBUTE_VIRTUAL              0x00010000  
-#endif
-
-#ifndef SECURITY_VALUE_MASK
-#define SECURITY_VALUE_MASK                (SECURITY_ANONYMOUS | SECURITY_IDENTIFICATION | SECURITY_IMPERSONATION | SECURITY_DELEGATION)
-#endif
-
-#ifndef FSCTL_REQUEST_OPLOCK
-#define FSCTL_REQUEST_OPLOCK                CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 144, METHOD_BUFFERED, FILE_ANY_ACCESS)
-#endif
-
-#ifndef FILE_OPLOCK_BROKEN_TO_LEVEL_2
-#define FILE_OPLOCK_BROKEN_TO_LEVEL_2   0x00000007
-#define FILE_OPLOCK_BROKEN_TO_NONE      0x00000008
-#define FILE_OPBATCH_BREAK_UNDERWAY     0x00000009
-#endif
-
-#ifndef OPLOCK_LEVEL_CACHE_READ
-#define OPLOCK_LEVEL_CACHE_READ         (0x00000001)
-#define OPLOCK_LEVEL_CACHE_HANDLE       (0x00000002)
-#define OPLOCK_LEVEL_CACHE_WRITE        (0x00000004)
-
-#define REQUEST_OPLOCK_INPUT_FLAG_REQUEST               (0x00000001)
-#define REQUEST_OPLOCK_INPUT_FLAG_ACK                   (0x00000002)
-#define REQUEST_OPLOCK_INPUT_FLAG_COMPLETE_ACK_ON_CLOSE (0x00000004)
-
-#define REQUEST_OPLOCK_CURRENT_VERSION          1
-
-typedef struct _REQUEST_OPLOCK_INPUT_BUFFER {
-
-    //
-    //  This should be set to REQUEST_OPLOCK_CURRENT_VERSION.
-    //
-
-    WORD   StructureVersion;
-
-    WORD   StructureLength;
-
-    //
-    //  One or more OPLOCK_LEVEL_CACHE_* values to indicate the desired level of the oplock.
-    //
-
-    DWORD RequestedOplockLevel;
-
-    //
-    //  REQUEST_OPLOCK_INPUT_FLAG_* flags.
-    //
-
-    DWORD Flags;
-
-} REQUEST_OPLOCK_INPUT_BUFFER, *PREQUEST_OPLOCK_INPUT_BUFFER;
-
-#define REQUEST_OPLOCK_OUTPUT_FLAG_ACK_REQUIRED     (0x00000001)
-#define REQUEST_OPLOCK_OUTPUT_FLAG_MODES_PROVIDED   (0x00000002)
-
-typedef struct _REQUEST_OPLOCK_OUTPUT_BUFFER {
-
-    //
-    //  This should be set to REQUEST_OPLOCK_CURRENT_VERSION.
-    //
-
-    WORD   StructureVersion;
-
-    WORD   StructureLength;
-
-    //
-    //  One or more OPLOCK_LEVEL_CACHE_* values indicating the level of the oplock that
-    //  was just broken.
-    //
-
-    DWORD OriginalOplockLevel;
-
-    //
-    //  One or more OPLOCK_LEVEL_CACHE_* values indicating the level to which an oplock
-    //  is being broken, or an oplock level that may be available for granting, depending
-    //  on the operation returning this buffer.
-    //
-
-    DWORD NewOplockLevel;
-
-    //
-    //  REQUEST_OPLOCK_OUTPUT_FLAG_* flags.
-    //
-
-    DWORD Flags;
-
-    //
-    //  When REQUEST_OPLOCK_OUTPUT_FLAG_MODES_PROVIDED is set, and when the
-    //  OPLOCK_LEVEL_CACHE_HANDLE level is being lost in an oplock break, these fields
-    //  contain the access mode and share mode of the request that is causing the break.
-    //
-
-    ACCESS_MASK AccessMode;
-
-    WORD   ShareMode;
-
-} REQUEST_OPLOCK_OUTPUT_BUFFER, *PREQUEST_OPLOCK_OUTPUT_BUFFER;
-#endif
-
-typedef BOOL (WINAPI * ADDMANDATORYACE)(PACL pAcl,
-                                        DWORD dwAceRevision,
-                                        DWORD AceFlags,
-                                        DWORD MandatoryPolicy,
-                                        PSID pLabelSid);
-
-//-----------------------------------------------------------------------------
-// Defines for the reparse point
-
-#define FSCTL_SET_REPARSE_POINT         CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 41, METHOD_BUFFERED, FILE_SPECIAL_ACCESS) // REPARSE_DATA_BUFFER,
-#define FSCTL_GET_REPARSE_POINT         CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 42, METHOD_BUFFERED, FILE_ANY_ACCESS) // REPARSE_DATA_BUFFER
-#define FSCTL_DELETE_REPARSE_POINT      CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 43, METHOD_BUFFERED, FILE_SPECIAL_ACCESS) // REPARSE_DATA_BUFFER,
-
-typedef struct _REPARSE_DATA_BUFFER {
-    ULONG  ReparseTag;
-    USHORT ReparseDataLength;
-    USHORT Reserved;
-    union {
-        struct {
-            USHORT SubstituteNameOffset;
-            USHORT SubstituteNameLength;
-            USHORT PrintNameOffset;
-            USHORT PrintNameLength;
-            ULONG Flags;
-            WCHAR PathBuffer[1];
-        } SymbolicLinkReparseBuffer;
-        struct {
-            USHORT SubstituteNameOffset;
-            USHORT SubstituteNameLength;
-            USHORT PrintNameOffset;
-            USHORT PrintNameLength;
-            WCHAR PathBuffer[1];
-        } MountPointReparseBuffer;
-        struct {
-            UCHAR  DataBuffer[1];
-        } GenericReparseBuffer;
-    } DUMMYUNIONNAME;
-} REPARSE_DATA_BUFFER, *PREPARSE_DATA_BUFFER;
-
-#define REPARSE_DATA_BUFFER_HEADER_SIZE   FIELD_OFFSET(REPARSE_DATA_BUFFER, GenericReparseBuffer)
-
-#ifndef IO_REPARSE_TAG_WIM
-#define IO_REPARSE_TAG_WIM      (0x80000008L)
-#endif
-
-//-----------------------------------------------------------------------------
 // Structures
 
+#define FLAG_SEPARATOR                  0xFFFFFFFF
 #define FLAG_INFO_CTRLID(flag)          {{(LPCTSTR)IDC_##flag}, flag, flag}
 #define FLAG_INFO_ENTRY(flag)           {{_T(#flag)}, flag, flag}
 #define FLAG_INFO_MASK(mask, flag)      {{(LPCTSTR)IDC_##flag}, mask, flag}
+#define FLAG_INFO_SEPARATOR()           {{_T("")}, FLAG_SEPARATOR, FLAG_SEPARATOR}
 #define FLAG_INFO_END                   {{NULL}, 0, 0}
 #define IS_FLAG_SET(FlagInfo, flag)     ((flag & FlagInfo->dwMask) == FlagInfo->dwValue)
 
