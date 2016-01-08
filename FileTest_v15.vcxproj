@@ -252,6 +252,7 @@
     <ClInclude Include="resource.h" />
     <ClInclude Include="TDataEditor.h" />
     <ClInclude Include="TToolTip.h" />
+    <ClInclude Include="WinSDK.h" />
   </ItemGroup>
   <ItemGroup>
     <Manifest Include="res\FileTest.exe.manifest" />

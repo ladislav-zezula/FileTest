@@ -273,6 +273,7 @@
     <ClInclude Include="resource.h" />
     <ClInclude Include="TDataEditor.h" />
     <ClInclude Include="TToolTip.h" />
+    <ClInclude Include="WinSDK.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="Res\FileTest.ico" />
