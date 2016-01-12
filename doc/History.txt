@@ -2,10 +2,15 @@
   FileTest history
   ================
 
+ Version 2.6.0.523
+ 
+ - Date/Time fields can now accept 64-bit hexa value without separators
+
  Version 2.6.0.520
 
  - Improved the "Copy File" command. Now can copy volumes, too.
  - Fixed invalid determining whether running under restricted token.
+ - Sources backported to VS 2005
 
  Version 2.6.0.506
 

@@ -263,10 +263,6 @@ static void InitializeTabControl(HWND hDlg, TWindowData * pData)
     psp[nPages].lParam      = (LPARAM)pData;
     nPages++;
 
-#ifdef _DEBUG
-    psh.nStartPage = nPages - 1; // Set the "FileOps" as starting page for debug purposes
-#endif
-
     // Fill the "NtFileInfo" page
     ZeroMemory(&psp[nPages], sizeof(PROPSHEETPAGE));
     psp[nPages].dwSize      = sizeof(PROPSHEETPAGE);
@@ -276,6 +272,10 @@ static void InitializeTabControl(HWND hDlg, TWindowData * pData)
     psp[nPages].pfnDlgProc  = PageProc06;
     psp[nPages].lParam      = (LPARAM)pData;
     nPages++;
+
+#ifdef _DEBUG
+    psh.nStartPage = nPages - 1; // Set the "FileOps" as starting page for debug purposes
+#endif
 
     // Fill the "NtFsInfo" page.
     ZeroMemory(&psp[nPages], sizeof(PROPSHEETPAGE));

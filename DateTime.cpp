@@ -690,34 +690,38 @@ NTSTATUS TextToFileTime(LPCTSTR szText, PFILETIME pFt)
         return STATUS_SUCCESS;
     }
 
-    // Try to convert the time as LARGE_INTEGER
-    ft.dwHighDateTime = StrToInt(szText, &szEndChar, 16);
-    if(szEndChar != NULL && szEndChar[0] == _T('-'))
+    // Try to convert 64-bit value in the form of ################ or 0x################
+    if(Text2Hex64(szText, (PLONGLONG)&ft) != ERROR_SUCCESS)
     {
+        // Try to convert the 64-bit value in the form of ########-########
+        ft.dwHighDateTime = StrToInt(szText, &szEndChar, 16);
+        if(szEndChar == NULL || szEndChar[0] != _T('-'))
+            return STATUS_INVALID_DATA_FORMAT;
+
         ft.dwLowDateTime = StrToInt(szEndChar+1, &szEndChar, 16);
-        if(szEndChar[0] == 0 || szEndChar[0] == _T(' '))
-        {
-            // We accept "FFFFFFFF-FFFFFFFF" as input
-            if(ft.dwHighDateTime == 0xFFFFFFFF && ft.dwLowDateTime == 0xFFFFFFFF)
-            {
-                pFt->dwHighDateTime = ft.dwHighDateTime;
-                pFt->dwLowDateTime = ft.dwLowDateTime;
-                return STATUS_SUCCESS;
-            }
-
-            // We accept "00000000-00000000" as input
-            if(ft.dwHighDateTime == 0 && ft.dwLowDateTime == 0)
-            {
-                pFt->dwHighDateTime = ft.dwHighDateTime;
-                pFt->dwLowDateTime = ft.dwLowDateTime;
-                return STATUS_SUCCESS;
-            }
-
-            // Convert from local time to file time
-            if(LocalFileTimeToFileTime(&ft, pFt))
-                return STATUS_SUCCESS;
-        }
+        if(szEndChar[0] != 0 && szEndChar[0] != _T(' '))
+            return STATUS_INVALID_DATA_FORMAT;
     }
+
+    // We accept "FFFFFFFF-FFFFFFFF" as input
+    if(ft.dwHighDateTime == 0xFFFFFFFF && ft.dwLowDateTime == 0xFFFFFFFF)
+    {
+        pFt->dwHighDateTime = ft.dwHighDateTime;
+        pFt->dwLowDateTime = ft.dwLowDateTime;
+        return STATUS_SUCCESS;
+    }
+
+    // We accept "00000000-00000000" as input
+    if(ft.dwHighDateTime == 0 && ft.dwLowDateTime == 0)
+    {
+        pFt->dwHighDateTime = ft.dwHighDateTime;
+        pFt->dwLowDateTime = ft.dwLowDateTime;
+        return STATUS_SUCCESS;
+    }
+
+    // Convert from local time to file time
+    if(LocalFileTimeToFileTime(&ft, pFt))
+        return STATUS_SUCCESS;
 
     // Conversion failed
     return STATUS_INVALID_DATA_FORMAT;
