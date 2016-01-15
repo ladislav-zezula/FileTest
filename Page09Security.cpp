@@ -1990,50 +1990,30 @@ static void OnTVKeyDown(HWND hDlg, NMTVKEYDOWN * pNMTVKeyDown)
 static int OnBeginLabelEdit(HWND hDlg, NMTVDISPINFO * pTVDispInfo)
 {
     HWND hTreeView = pTVDispInfo->hdr.hwndFrom;
-    BOOL bCancelEdit = TRUE;
+    BOOL bStartEditing = FALSE;
 
     // Verify if the selected tree item is editable
     switch(pTVDispInfo->item.lParam)
     {
         case TREE_ITEM_ACE_FLAGS:
-            if(StartEditingAceFlags(hDlg, hTreeView, pTVDispInfo->item.hItem))
-            {
-                DisableDialogMessages(hDlg, TRUE);
-                bCancelEdit = FALSE;
-            }
+            bStartEditing = StartEditingAceFlags(hDlg, hTreeView, pTVDispInfo->item.hItem);
             break;
 
         case TREE_ITEM_ACE_MASK:
-            if(StartEditingAceMask(hDlg, hTreeView, pTVDispInfo->item.hItem))
-            {
-                DisableDialogMessages(hDlg, TRUE);
-                bCancelEdit = FALSE;
-            }
+            bStartEditing = StartEditingAceMask(hDlg, hTreeView, pTVDispInfo->item.hItem);
             break;
 
         case TREE_ITEM_MANDATORY_MASK:
-            if(StartEditingMandAceMask(hDlg, hTreeView, pTVDispInfo->item.hItem))
-            {
-                DisableDialogMessages(hDlg, TRUE);
-                bCancelEdit = FALSE;
-            }
+            bStartEditing = StartEditingMandAceMask(hDlg, hTreeView, pTVDispInfo->item.hItem);
             break;
 
         case TREE_ITEM_SID:
         case TREE_ITEM_NO_SID:
-            if(StartEditingSid(hDlg, hTreeView, pTVDispInfo->item.hItem))
-            {
-                DisableDialogMessages(hDlg, TRUE);
-                bCancelEdit = FALSE;
-            }
+            bStartEditing = StartEditingSid(hDlg, hTreeView, pTVDispInfo->item.hItem);
             break;
 
         case TREE_ITEM_SID_MAND_LABEL:
-            if(StartEditingMandLabelSid(hDlg, hTreeView, pTVDispInfo->item.hItem))
-            {
-                DisableDialogMessages(hDlg, TRUE);
-                bCancelEdit = FALSE;
-            }
+            bStartEditing = StartEditingMandLabelSid(hDlg, hTreeView, pTVDispInfo->item.hItem);
             break;
 
         default:
@@ -2041,8 +2021,12 @@ static int OnBeginLabelEdit(HWND hDlg, NMTVDISPINFO * pTVDispInfo)
             break;
     }
 
+    // If we start editing something, make sure that Esc key will not
+    // cancel the entire FileTest
+    DisableCloseDialog(hDlg, bStartEditing);
+
     // Store the result info the dialog's private variables
-    SetWindowLongPtr(hDlg, DWLP_MSGRESULT, bCancelEdit);
+    SetWindowLongPtr(hDlg, DWLP_MSGRESULT, bStartEditing ? FALSE : TRUE);
     return TRUE;
 }
 
@@ -2141,50 +2125,37 @@ static int OnEndLabelEdit(HWND hDlg, NMTVDISPINFO * pTVDispInfo)
     }
 
     // Enable the exit button
-    DisableDialogMessages(hDlg, FALSE);
+    DisableCloseDialog(hDlg, FALSE);
     SetWindowLongPtr(hDlg, DWLP_MSGRESULT, bAcceptChanges);
     return TRUE;
 }
 
-static int OnCommand(HWND hDlg, UINT nNotify, UINT nIDCtrl)
+static int OnCommand(HWND hDlg, UINT /* nNotify */, UINT nIDCtrl)
 {
-    // From an accelerator
-    if(nNotify == 1)
+    switch(nIDCtrl)
     {
-        switch(nIDCtrl)        
-        {
-            case ID_DOUBLE_CLICK:
-                return OnTreeViewDoubleClick(hDlg);
+        case ID_DOUBLE_CLICK:
+            return OnTreeViewDoubleClick(hDlg);
 
-            case ID_EDIT_LABEL:
-                return OnEditLabel(hDlg);
-        }
-        return FALSE;
+        case ID_EDIT_LABEL:
+            return OnEditLabel(hDlg);
+
+        case IDC_NEW_ACE_BEFORE:
+        case IDC_NEW_ACE_AFTER:
+        case IDC_MOVE_ACE_UP:
+        case IDC_MOVE_ACE_DOWN:
+        case IDC_DELETE_ACE:
+            return OnAceOperation(hDlg, nIDCtrl);
+
+        case IDC_SET_BLANK:
+            return OnSetBlankSecurityDescriptor(hDlg);
+
+        case IDC_QUERY_SECURITY:
+            return OnQuerySecurity(hDlg);
+
+        case IDC_SET_SECURITY:
+            return OnSetSecurity(hDlg);
     }
-
-    if(nNotify == BN_CLICKED)
-    {
-        switch(nIDCtrl)
-        {
-            case IDC_NEW_ACE_BEFORE:
-            case IDC_NEW_ACE_AFTER:
-            case IDC_MOVE_ACE_UP:
-            case IDC_MOVE_ACE_DOWN:
-            case IDC_DELETE_ACE:
-                return OnAceOperation(hDlg, nIDCtrl);
-
-            case IDC_SET_BLANK:
-                return OnSetBlankSecurityDescriptor(hDlg);
-
-            case IDC_QUERY_SECURITY:
-                return OnQuerySecurity(hDlg);
-
-            case IDC_SET_SECURITY:
-                return OnSetSecurity(hDlg);
-        }
-        return FALSE;
-    }
-
     return FALSE;
 }
 

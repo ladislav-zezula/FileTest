@@ -16,6 +16,7 @@
 
 #define COPY_BLOCK_SIZE             0x00100000
 #define CALLBACK_READ_BAD_SECTOR    0x80000001
+#define STRING_FROM_BYTES_LENGTH    0x20
 
 typedef BOOL (WINAPI * COPYFILEEX)(LPCTSTR lpExistingFileName, LPCTSTR lpNewFileName, LPPROGRESS_ROUTINE lpProgressRoutine, LPVOID lpData, LPBOOL pbCancel, DWORD dwCopyFlags);
 typedef BOOL (WINAPI * COPYFILE)(LPCTSTR lpExistingFileName, LPCTSTR lpNewFileName, BOOL bFailIfExists);
@@ -45,11 +46,39 @@ struct TDialogData
 
 static LPCTSTR szReadErrorFmt = _T("Offset %I64X: Read Error %u\r\n");
 
-
 //-----------------------------------------------------------------------------
 // Copy worker
 
 #define LOG_BUFFER_SIZE   0x1000
+
+static LPCTSTR StringFromBytes(LARGE_INTEGER & ByteCount, LPTSTR szBuffer)
+{
+    ULONGLONG Value64 = ByteCount.QuadPart;
+    LPTSTR szSaveBuffer = szBuffer;
+    LPTSTR szBufferEnd = szBuffer + STRING_FROM_BYTES_LENGTH - 1;
+    int nDigitIndex = 0;
+
+    // Keep copying
+    while(szBuffer < szBufferEnd)
+    {
+        // Put one digit
+        if(szBuffer > szSaveBuffer && (nDigitIndex % 3) == 0)
+            *szBuffer++ = _T(' ');
+        *szBuffer++ = (DWORD)(Value64 % 10) + _T('0');
+
+        // Shift the input value
+        if((Value64 = Value64 / 10) == 0)
+            break;
+        nDigitIndex++;
+    }
+
+    // Terminate the buffer
+    szBuffer[0] = 0;
+
+    // Revert the buffer and return its begin
+    _tcsrev(szSaveBuffer);
+    return szSaveBuffer;
+}
 
 static void LogPrintf(HANDLE hLogFile, LPCTSTR szFormat, ...)
 {
@@ -230,8 +259,10 @@ static DWORD CALLBACK CopyProgressRoutine(
     LPVOID lpData)
 {
     TDialogData * pData = (TDialogData *)lpData;
-    LPCTSTR szFormat = _T("%I64u bytes copied");
+    LPCTSTR szFormat = _T("%s bytes copied");
     TCHAR szCopyInfo[0x200];
+    TCHAR szBytes1[STRING_FROM_BYTES_LENGTH];
+    TCHAR szBytes2[STRING_FROM_BYTES_LENGTH];
 
     // Keep compiler happy
     UNREFERENCED_PARAMETER(StreamSize);
@@ -243,7 +274,7 @@ static DWORD CALLBACK CopyProgressRoutine(
     // If we are trying to recover a bad sector, show it
     if(dwCallbackReason == CALLBACK_READ_BAD_SECTOR)
     {
-        StringCchPrintf(szCopyInfo, _countof(szCopyInfo), _T("Reading damaged file at %I64u..."), TotalBytesTransferred.QuadPart);
+        StringCchPrintf(szCopyInfo, _countof(szCopyInfo), _T("Reading damaged file at %s..."), StringFromBytes(TotalBytesTransferred, szBytes1));
         SetWindowText(pData->hCopyInfo, szCopyInfo);
         return PROGRESS_CONTINUE;
     }
@@ -269,11 +300,13 @@ static DWORD CALLBACK CopyProgressRoutine(
     if(pData->bProgressInitialized)
     {
         SendMessage(pData->hProgress, PBM_SETPOS, (WPARAM)(TotalBytesTransferred.QuadPart >> pData->dwProgressShift), 0);
-        szFormat = _T("%I64u of %I64u bytes copied");
+        szFormat = _T("%s of %s bytes copied");
     }
 
     // Set the copy progress as text
-    StringCchPrintf(szCopyInfo, _countof(szCopyInfo), szFormat, TotalBytesTransferred.QuadPart, TotalFileSize.QuadPart);
+    StringCchPrintf(szCopyInfo, _countof(szCopyInfo), szFormat,
+                                                      StringFromBytes(TotalBytesTransferred, szBytes1),
+                                                      StringFromBytes(TotalFileSize, szBytes2));
     SetWindowText(pData->hCopyInfo, szCopyInfo);
 
     // Keep copying or stop, depends on the cancelled flag
@@ -436,8 +469,8 @@ static int CopyLoop(
         }
     }
 
-    // All OK
-    return ERROR_SUCCESS;
+    // Cancelled?
+    return (pData->bCancelled) ? ERROR_CANCELLED : ERROR_SUCCESS;
 }
 
 static void CopyFileWorker_ByHand(TDialogData * pData, LPCTSTR szFileName1, LPCTSTR szFileName2, DWORD dwCopyFlags)

@@ -16,7 +16,7 @@
 
 #define SC_HELP_ABOUT (SC_CLOSE + 0x800)
 
-static BOOL bDisableDialogMessages = FALSE;
+static BOOL bDisableCloseDialog = FALSE;
 
 //-----------------------------------------------------------------------------
 // Thread moving the dialog
@@ -274,7 +274,7 @@ static void InitializeTabControl(HWND hDlg, TWindowData * pData)
     nPages++;
 
 #ifdef _DEBUG
-    psh.nStartPage = nPages - 1; // Set the "FileOps" as starting page for debug purposes
+//  psh.nStartPage = nPages - 1; // Set the "FileOps" as starting page for debug purposes
 #endif
 
     // Fill the "NtFsInfo" page.
@@ -594,6 +594,25 @@ static void OnGetMinMaxInfo(HWND /* hDlg */, LPARAM lParam)
     pmmi->ptMinTrackSize.y = 700;
 }
 
+static void OnNextTab(HWND hDlg, HWND hTabCtrl, BOOL bNextTab)
+{
+    // Get total number of tabs and the index of the current tab
+    int nPageCount = TabCtrl_GetItemCount(hTabCtrl);
+    int nPageIndex = TabCtrl_GetCurSel(hTabCtrl);
+
+    UNREFERENCED_PARAMETER(hDlg);
+
+    // Determine index of the page to be selected next
+    if(bNextTab == FALSE)
+        nPageIndex += (nPageCount - 1);
+    else
+        nPageIndex++;
+    nPageIndex %= nPageCount;
+
+    // Select the given tab
+    TabCtrl_SelectPageByIndex(hTabCtrl, nPageIndex);
+}
+
 static void OnTimerCheckMouse(HWND hDlg)
 {
     TWindowData * pData = GetDialogData(hDlg);
@@ -663,17 +682,14 @@ static void OnHelpAbout(HWND hDlg)
     HelpAboutDialog(hDlg);
 }
 
-static BOOL OnCommand(HWND hDlg, UINT nNotify, UINT nIDCtrl)
+static BOOL OnCommand(HWND hDlg, UINT /* nNotify */, UINT nIDCtrl)
 {
-    // IDC_EXIT or IDCANCEL pressed
-    if(nNotify == BN_CLICKED && bDisableDialogMessages == FALSE)
+    switch(nIDCtrl)
     {
-        if(nIDCtrl == IDCANCEL || nIDCtrl == IDC_EXIT)
-        {
-            EndDialog(hDlg, nIDCtrl);
-            PostQuitMessage(nIDCtrl);
-            return TRUE;
-        }
+        case IDCANCEL:
+        case IDC_EXIT:
+            DestroyWindow(hDlg);
+            break;
     }
 
     return FALSE;
@@ -690,7 +706,7 @@ static void OnNotify(HWND hDlg, NMHDR * pNMHDR)
     }
 }
 
-static void OnClose(HWND hDlg)
+static void OnDestroy(HWND hDlg)
 {
     TWindowData * pData = GetDialogData(hDlg);
 
@@ -765,8 +781,8 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM l
             OnNotify(hDlg, (NMHDR *)lParam);
             break;
 
-        case WM_CLOSE:
-            OnClose(hDlg);
+        case WM_DESTROY:
+            OnDestroy(hDlg);
             break;
     }
 
@@ -775,63 +791,46 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM l
 
 static BOOL IsMyDialogMessage(HWND hDlg, HWND hTabCtrl, LPMSG pMsg)
 {
-    int nPageCount;
-    int nPageIndex;
-    BOOL bNextTab = TRUE;
-
     // Support for navigation keys
     if(pMsg->message == WM_KEYDOWN)
     {
-        if(GetAsyncKeyState(VK_CONTROL) & 0x8000)
+        BOOL bNextTab;
+
+        switch(pMsg->wParam)
         {
-            switch(pMsg->wParam)
-            {
-                case VK_TAB:        // Ctrl+Tab: select next
-                                    // Ctrl+Shift+Tab: Select previous
-                    if(GetAsyncKeyState(VK_SHIFT) & 0x8000)
-                        bNextTab = FALSE;
-                    break;
+            case VK_TAB:        // Ctrl+(Shift)+Tab: select (prev)next
+                if(GetAsyncKeyState(VK_CONTROL) & 0x8000)
+                {
+                    bNextTab = (GetAsyncKeyState(VK_SHIFT) & 0x8000) ? FALSE : TRUE;
+                    OnNextTab(hDlg, hTabCtrl, bNextTab);
+                    return FALSE;
+                }
+                break;
 
-                case VK_PRIOR:      // Ctrl+PgUp: Select previous page
-                    bNextTab = FALSE;
-                    break;
+            case VK_PRIOR:      // Ctrl+PgUp: Select previous page
+            case VK_NEXT:       // Ctrl+PgDown: Select next page
+                if(GetAsyncKeyState(VK_CONTROL) & 0x8000)
+                {
+                    bNextTab = (pMsg->wParam == VK_NEXT) ? TRUE : FALSE;
+                    OnNextTab(hDlg, hTabCtrl, bNextTab);
+                    return FALSE;
+                }
+                break;
 
-                case VK_NEXT:       // Ctrl+PgDown: Select next page
-                    bNextTab = TRUE;
-                    break;
+            case VK_F2:         // Allow tree item editing using F2 accelerator
+                return FALSE;
 
-                default:
-                    goto __KeyNotSupported;   // Other keys: Do nothing
-            }
-
-            // Get total number of tabs and the index of the current tab
-            nPageCount = TabCtrl_GetItemCount(hTabCtrl);
-            nPageIndex = TabCtrl_GetCurSel(hTabCtrl);
-
-            // Determine index of the page to be selected next
-            if(bNextTab == FALSE)
-                nPageIndex += (nPageCount - 1);
-            else
-                nPageIndex++;
-            nPageIndex %= nPageCount;
-
-            // Select the given tab
-            TabCtrl_SelectPageByIndex(hTabCtrl, nPageIndex);
-            return TRUE;
+            // If the dialog messages are disabled, we pass all key messages as-is.
+            // Example: When editing a tree view item, Enter and Esc key would
+            // be eaten by the dialog and they would never arrive to the edit box.
+            case VK_RETURN:
+            case VK_ESCAPE:
+                if(bDisableCloseDialog)
+                    return FALSE;
+                break;
         }
-
-        // Enter key: Pass it to the dialog as-is
-        if(pMsg->wParam == VK_RETURN || pMsg->wParam == VK_SPACE)
-            return FALSE;
-
-        // If the dialog messages are disabled, we pass all key messages as-is.
-        // Example: When editing a tree view item, Enter and Esc key would
-        // be eaten by the dialog and they would never arrive to the edit box.
-        if(bDisableDialogMessages)
-            return FALSE;
     }
 
-__KeyNotSupported:
     return IsDialogMessage(hDlg, pMsg);
 }
 
@@ -939,7 +938,7 @@ int NtUseFileId(HWND hDlg, LPCTSTR szFileId)
     return ERROR_SUCCESS;
 }
 
-void DisableDialogMessages(HWND hDlg, BOOL bDisable)
+void DisableCloseDialog(HWND hDlg, BOOL bDisable)
 {
     HWND hExitButton = GetDlgItem(GetParent(hDlg), IDC_EXIT);
 
@@ -947,7 +946,7 @@ void DisableDialogMessages(HWND hDlg, BOOL bDisable)
     // Hide "OK" button and change "Cancel" to "Exit"
     if(hExitButton != NULL)
         EnableWindow(hExitButton, !bDisable);
-    bDisableDialogMessages = bDisable;
+    bDisableCloseDialog = bDisable;
 }
 
 INT_PTR FileTestDialog(HWND hParent, TFileTestData * pData)
@@ -968,10 +967,12 @@ INT_PTR FileTestDialog(HWND hParent, TFileTestData * pData)
     // Perform the modal loop
     if(hDlg != NULL)
     {
+        // Show the dialog
         ShowWindow(hDlg, SW_SHOW);
         hTabCtrl = GetDlgItem(hDlg, IDC_TAB);
 
-        while(IsWindow(hDlg))
+        // Get the message. Stop processing if WM_QUIT has arrived
+        while(IsWindow(hDlg) && GetMessage(&msg, NULL, 0, 0))
         {
             // We need an alertable sleep to make APCs to work.
             // Uncomment this if you want to use the asynchronous "ApcRoutine"
@@ -982,14 +983,10 @@ INT_PTR FileTestDialog(HWND hParent, TFileTestData * pData)
 //                                      QS_ALLEVENTS | QS_ALLINPUT | QS_ALLPOSTMESSAGE,
 //                                      MWMO_WAITALL | MWMO_ALERTABLE | MWMO_INPUTAVAILABLE);
 
-            // Get the message. Stop processing if WM_QUIT has arrived
-            if(!GetMessage(&msg, NULL, 0, 0))
-                break;
-
-            // Process the accelerator table
-            if(!TranslateAccelerator(hDlg, hAccelTable, &msg))
+            if(!IsMyDialogMessage(hDlg, hTabCtrl, &msg))
             {
-                if(!IsMyDialogMessage(hDlg, hTabCtrl, &msg))
+                // Process the accelerator table
+                if(!TranslateAccelerator(hDlg, hAccelTable, &msg))
                 {
                     TranslateMessage(&msg);
                     DispatchMessage(&msg);

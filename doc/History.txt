@@ -2,8 +2,13 @@
   FileTest history
   ================
 
+ Version 2.6.0.524
+ 
+ - Fixed dialog cleanup
+
  Version 2.6.0.523
  
+ - Byte counts are space separated in copy dialog
  - Date/Time fields can now accept 64-bit hexa value without separators
 
  Version 2.6.0.520

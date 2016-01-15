@@ -486,7 +486,7 @@ bool InsertApcEntry(TWindowData * pData, TApcEntry * pApc);
 void FreeApcEntry(TApcEntry * pApc);
 
 int NtUseFileId(HWND hDlg, LPCTSTR szFileId);
-void DisableDialogMessages(HWND hDlg, BOOL bDisable);
+void DisableCloseDialog(HWND hDlg, BOOL bDisable);
 INT_PTR FileTestDialog(HWND hParent, TFileTestData * pData);
 
 //-----------------------------------------------------------------------------

@@ -2142,7 +2142,7 @@ static int OnBeginLabelEdit(HWND hDlg, NMTVDISPINFO * pTVDispInfo)
     HWND hTreeView = pTVDispInfo->hdr.hwndFrom;
     HWND hCombo;
     HWND hEdit;
-    BOOL bCancelEdit = TRUE;
+    BOOL bStartEditing = FALSE;
     bool bCopyToClipboard = false;
     bool bEditable = true;
 
@@ -2200,14 +2200,17 @@ static int OnBeginLabelEdit(HWND hDlg, NMTVDISPINFO * pTVDispInfo)
             if(DataToItemText(pMemberInfo, szItemText, _maxchars(szItemText), TRUE) == ERROR_SUCCESS)
             {
                 SetWindowText(hEdit, szItemText);
-                DisableDialogMessages(hDlg, TRUE);
-                bCancelEdit = FALSE;
+                bStartEditing = TRUE;
             }
         }
     }
 
+    // If we start editing something, make sure that Esc key will not
+    // cancel the entire FileTest
+    DisableCloseDialog(hDlg, bStartEditing);
+
     // Store the result info the dialog's private variables
-    SetWindowLongPtr(hDlg, DWLP_MSGRESULT, bCancelEdit);
+    SetWindowLongPtr(hDlg, DWLP_MSGRESULT, bStartEditing ? FALSE : TRUE);
     return TRUE;
 }
 
@@ -2248,7 +2251,7 @@ static int OnEndLabelEdit(HWND hDlg, NMTVDISPINFO * pTVDispInfo)
     }
 
     // Enable the exit button
-    DisableDialogMessages(hDlg, FALSE);
+    DisableCloseDialog(hDlg, FALSE);
     SetWindowLongPtr(hDlg, DWLP_MSGRESULT, bAcceptChanges);
     return TRUE;
 }
@@ -2735,14 +2738,13 @@ static int OnSetFsInfoClick(HWND hDlg)
 
 static int OnCommand(HWND hDlg, UINT nNotify, UINT nIDCtrl)
 {
-    // From an accelerator
-    if(nNotify == 1 && nIDCtrl == ID_EDIT_LABEL)
-        return OnEditLabel(hDlg);
-
-    if(nNotify == BN_CLICKED)
+    if(nNotify == BN_CLICKED || nNotify == 1)
     {
         switch(nIDCtrl)
         {
+            case ID_EDIT_LABEL:
+                return OnEditLabel(hDlg);
+
             case IDC_DEFAULT_LENGTH:
                 return OnDefaultLengthClick(hDlg);
 
