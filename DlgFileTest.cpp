@@ -594,9 +594,9 @@ static void OnGetMinMaxInfo(HWND /* hDlg */, LPARAM lParam)
     pmmi->ptMinTrackSize.y = 700;
 }
 
-static void OnNextTab(HWND hDlg, HWND hTabCtrl, BOOL bNextTab)
+static void OnNextTab(HWND hDlg, BOOL bNextTab)
 {
-    // Get total number of tabs and the index of the current tab
+    HWND hTabCtrl = GetDlgItem(hDlg, IDC_TAB);
     int nPageCount = TabCtrl_GetItemCount(hTabCtrl);
     int nPageIndex = TabCtrl_GetCurSel(hTabCtrl);
 
@@ -789,7 +789,7 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM l
     return FALSE;
 }
 
-static BOOL IsMyDialogMessage(HWND hDlg, HWND hTabCtrl, LPMSG pMsg)
+static BOOL IsMyDialogMessage(HWND hDlg, LPMSG pMsg)
 {
     // Support for navigation keys
     if(pMsg->message == WM_KEYDOWN)
@@ -802,7 +802,7 @@ static BOOL IsMyDialogMessage(HWND hDlg, HWND hTabCtrl, LPMSG pMsg)
                 if(GetAsyncKeyState(VK_CONTROL) & 0x8000)
                 {
                     bNextTab = (GetAsyncKeyState(VK_SHIFT) & 0x8000) ? FALSE : TRUE;
-                    OnNextTab(hDlg, hTabCtrl, bNextTab);
+                    OnNextTab(hDlg, bNextTab);
                     return FALSE;
                 }
                 break;
@@ -812,7 +812,7 @@ static BOOL IsMyDialogMessage(HWND hDlg, HWND hTabCtrl, LPMSG pMsg)
                 if(GetAsyncKeyState(VK_CONTROL) & 0x8000)
                 {
                     bNextTab = (pMsg->wParam == VK_NEXT) ? TRUE : FALSE;
-                    OnNextTab(hDlg, hTabCtrl, bNextTab);
+                    OnNextTab(hDlg, bNextTab);
                     return FALSE;
                 }
                 break;
@@ -952,7 +952,6 @@ void DisableCloseDialog(HWND hDlg, BOOL bDisable)
 INT_PTR FileTestDialog(HWND hParent, TFileTestData * pData)
 {
     HACCEL hAccelTable = LoadAccelerators(g_hInst, MAKEINTRESOURCE(IDR_ACCELERATORS));
-    HWND hTabCtrl;
     HWND hDlg;
     MSG msg;
 
@@ -969,7 +968,6 @@ INT_PTR FileTestDialog(HWND hParent, TFileTestData * pData)
     {
         // Show the dialog
         ShowWindow(hDlg, SW_SHOW);
-        hTabCtrl = GetDlgItem(hDlg, IDC_TAB);
 
         // Get the message. Stop processing if WM_QUIT has arrived
         while(IsWindow(hDlg) && GetMessage(&msg, NULL, 0, 0))
@@ -983,7 +981,7 @@ INT_PTR FileTestDialog(HWND hParent, TFileTestData * pData)
 //                                      QS_ALLEVENTS | QS_ALLINPUT | QS_ALLPOSTMESSAGE,
 //                                      MWMO_WAITALL | MWMO_ALERTABLE | MWMO_INPUTAVAILABLE);
 
-            if(!IsMyDialogMessage(hDlg, hTabCtrl, &msg))
+            if(!IsMyDialogMessage(hDlg, &msg))
             {
                 // Process the accelerator table
                 if(!TranslateAccelerator(hDlg, hAccelTable, &msg))
