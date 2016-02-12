@@ -43,6 +43,8 @@
 #define IDI_ICON_WAIT                   140
 #define IDD_COPY_FILE                   140
 #define IDR_OPLOCK_PRE_WIN7             141
+#define IDD_DIRECTORY_ACTION1           141
+#define IDD_FILE_ACTION                 141
 #define IDC_FILE_ATTRIBUTE_READONLY     800
 #define IDC_FILE_ATTRIBUTE_HIDDEN       801
 #define IDC_FILE_ATTRIBUTE_SYSTEM       802
@@ -354,6 +356,8 @@
 #define IDC_RDWR_ASYNC                  1221
 #define IDC_COPY_INFO                   1222
 #define IDC_COPY_METHOD                 1223
+#define IDC_SIMPLE_DELETE               1223
+#define IDC_FORCED_DELETE               1224
 #define IDS_FLUSH_FILE_BUFFERS_TIP      4000
 #define IDS_SET_SPARSE_TIP              4001
 #define IDS_OPLOCK_BROKE                4002
@@ -468,7 +472,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        142
 #define _APS_NEXT_COMMAND_VALUE         40052
-#define _APS_NEXT_CONTROL_VALUE         1223
+#define _APS_NEXT_CONTROL_VALUE         1225
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

@@ -478,6 +478,7 @@ INT_PTR FlagsDialog2(HWND hWndParent, UINT nIDDialog, UINT nIDCtrl, TFlagInfo * 
 INT_PTR EaEditorDialog(HWND hParent, PFILE_FULL_EA_INFORMATION * pEaInfo);
 INT_PTR PrivilegesDialog(HWND hParent);
 INT_PTR ObjectIDActionDialog(HWND hParent);
+INT_PTR FileActionDialog(HWND hParent);
 INT_PTR DirectoryActionDialog(HWND hParent);
 INT_PTR CopyFileDialog(HWND hParent, TFileTestData * pData);
 

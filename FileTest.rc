@@ -126,13 +126,13 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Ladislav Zezula"
             VALUE "FileDescription", "Interactive File System API Test"
-            VALUE "FileVersion", "2, 6, 0, 527\0"
+            VALUE "FileVersion", "2, 6, 0, 527"
             VALUE "InternalName", "FileTest"
             VALUE "LegalCopyright", "Copyright © 2004 - 2014 Ladislav Zezula"
             VALUE "LegalTrademarks", "http://www.zezula.net"
             VALUE "OriginalFilename", "FileTest.exe"
             VALUE "ProductName", "FileTest"
-            VALUE "ProductVersion", "2, 6, 0, 527\0"
+            VALUE "ProductVersion", "2, 6, 0, 527"
         END
     END
     BLOCK "VarFileInfo"
@@ -808,6 +808,17 @@ BEGIN
     DEFPUSHBUTTON   "Cancel",IDCANCEL,100,50,50,14
 END
 
+IDD_FILE_ACTION DIALOGEX 0, 0, 210, 102
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Choose way to delete"
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    GROUPBOX        "",IDC_STATIC,7,4,196,90
+    PUSHBUTTON      "Simple Delete",IDC_SIMPLE_DELETE,22,19,167,14
+    PUSHBUTTON      "Forced Delete (with reset permissions)",IDC_FORCED_DELETE,21,44,167,14
+    PUSHBUTTON      "Cancel",IDCANCEL,21,69,167,14
+END
+
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -1007,6 +1018,14 @@ BEGIN
         RIGHTMARGIN, 243
         TOPMARGIN, 7
         BOTTOMMARGIN, 64
+    END
+
+    IDD_FILE_ACTION, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 203
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 95
     END
 END
 #endif    // APSTUDIO_INVOKED

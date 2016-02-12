@@ -415,6 +415,24 @@ static NTSTATUS NtRemoveDirectoryTree(POBJECT_ATTRIBUTES PtrObjectAttributes)
     return Status;
 }
 
+static int ForceRemoveFile(LPCTSTR szFileName)
+{
+    OBJECT_ATTRIBUTES ObjAttr;
+    UNICODE_STRING PathName;
+    NTSTATUS Status;
+
+    // Convert to UNICODE_STRING
+    Status = FileNameToUnicodeString(&PathName, szFileName);
+    if(NT_SUCCESS(Status))
+    {
+        InitializeObjectAttributes(&ObjAttr, &PathName, OBJ_CASE_INSENSITIVE, NULL, NULL);
+        Status = NtRemoveSingleFile(&ObjAttr);
+        FreeFileNameString(&PathName);
+    }
+
+    return RtlNtStatusToDosError(Status);
+}
+
 static int RemoveDirectoryTree(LPCTSTR szDirName)
 {
     OBJECT_ATTRIBUTES ObjAttr;
@@ -644,9 +662,24 @@ static int OnDeleteFileClick(HWND hDlg)
     TFileTestData * pData = GetDialogData(hDlg);
     int nError = ERROR_SUCCESS;
 
+    // Save the dialog variables
     SaveDialog(hDlg);
-    if(!DeleteFile(pData->szFileName1))
-        nError = GetLastError();
+
+    // Choose what exactly to do
+    switch(FileActionDialog(hDlg))
+    {
+        case IDC_SIMPLE_DELETE:
+            if(!DeleteFile(pData->szFileName1))
+                nError = GetLastError();
+            break;
+
+        case IDC_FORCED_DELETE:
+            nError = ForceRemoveFile(pData->szFileName1);
+            break;
+
+        default:
+            return TRUE;
+    }
 
     UpdateDialogButtons(hDlg);
     SetResultInfo(hDlg, nError);
@@ -665,15 +698,11 @@ static int OnDeleteDirectoryClick(HWND hDlg)
     switch(DirectoryActionDialog(hDlg))
     {
         case IDC_SINGLE_DIRECTORY:
-            
-            // Just delete single directory as-is
             if(!RemoveDirectory(pData->szFileName1))
                 nError = GetLastError();
             break;
 
         case IDC_DIRECTORY_TREE:
-
-            // Delete the directory recursively
             nError = RemoveDirectoryTree(pData->szFileName1);
             break;
 
