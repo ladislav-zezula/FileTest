@@ -376,19 +376,19 @@ static NTSTATUS NtRemoveDirectoryTree(POBJECT_ATTRIBUTES PtrObjectAttributes)
                 ChildPath.Length = (USHORT)pDirInfo->FileNameLength;
                 ChildPath.Buffer = pDirInfo->FileName;
 
-                // If the entry is a reparse point, we need to delete the reparse first
-                if(pDirInfo->FileAttributes & FILE_ATTRIBUTE_REPARSE_POINT)
+                // If the entry has the FILE_ATTRIBUTE_READONLY (both file/subdir),
+                // we need to clear it first
+                if(pDirInfo->FileAttributes & (FILE_ATTRIBUTE_REPARSE_POINT | FILE_ATTRIBUTE_READONLY))
                 {
-                    Status = NtDeleteReparsePoint(&ChildAttr);
+                    Status = NtSetFileAccessToEveryone(&ChildAttr, GENERIC_ALL | DELETE);
                     if(!NT_SUCCESS(Status))
                         break;
                 }
 
-                // If the entry has the FILE_ATTRIBUTE_READONLY (both file/subdir),
-                // we need to clear it first
-                if(pDirInfo->FileAttributes & FILE_ATTRIBUTE_READONLY)
+                // If the entry is a reparse point, we need to delete the reparse first
+                if(pDirInfo->FileAttributes & FILE_ATTRIBUTE_REPARSE_POINT)
                 {
-                    Status = NtSetFileAccessToEveryone(&ChildAttr, GENERIC_ALL | DELETE);
+                    Status = NtDeleteReparsePoint(&ChildAttr);
                     if(!NT_SUCCESS(Status))
                         break;
                 }

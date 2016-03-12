@@ -1480,7 +1480,6 @@ NTSTATUS NtDeleteReparsePoint(POBJECT_ATTRIBUTES PtrObjectAttributes)
                         &IoStatus,
                          0,
                          FILE_OPEN_REPARSE_POINT);
-
     if(NT_SUCCESS(Status))
     {
         // Query the reparse point 
@@ -1510,6 +1509,11 @@ NTSTATUS NtDeleteReparsePoint(POBJECT_ATTRIBUTES PtrObjectAttributes)
                                      REPARSE_GUID_DATA_BUFFER_HEADER_SIZE,
                                      NULL,
                                      0);
+        }
+        else
+        {
+            if(Status == STATUS_NOT_A_REPARSE_POINT)
+                Status = STATUS_SUCCESS;
         }
 
         NtClose(FileHandle);
