@@ -421,6 +421,7 @@
 #define IDS_ENTER_DIRECTORY_NAME        4066
 #define IDS_RELATIVE_FILE               4067
 #define IDS_RELATIVE_FILE1              4067
+#define IDS_RELATIVE_FILE_HELP          4067
 #define IDS_RELATIVE_FILE2              4068
 #define IDS_RELATIVE_FILE3              4069
 #define IDS_RELATIVE_FILE_TITLE         4070

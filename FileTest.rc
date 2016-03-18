@@ -108,8 +108,8 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 2,6,0,527
- PRODUCTVERSION 2,6,0,527
+ FILEVERSION 2,6,0,528
+ PRODUCTVERSION 2,6,0,528
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -126,13 +126,13 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Ladislav Zezula"
             VALUE "FileDescription", "Interactive File System API Test"
-            VALUE "FileVersion", "2, 6, 0, 527"
+            VALUE "FileVersion", "2, 6, 0, 528"
             VALUE "InternalName", "FileTest"
             VALUE "LegalCopyright", "Copyright © 2004 - 2014 Ladislav Zezula"
             VALUE "LegalTrademarks", "http://www.zezula.net"
             VALUE "OriginalFilename", "FileTest.exe"
             VALUE "ProductName", "FileTest"
-            VALUE "ProductVersion", "2, 6, 0, 527"
+            VALUE "ProductVersion", "2, 6, 0, 528"
         END
     END
     BLOCK "VarFileInfo"
@@ -1212,9 +1212,7 @@ BEGIN
     IDS_E_OPEN_TOKEN        "Failed to open current token.\n%s"
     IDS_EMPTY_STREAM        "<empty>"
     IDS_ENTER_DIRECTORY_NAME "NULL <Enter a directory name>"
-    IDS_RELATIVE_FILE1      "The ""Relative File"" (if entered) is open by NtOpenFile and its handle is put to OBJECT_ATTRIBUTES::RootDirectory."
-    IDS_RELATIVE_FILE2      "\nIf you click ""Desired Access"", ""Create Options"" or ""Share Access"" while holding the Shift key,\nyou can modify the respective flags for the relative file."
-    IDS_RELATIVE_FILE3      "\n\nDesired Access:\t%08X\nOpen Options:\t%08X\nShare Access:\t%08X"
+    IDS_RELATIVE_FILE_HELP  "The relative file (OBJECT_ATTRIBUTES::RootDirectory) will be open with the following options:\n\nDesiredAcces: \t%08X (%s)\nShare Access: \t%08X (%s)\nOpenOptions:\t%08X (%s)\n\nHold Shift and click the appropriate button to change."
     IDS_RELATIVE_FILE_TITLE "Relative File"
     IDS_DESIRED_ACCESS_RF   "Desired Access (Relative File)"
     IDS_OPEN_OPTIONS_RF     "Open Options (Relative File)"

@@ -343,18 +343,33 @@ static int OnKillActive(HWND hDlg)
 static int OnRelativeFileHelp(HWND hDlg)
 {
     TFileTestData * pData = GetDialogData(hDlg);
-    TCHAR szMsgBuff[512];
-    LPTSTR szBuffer = szMsgBuff;
+    LPTSTR szBuffer;
+    TCHAR szDesiredAccess[0x100];
+    TCHAR szShareAccess[0x100];
+    TCHAR szOpenOptions[0x100];
+    TCHAR szMsgFormat[512];
+    size_t cchBuffer = 0x1000;
     int nLength = 0;
 
     // Load both parts of the message
-    nLength += LoadString(g_hInst, IDS_RELATIVE_FILE1, szBuffer + nLength, _maxchars(szMsgBuff) - nLength);
-    nLength += LoadString(g_hInst, IDS_RELATIVE_FILE2, szBuffer + nLength, _maxchars(szMsgBuff) - nLength);
-    nLength += rsprintf(szBuffer + nLength, IDS_RELATIVE_FILE3, pData->dwDesiredAccessRF,
-                                                                pData->dwOpenOptionsRF,
-                                                                pData->dwShareAccessRF);
-    // Show the message
-    MessageBoxRc(hDlg, IDS_RELATIVE_FILE_TITLE, (UINT_PTR)szMsgBuff);
+    nLength = LoadString(g_hInst, IDS_RELATIVE_FILE_HELP, szMsgFormat, _maxchars(szMsgFormat));
+    if(nLength > 0)
+    {
+        // Allocate big buffer for the entire text
+        szBuffer = new TCHAR[cchBuffer];
+        if(szBuffer != NULL)
+        {
+            // Format the result string
+            StringCchPrintf(szBuffer, cchBuffer, szMsgFormat,
+                            pData->dwDesiredAccessRF, FlagsToString(DesiredAccessValues, szDesiredAccess, _countof(szDesiredAccess), pData->dwDesiredAccessRF, false),
+                            pData->dwShareAccessRF,   FlagsToString(ShareAccessValues,   szShareAccess, _countof(szShareAccess), pData->dwShareAccessRF, false),
+                            pData->dwOpenOptionsRF,   FlagsToString(CreateOptionsValues, szOpenOptions, _countof(szOpenOptions), pData->dwOpenOptionsRF, false));
+
+            // Display the message box
+            MessageBoxRc(hDlg, IDS_INFO, (UINT_PTR)szBuffer);
+            delete [] szBuffer;
+        }
+    }
     return TRUE;
 }
 

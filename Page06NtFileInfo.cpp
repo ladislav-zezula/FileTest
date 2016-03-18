@@ -808,16 +808,7 @@ static int FillChainedStructMembers(
 
 //-----------------------------------------------------------------------------
 // Conversion functions
-/*
-#ifdef _DEBUG
-static void FillRandomData(LPBYTE pbBuffer, ULONG cbBuffer)
-{
-    srand(GetTickCount());    
-    for(ULONG i = 0; i < cbBuffer; i++)
-        pbBuffer[i] = (BYTE)(rand() % 255);
-}
-#endif
-*/
+
 static int GetAlignedDataLength(LPBYTE pbStructPtr, LPBYTE pbData, int nTypeSize, int nAlignmentSize)
 {
     int nCurrentOffset = (int)(pbData - pbStructPtr);
@@ -2487,10 +2478,6 @@ static int OnQueryInfoClick(HWND hDlg)
                                         Length,
                                         FileInfoClass);
     }                                        
-
-#ifdef _DEBUG   // Test code
-//  FillRandomData(pData->pbNtInfoBuff, pData->cbNtInfoBuff);
-#endif
 
     // If succeeded, we have to fill the dialog with file info
     if(NT_SUCCESS(Status) || Status == STATUS_BUFFER_OVERFLOW)

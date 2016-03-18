@@ -148,23 +148,15 @@ BOOL TToolTip::AddToolTipInternal(HWND hDlg, UINT nIDCtrl, LPCTSTR szTip, LPARAM
     return bResult;
 }
 
-LPTSTR TToolTip::AddNewLine(LPTSTR szTextBuff, size_t cchMaxChars)
-{
-    StringCchCopy(szTextBuff, cchMaxChars, _T(" |\r\n"));
-    return szTextBuff + 4;
-}
-
 void TToolTip::OnGetTooltipText(LPNMTTDISPINFO pTTDispInfo)
 {
     TFlagInfo * pFlags = (TFlagInfo *)pTTDispInfo->lParam;
-    LPTSTR szTextBuffEnd = szToolTipText + cchTooltipText;
-    LPTSTR szTextBuff = szToolTipText;
     TCHAR szWindowText[0x80];
     DWORD dwValue32 = 0;
     HWND hWndChild = (HWND)pTTDispInfo->hdr.idFrom;
 
     // Only if the text buffer has been allocated
-    if(pFlags != NULL && szTextBuff != NULL)
+    if(pFlags != NULL && szToolTipText != NULL)
     {
         // Reset the tooltip info to an empty string
         szToolTipText[0] = 0;
@@ -173,43 +165,8 @@ void TToolTip::OnGetTooltipText(LPNMTTDISPINFO pTTDispInfo)
         GetWindowText(hWndChild, szWindowText, _maxchars(szWindowText));
         if(Text2Hex32(szWindowText, &dwValue32) == ERROR_SUCCESS)
         {
-            // Supply the flags
-            while(dwValue32 != 0 && pFlags->szFlagText != NULL)
-            {
-                // Is that flag set?
-                if(IS_FLAG_SET(pFlags, dwValue32))
-                {
-                    size_t nLength = _tcslen(pFlags->szFlagText);
-
-                    // Is there enough space left?
-                    if((size_t)(szTextBuffEnd - szTextBuff) < (nLength + 0x20))
-                        break;
-
-                    // If there is a flag from the previous pass, append newline to it
-                    if(szTextBuff > szToolTipText)
-                        szTextBuff = AddNewLine(szTextBuff, (szTextBuffEnd - szTextBuff));
-
-                    // Append the flag text
-                    memcpy(szTextBuff, pFlags->szFlagText, (nLength + 1) * sizeof(TCHAR));
-                    szTextBuff += nLength;
-
-                    // Clear the bit from the 
-                    dwValue32 &= ~pFlags->dwValue;
-                }
-
-                // Move to the next flag
-                pFlags++;
-            }
-
-            // If there is no text or there are unknown flags left, put them as hexa value
-            if(szTextBuff == szToolTipText || dwValue32 != 0)
-            {
-                // If there is a flag from the previous pass, append newline to it
-                if(szTextBuff > szToolTipText)
-                    szTextBuff = AddNewLine(szTextBuff, (szTextBuffEnd - szTextBuff));
-
-                StringCchPrintf(szTextBuff, (szTextBuffEnd - szTextBuff), _T("0x%08X"), dwValue32);
-            }
+            // Convert the flags to string
+            FlagsToString(pFlags, szToolTipText, cchTooltipText, dwValue32, true);
 
             // Supply the text to the tooltip
             pTTDispInfo->lpszText = szToolTipText;

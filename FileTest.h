@@ -439,6 +439,8 @@ void     FreeFileNameString(PUNICODE_STRING FileName);
 NTSTATUS ConvertToNtName(HWND hDlg, UINT nIDEdit);
 int      ConvertToWin32Name(HWND hDlg, UINT nIDEdit);
 
+LPTSTR FlagsToString(TFlagInfo * pFlags, LPTSTR szBuffer, size_t cchBuffer, DWORD dwFlags, bool bNewLineSeparated);
+
 void FileIDToString(TFileTestData * pData, ULONGLONG FileId, LPTSTR szBuffer);
 void ObjectIDToString(PBYTE pbObjId, LPCTSTR szFileName, LPTSTR szObjectID);
 int  StringToFileID(LPCTSTR szFileOrObjId, LPTSTR szVolume, PVOID pvFileObjId, PDWORD pLength);
@@ -446,6 +448,7 @@ int  StringToFileID(LPCTSTR szFileOrObjId, LPTSTR szVolume, PVOID pvFileObjId, P
 int ExecuteContextMenu(HWND hWndParent, UINT nIDMenu, LPARAM lParam);
 int ExecuteContextMenuForDlgItem(HWND hDlg, UINT nIDCtrl, UINT nIDMenu);
 
+NTSTATUS NtDeleteReparsePoint(HANDLE ObjectHandle);
 NTSTATUS NtDeleteReparsePoint(POBJECT_ATTRIBUTES PtrObjectAttributes);
 
 //-----------------------------------------------------------------------------
@@ -514,5 +517,12 @@ INT_PTR CALLBACK PageProc08(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);
 INT_PTR CALLBACK PageProc09(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);
 INT_PTR CALLBACK PageProc10(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);
 INT_PTR CALLBACK PageProc11(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);
+
+//-----------------------------------------------------------------------------
+// Debugging functions
+
+#ifdef _DEBUG
+int RemoveDirectory_DEBUG(LPCTSTR szDirName);
+#endif
 
 #endif // __TESTFILE_H__

@@ -1292,6 +1292,55 @@ int ConvertToWin32Name(HWND hDlg, UINT nIDEdit)
 }
 
 //-----------------------------------------------------------------------------
+// Conversion flags to the text value
+
+LPTSTR FlagsToString(TFlagInfo * pFlags, LPTSTR szBuffer, size_t cchBuffer, DWORD dwFlags, bool bNewLineSeparated)
+{
+    LPCTSTR szSeparator = (bNewLineSeparated == false) ? _T(" | ") : _T(" |\r\n");
+    LPTSTR szSaveBuffer = szBuffer;
+    LPTSTR szBufferEnd = szBuffer + cchBuffer;
+
+    // As long as we are not at the end, or as long as there are some flags
+    while(pFlags->szFlagText && dwFlags)
+    {
+        // Is that flag set?
+        if(IS_FLAG_SET(pFlags, dwFlags))
+        {
+            // Append the appropriate separator
+            if(szBuffer > szSaveBuffer)
+                StringCchCopyEx(szBuffer, (szBufferEnd - szBuffer), szSeparator, &szBuffer, NULL, 0);
+
+            // Append the flag
+            StringCchCopyEx(szBuffer, (szBufferEnd - szBuffer), pFlags->szFlagText, &szBuffer, NULL, 0);
+
+            // Clear the flag from the flags list
+            dwFlags &= ~pFlags->dwValue;
+        }
+
+        // Move to the next flag
+        pFlags++;
+    }
+
+    // Are there some flags left?
+    if(dwFlags != 0)
+    {
+        // Append the appropriate separator and the hexa value
+        if(szBuffer > szSaveBuffer)
+            StringCchCopyEx(szBuffer, (szBufferEnd - szBuffer), szSeparator, &szBuffer, NULL, 0);
+        StringCchPrintfEx(szBuffer, (szBufferEnd - szBuffer), &szBuffer, NULL, 0, _T("%08X"), dwFlags);
+    }
+
+    // If there is nothing, append simple zero
+    if(szBuffer == szSaveBuffer && (szBuffer + 1) < szBufferEnd)
+    {
+        *szBuffer++ = _T('0');
+        *szBuffer = 0;
+    }
+
+    return szSaveBuffer;
+}
+
+//-----------------------------------------------------------------------------
 // File ID and object ID support
 
 void FileIDToString(TFileTestData * pData, ULONGLONG FileId, LPTSTR szBuffer)
@@ -1464,14 +1513,56 @@ int ExecuteContextMenuForDlgItem(HWND hDlg, UINT nIDCtrl, UINT nIDMenu)
     return ExecuteContextMenu(hDlg, nIDMenu, lParam);
 }
 
-NTSTATUS NtDeleteReparsePoint(POBJECT_ATTRIBUTES PtrObjectAttributes)
+NTSTATUS NtDeleteReparsePoint(HANDLE ObjectHandle)
 {
     PREPARSE_DATA_BUFFER pReparseData = NULL;
     IO_STATUS_BLOCK IoStatus;
     ULONGLONG ReparseBuffer[0x100];         // ULONGLONG makes sure it's aligned to 8
     NTSTATUS Status;
-    HANDLE FileHandle = NULL;
     ULONG Length = sizeof(ReparseBuffer);
+
+    // Query the reparse point 
+    pReparseData = (PREPARSE_DATA_BUFFER)ReparseBuffer;
+    Status = NtFsControlFile(ObjectHandle, 
+                             NULL,
+                             NULL,
+                             NULL,
+                            &IoStatus,
+                             FSCTL_GET_REPARSE_POINT,
+                             NULL,
+                             0,
+                             pReparseData,
+                             Length);
+
+    // ... and delete it
+    if(NT_SUCCESS(Status))
+    {
+        pReparseData->ReparseDataLength = 0;
+        Status = NtFsControlFile(ObjectHandle,
+                                 NULL,
+                                 NULL,
+                                 NULL,
+                                &IoStatus,
+                                 FSCTL_DELETE_REPARSE_POINT,
+                                 pReparseData,
+                                 REPARSE_GUID_DATA_BUFFER_HEADER_SIZE,
+                                 NULL,
+                                 0);
+    }
+    else
+    {
+        if(Status == STATUS_NOT_A_REPARSE_POINT)
+            Status = STATUS_SUCCESS;
+    }
+
+    return Status;
+}
+
+NTSTATUS NtDeleteReparsePoint(POBJECT_ATTRIBUTES PtrObjectAttributes)
+{
+    IO_STATUS_BLOCK IoStatus;
+    NTSTATUS Status;
+    HANDLE FileHandle = NULL;
 
     // Open the reparse point
     Status = NtOpenFile(&FileHandle,
@@ -1482,40 +1573,7 @@ NTSTATUS NtDeleteReparsePoint(POBJECT_ATTRIBUTES PtrObjectAttributes)
                          FILE_OPEN_REPARSE_POINT);
     if(NT_SUCCESS(Status))
     {
-        // Query the reparse point 
-        pReparseData = (PREPARSE_DATA_BUFFER)ReparseBuffer;
-        Status = NtFsControlFile(FileHandle, 
-                                 NULL,
-                                 NULL,
-                                 NULL,
-                                &IoStatus,
-                                 FSCTL_GET_REPARSE_POINT,
-                                 NULL,
-                                 0,
-                                 pReparseData,
-                                 Length);
-
-        // ... and delete it
-        if(NT_SUCCESS(Status))
-        {
-            pReparseData->ReparseDataLength = 0;
-            Status = NtFsControlFile(FileHandle,
-                                     NULL,
-                                     NULL,
-                                     NULL,
-                                    &IoStatus,
-                                     FSCTL_DELETE_REPARSE_POINT,
-                                     pReparseData,
-                                     REPARSE_GUID_DATA_BUFFER_HEADER_SIZE,
-                                     NULL,
-                                     0);
-        }
-        else
-        {
-            if(Status == STATUS_NOT_A_REPARSE_POINT)
-                Status = STATUS_SUCCESS;
-        }
-
+        Status = NtDeleteReparsePoint(FileHandle);
         NtClose(FileHandle);
     }
 

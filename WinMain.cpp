@@ -162,6 +162,12 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
     if(pData->szFileName1[0] == 0)
         StringCchCopy(pData->szFileName1, _countof(pData->szFileName1), _T("C:\\TestFile.bin"));
 
+#ifdef _DEBUG
+//  EnablePrivilege(SE_TAKE_OWNERSHIP_NAME);
+//  RemoveDirectory_DEBUG(pData->szFileName1);
+//  ExitProcess(0);
+#endif
+
     //
     // DEVELOPMENT CODE: Build the NT status table from the NTSTATUS.h
     //

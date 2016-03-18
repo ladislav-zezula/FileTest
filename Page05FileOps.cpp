@@ -314,104 +314,135 @@ static NTSTATUS NtRemoveSingleFile(POBJECT_ATTRIBUTES PtrObjectAttributes)
     return Status;
 }
 
-static NTSTATUS NtRemoveDirectoryTree(POBJECT_ATTRIBUTES PtrObjectAttributes)
+static NTSTATUS NtRemoveFsObject(
+    POBJECT_ATTRIBUTES PtrObjectAttributes,     // OBJECT_ATTRIBUTES of the object to be deleted
+    PVOID WorkBuffer,                           // Work buffer to be used for queries
+    ULONG WorkBufferSize,                       // Size of the work buffer
+    BOOLEAN RecursiveDelete)                    // TRUE - delete recursively
 {
-    PFILE_DIRECTORY_INFORMATION pDirInfo;
+    PFILE_DIRECTORY_INFORMATION pDirInfo = (PFILE_DIRECTORY_INFORMATION)WorkBuffer;
+    PFILE_BASIC_INFORMATION pFileInfo = (PFILE_BASIC_INFORMATION)WorkBuffer;
     OBJECT_ATTRIBUTES ChildAttr;
     IO_STATUS_BLOCK IoStatus;
     UNICODE_STRING ChildPath;
-    NTSTATUS DelStatus;
     NTSTATUS Status;
     HANDLE DirHandle = NULL;
     ULONG TryCount = 0;
-    BYTE DirBuffer[0x300];
+    BOOLEAN IsSubdirectory;
 
     // Open the directory for enumeration+delete
     // Use FILE_OPEN_REPARSE_POINT, because the directory can be
     // a reparse point (even an invalid one) and still contain files/subdirs
     __TryOpenDirectory:
     Status = NtOpenFile(&DirHandle,
-                         FILE_LIST_DIRECTORY | DELETE | SYNCHRONIZE,
+                         FILE_LIST_DIRECTORY | FILE_READ_ATTRIBUTES | FILE_WRITE_ATTRIBUTES | DELETE | SYNCHRONIZE,
                          PtrObjectAttributes,
                         &IoStatus,
                          FILE_SHARE_READ,
                          FILE_SYNCHRONOUS_IO_ALERT | FILE_DELETE_ON_CLOSE | FILE_OPEN_REPARSE_POINT);
+
+    // If the file was not found, we consider this a success
+    if(Status == STATUS_OBJECT_NAME_NOT_FOUND)
+        return STATUS_SUCCESS;
     
     // When the access is denied, we can try to reset the permissions
-    if(Status == STATUS_ACCESS_DENIED && TryCount == 0)
+    // Note that if the file/directory has FILE_ATTRIBUTE_READONLY,
+    // then NtOpenFile return STATUS_CANNOT_DELETE
+    if(Status == STATUS_ACCESS_DENIED || Status == STATUS_CANNOT_DELETE)
     {
-        Status = NtSetFileAccessToEveryone(PtrObjectAttributes, GENERIC_ALL | DELETE);
-        if(NT_SUCCESS(Status))
+        // Don't try more than once
+        if(TryCount++ == 0)
         {
-            TryCount++;
+            // Reset the complete security descriptor to Everyone:Full Control.
+            // Also reset the file/directory attributes
+            Status = NtSetFileAccessToEveryone(PtrObjectAttributes, GENERIC_ALL | DELETE);
             goto __TryOpenDirectory;
         }
     }
 
-    if(NT_SUCCESS(Status))
+    if(NT_SUCCESS(Status) && RecursiveDelete)
     {
-        // Prepare the child object attributes and the pointer to directory entry
-        InitializeObjectAttributes(&ChildAttr, &ChildPath, OBJ_CASE_INSENSITIVE, DirHandle, NULL);
-        pDirInfo = (PFILE_DIRECTORY_INFORMATION)DirBuffer;
+        // Check if the FS object is a directory
+        Status = NtQueryInformationFile(DirHandle,
+                                       &IoStatus,
+                                        pFileInfo,
+                                        WorkBufferSize,
+                                        FileBasicInformation);
 
-        // Work as long as we have something
-        while(Status == STATUS_SUCCESS)
+        // If the opened object has reparse point on it,
+        // we need to delete the reparse point first 
+        if(NT_SUCCESS(Status) && (pFileInfo->FileAttributes & FILE_ATTRIBUTE_REPARSE_POINT))
         {
-            // Query a single item
-            Status = NtQueryDirectoryFile(DirHandle,
-                                          NULL,
-                                          NULL,
-                                          NULL,
-                                         &IoStatus,
-                                          pDirInfo,
-                                          sizeof(DirBuffer),
-                                          FileDirectoryInformation,
-                                          TRUE,
-                                          NULL,
-                                          FALSE);
-            if(Status == STATUS_SUCCESS && !IsDotDirectoryName(pDirInfo))
+            Status = NtDeleteReparsePoint(DirHandle);
+            if(NT_SUCCESS(Status))
             {
-                // Create the child path
-                ChildPath.MaximumLength =
-                ChildPath.Length = (USHORT)pDirInfo->FileNameLength;
-                ChildPath.Buffer = pDirInfo->FileName;
-
-                // If the entry has the FILE_ATTRIBUTE_READONLY (both file/subdir),
-                // we need to clear it first
-                if(pDirInfo->FileAttributes & (FILE_ATTRIBUTE_REPARSE_POINT | FILE_ATTRIBUTE_READONLY))
-                {
-                    Status = NtSetFileAccessToEveryone(&ChildAttr, GENERIC_ALL | DELETE);
-                    if(!NT_SUCCESS(Status))
-                        break;
-                }
-
-                // If the entry is a reparse point, we need to delete the reparse first
-                if(pDirInfo->FileAttributes & FILE_ATTRIBUTE_REPARSE_POINT)
-                {
-                    Status = NtDeleteReparsePoint(&ChildAttr);
-                    if(!NT_SUCCESS(Status))
-                        break;
-                }
-
-                // If this is a directory, we need to delete the directory
-                if(pDirInfo->FileAttributes & FILE_ATTRIBUTE_DIRECTORY)
-                {
-                    Status = NtRemoveDirectoryTree(&ChildAttr);
-                }
-                else
-                {
-                    Status = NtRemoveSingleFile(&ChildAttr);
-                }
+                // Note that the NtClose might cause the directory be deleted
+                // if it is empty.
+                NtClose(DirHandle);
+                DirHandle = NULL;
+                TryCount = 0;
+                goto __TryOpenDirectory;
             }
         }
 
-        // Close the directory handle, (also) performing the delete
-        DelStatus = NtClose(DirHandle);
-        if(NT_SUCCESS(Status) || Status == STATUS_NO_MORE_FILES)
-            Status = DelStatus;
+        // If the FS object is a directory
+        if(NT_SUCCESS(Status) && (pFileInfo->FileAttributes & FILE_ATTRIBUTE_DIRECTORY))
+        {
+            // Prepare the child object attributes and the pointer to directory entry
+            InitializeObjectAttributes(&ChildAttr, &ChildPath, OBJ_CASE_INSENSITIVE, DirHandle, NULL);
+
+            // Work as long as we have something
+            for(;;)
+            {
+                // Query a single directory item
+                Status = NtQueryDirectoryFile(DirHandle,
+                                              NULL,
+                                              NULL,
+                                              NULL,
+                                             &IoStatus,
+                                              pDirInfo,
+                                              WorkBufferSize,
+                                              FileDirectoryInformation,
+                                              TRUE,
+                                              NULL,
+                                              FALSE);
+
+                // STATUS_NO_MORE_FILES means there are no files
+                // STATUS_INVALID_PARAMETER means that it is a file
+                if(Status == STATUS_NO_MORE_FILES || Status == STATUS_INVALID_PARAMETER)
+                {
+                    Status = STATUS_SUCCESS;
+                    break;
+                }
+
+                // Skip "." and ".."
+                if(!IsDotDirectoryName(pDirInfo))
+                {
+                    // Create the child path
+                    ChildPath.MaximumLength =
+                    ChildPath.Length = (USHORT)pDirInfo->FileNameLength;
+                    ChildPath.Buffer = pDirInfo->FileName;
+
+                    // Terminate the child path with zero. Redundant, but easier to debug
+                    ChildPath.Buffer[ChildPath.Length / sizeof(WCHAR)] = 0;
+
+                    // If the found object is a file, we pass RecursiveDelete = FALSE,
+                    // which will skip subdirectory enumeration
+                    IsSubdirectory = (pDirInfo->FileAttributes & FILE_ATTRIBUTE_DIRECTORY) ? TRUE : FALSE;
+
+                    // Delete the files/directories in the directory itself
+                    // Note that the content of the work buffer is destroyed after this call
+                    Status = NtRemoveFsObject(&ChildAttr, WorkBuffer, WorkBufferSize, IsSubdirectory);
+                    if(!NT_SUCCESS(Status))
+                        break;
+                }
+            }
+        }
     }
 
-    // Return the result
+    // Delete the file/directory
+    if(DirHandle != NULL)
+        Status = NtClose(DirHandle);
     return Status;
 }
 
@@ -438,14 +469,29 @@ static int RemoveDirectoryTree(LPCTSTR szDirName)
     OBJECT_ATTRIBUTES ObjAttr;
     UNICODE_STRING PathName;
     NTSTATUS Status;
+    PVOID WorkBuffer;
+    ULONG WorkBufferSize = 0x1000;
 
     // Convert to UNICODE_STRING
     Status = FileNameToUnicodeString(&PathName, szDirName);
     if(NT_SUCCESS(Status))
     {
-        InitializeObjectAttributes(&ObjAttr, &PathName, OBJ_CASE_INSENSITIVE, NULL, NULL);
-        Status = NtRemoveDirectoryTree(&ObjAttr);
-        FreeFileNameString(&PathName);
+        // Allocate working buffer so the recursive function will not consume so much memory
+        WorkBuffer = RtlAllocateHeap(RtlProcessHeap(), 0, WorkBufferSize);
+        if(WorkBuffer != NULL)
+        {
+            // Call the recursive function
+            InitializeObjectAttributes(&ObjAttr, &PathName, OBJ_CASE_INSENSITIVE, NULL, NULL);
+            Status = NtRemoveFsObject(&ObjAttr, WorkBuffer, WorkBufferSize, TRUE);
+            FreeFileNameString(&PathName);
+
+            // Free the work buffer
+            RtlFreeHeap(RtlProcessHeap(), 0, WorkBuffer);
+        }
+        else
+        {
+            Status = STATUS_NO_MEMORY;
+        }
     }
 
     return RtlNtStatusToDosError(Status);
@@ -1371,3 +1417,10 @@ INT_PTR CALLBACK PageProc05(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
     }
     return FALSE;
 }
+
+#ifdef _DEBUG
+int RemoveDirectory_DEBUG(LPCTSTR szDirName)
+{
+    return RemoveDirectoryTree(szDirName);
+}
+#endif

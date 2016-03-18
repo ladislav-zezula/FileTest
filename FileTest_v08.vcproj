@@ -254,7 +254,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine=""
+				CommandLine="PostBuild.exe $(OutDir)\$(ProjectName).exe /subsystem4 /tools"
 			/>
 		</Configuration>
 		<Configuration
@@ -334,7 +334,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine=""
+				CommandLine="PostBuild.exe $(OutDir)\$(ProjectName).exe /subsystem4 /tools"
 			/>
 		</Configuration>
 	</Configurations>
