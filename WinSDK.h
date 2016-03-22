@@ -326,12 +326,18 @@ DWORD
 #define FSCTL_DELETE_REPARSE_POINT      CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 43, METHOD_BUFFERED, FILE_SPECIAL_ACCESS) // REPARSE_DATA_BUFFER,
 #endif  // FSCTL_SET_REPARSE_POINT
 
-typedef struct _REPARSE_DATA_BUFFER {
-    ULONG  ReparseTag;
-    USHORT ReparseDataLength;
-    USHORT Reserved;
-    union {
-        struct {
+typedef struct _REPARSE_DATA_BUFFER
+{
+    ULONG  ReparseTag;                          // Reparse tag type
+    USHORT ReparseDataLength;                   // Length of the reparse data
+    USHORT Reserved;                            // Used internally by NTFS to store remaining length
+
+    union
+    {
+        // Structure for IO_REPARSE_TAG_SYMLINK
+        // Handled by nt!IoCompleteRequest
+        struct
+        {
             USHORT SubstituteNameOffset;
             USHORT SubstituteNameLength;
             USHORT PrintNameOffset;
@@ -339,14 +345,29 @@ typedef struct _REPARSE_DATA_BUFFER {
             ULONG Flags;
             WCHAR PathBuffer[1];
         } SymbolicLinkReparseBuffer;
-        struct {
+        
+        // Structure for IO_REPARSE_TAG_MOUNT_POINT
+        // Handled by nt!IoCompleteRequest
+        struct
+        {
             USHORT SubstituteNameOffset;
             USHORT SubstituteNameLength;
             USHORT PrintNameOffset;
             USHORT PrintNameLength;
             WCHAR PathBuffer[1];
         } MountPointReparseBuffer;
-        struct {
+
+        // Structure for IO_REPARSE_TAG_WIM
+        // Handled by wimmount!FPOpenReparseTarget->wimserv.dll (wimsrv!ImageExtract)
+        struct
+        {
+            GUID ImageGuid;                     // GUID of the mounted VIM image
+            BYTE ImagePathHash[0x14];           // Hash of the path to the file within the image
+        } WimImageReparseBuffer;
+
+        // Dummy structure
+        struct
+        {
             UCHAR  DataBuffer[1];
         } GenericReparseBuffer;
     } DUMMYUNIONNAME;

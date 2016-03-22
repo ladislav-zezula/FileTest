@@ -65,6 +65,7 @@
 #define WM_APC                      (WM_USER + 0x1004)
 #define WM_START_WORK               (WM_USER + 0x1005)
 #define WM_WORK_COMPLETE            (WM_USER + 0x1006)
+#define WM_UPDATE_VIEW              (WM_USER + 0x1007)
 
 #define STATUS_INVALID_DATA_FORMAT  0xC1110001
 #define STATUS_CANNOT_EDIT_THIS     0xC1110002
@@ -221,6 +222,9 @@ struct TFileTestData : public TWindowData
 
     LPBYTE        pbNtInfoBuff;             // Buffer for NtQueryInformationFile/NtSetInformationFile
     ULONG         cbNtInfoBuff;             // Size of pbNtInfoBuff in bytes
+
+    PREPARSE_DATA_BUFFER ReparseData;       // Buffer for reparse points
+    ULONG         cbReparseData;            // Size of pbReparseBuffer in bytes
 };
 
 #define GetDialogData(hDlg) ((TFileTestData *)GetWindowLongPtr(hDlg, DWLP_USER))
@@ -426,6 +430,7 @@ BOOL GetTokenElevation(PBOOL pbElevated);
 BOOL GetTokenVirtualizationEnabled(PBOOL pbEnabled);
 BOOL SetTokenVirtualizationEnabled(BOOL bEnabled);
 
+HWND AttachIconToEdit(HWND hDlg, HWND hWndChild, UINT nIDIcon);
 void SetResultInfo(HWND hDlg, NTSTATUS Status, HANDLE hHandle = NULL, UINT_PTR ResultLength = 0, PLARGE_INTEGER pResultLength = NULL);
 
 void ResolveDynamicLoadedAPIs();

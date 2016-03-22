@@ -12,6 +12,173 @@
 #include "resource.h"
 
 //-----------------------------------------------------------------------------
+// Local defines
+
+#define MAX_TREE_ITEM_LENGTH        0x400
+
+#define ITEM_TYPE_REPARSE_TAG       0x0001
+#define ITEM_TYPE_SUBSTNAME_MP      0x0002
+#define ITEM_TYPE_PRINTNAME_MP      0x0003
+#define ITEM_TYPE_SUBSTNAME_LNK     0x0004
+#define ITEM_TYPE_PRINTNAME_LNK     0x0005
+
+static TFlagInfo ReparseTags[] =
+{
+    FLAG_INFO_ENTRY(IO_REPARSE_TAG_MOUNT_POINT),
+    FLAG_INFO_ENTRY(IO_REPARSE_TAG_SYMLINK),
+    FLAG_INFO_ENTRY(IO_REPARSE_TAG_WIM),
+    FLAG_INFO_END
+};
+
+//-----------------------------------------------------------------------------
+// Support for REPARSE_DATA_BUFFER
+//
+// - Total data length must be REPARSE_DATA_BUFFER_HEADER_SIZE + sizeof(MountPointReparseBuffer) - sizeof(WCHAR) + filenames
+// - ReparseDataLength + REPARSE_DATA_BUFFER_HEADER_SIZE must be equal to total data length
+// - There must be both NT name and DOS name. Both names will be zero-terminated
+//
+
+static ULONG GetTotalDataLength(PREPARSE_DATA_BUFFER ReparseData)
+{
+    ULONG TotalLength = 0;
+
+    if(ReparseData != NULL)
+        TotalLength = FIELD_OFFSET(REPARSE_DATA_BUFFER, GenericReparseBuffer) + ReparseData->ReparseDataLength;
+    return TotalLength;
+}
+
+static int UpdateReparseDataLength(PREPARSE_DATA_BUFFER ReparseData, LPTSTR szBaseBuffer)
+{
+    size_t BufferOffset = (LPBYTE)szBaseBuffer - (LPBYTE)&ReparseData->MountPointReparseBuffer;
+
+    ReparseData->ReparseDataLength = (USHORT)(BufferOffset +
+                                              ReparseData->MountPointReparseBuffer.PrintNameOffset +
+                                              ReparseData->MountPointReparseBuffer.PrintNameLength +
+                                              sizeof(WCHAR));
+    return ERROR_SUCCESS;
+}
+
+static int SetReparseDataTag(PREPARSE_DATA_BUFFER ReparseData, ULONG ReparseTag, ULONG DataLength)
+{
+    // Always clear everything before changing tag
+    memset(ReparseData, 0, DataLength);
+    ReparseData->ReparseTag = ReparseTag;
+
+    // For a few known reparse formats, set empty values
+    switch(ReparseTag)
+    {
+        case IO_REPARSE_TAG_MOUNT_POINT:
+            ReparseData->ReparseDataLength = sizeof(ReparseData->MountPointReparseBuffer);
+            ReparseData->MountPointReparseBuffer.PrintNameOffset = sizeof(WCHAR);
+            break;
+
+        case IO_REPARSE_TAG_SYMLINK:
+            ReparseData->ReparseDataLength = sizeof(ReparseData->SymbolicLinkReparseBuffer);
+            ReparseData->SymbolicLinkReparseBuffer.PrintNameOffset = sizeof(WCHAR);
+            break;
+
+        case IO_REPARSE_TAG_WIM:
+            ReparseData->ReparseDataLength = sizeof(ReparseData->WimImageReparseBuffer);
+            break;
+    }
+
+    return ERROR_SUCCESS;
+}
+
+static int SetReparseDataSubstName(PREPARSE_DATA_BUFFER ReparseData, LPTSTR szBaseBuffer, LPCTSTR szSubstName)
+{
+    LPTSTR szOldPrintName;
+    LPTSTR szNewPrintName;
+    size_t cchSubstName = _tcslen(szSubstName);
+
+    // Fix the print name offset and size
+    szOldPrintName = szBaseBuffer + ReparseData->MountPointReparseBuffer.PrintNameOffset / sizeof(WCHAR);
+    szNewPrintName = szBaseBuffer + cchSubstName + 1;
+    memmove(szNewPrintName, szOldPrintName, ReparseData->MountPointReparseBuffer.PrintNameLength + sizeof(WCHAR));
+    ReparseData->MountPointReparseBuffer.PrintNameOffset = (USHORT)((LPBYTE)szNewPrintName - (LPBYTE)szBaseBuffer);
+
+    // Copy the subst name
+    memmove(szBaseBuffer, szSubstName, (cchSubstName + 1) * sizeof(WCHAR));
+    ReparseData->MountPointReparseBuffer.SubstituteNameOffset = 0;
+    ReparseData->MountPointReparseBuffer.SubstituteNameLength = (USHORT)(cchSubstName * sizeof(WCHAR));
+    
+    // Fix the reparse data size
+    return UpdateReparseDataLength(ReparseData, szBaseBuffer);
+}
+
+static int SetReparseDataPrintName(PREPARSE_DATA_BUFFER ReparseData, LPTSTR szBaseBuffer, LPCTSTR szPrintName)
+{
+    size_t cbPrintName = _tcslen(szPrintName) * sizeof(WCHAR);
+
+    // Copy the print name
+    memmove((LPBYTE)szBaseBuffer + ReparseData->MountPointReparseBuffer.PrintNameOffset, szPrintName, cbPrintName + sizeof(WCHAR));
+    ReparseData->MountPointReparseBuffer.PrintNameLength = (USHORT)cbPrintName;
+    
+    // Fix the reparse data size
+    return UpdateReparseDataLength(ReparseData, szBaseBuffer);
+}
+
+static void InitializeReparseData(TFileTestData * pData)
+{
+    PREPARSE_DATA_BUFFER ReparseData;
+
+    if(pData->ReparseData == NULL)
+    {
+        // Allocate the data buffer for the reparse
+        ReparseData = (PREPARSE_DATA_BUFFER)HeapAlloc(g_hHeap, HEAP_ZERO_MEMORY, MAXIMUM_REPARSE_DATA_BUFFER_SIZE);
+
+        // Fill-in the IO_REPARSE_TAG_MOUNT_POINT
+        if(ReparseData != NULL)
+        {
+            // Initialize the reparse data
+            ReparseData->ReparseTag = IO_REPARSE_TAG_MOUNT_POINT;
+            SetReparseDataSubstName(ReparseData, ReparseData->MountPointReparseBuffer.PathBuffer, L"\\??\\C:\\Windows");
+            SetReparseDataPrintName(ReparseData, ReparseData->MountPointReparseBuffer.PathBuffer, L"C:\\Windows");
+
+            // Set the reparse data to the dialog data
+            pData->ReparseData = ReparseData;
+            pData->cbReparseData = MAXIMUM_REPARSE_DATA_BUFFER_SIZE;
+        }
+    }
+}
+
+static bool ReparseTargetIsDirectory(PREPARSE_DATA_BUFFER ReparseData)
+{
+    FILE_BASIC_INFORMATION BasicInfo;
+    OBJECT_ATTRIBUTES ObjAttr;
+    UNICODE_STRING FileName;
+    NTSTATUS Status;
+    LPTSTR szBaseBuffer = 0;
+    bool bResult = false;
+
+    // Determine the pointer to the target name
+    switch(ReparseData->ReparseTag)
+    {
+        case IO_REPARSE_TAG_MOUNT_POINT:
+            szBaseBuffer = ReparseData->MountPointReparseBuffer.PathBuffer;
+            break;
+
+        case IO_REPARSE_TAG_SYMLINK:
+            szBaseBuffer = ReparseData->SymbolicLinkReparseBuffer.PathBuffer;
+            break;
+    }
+
+    // Only for mount point/symbolic link
+    if(szBaseBuffer != NULL)
+    {
+        InitializeObjectAttributes(&ObjAttr, &FileName, OBJ_CASE_INSENSITIVE, NULL, NULL);
+        FileName.MaximumLength =
+        FileName.Length = ReparseData->MountPointReparseBuffer.SubstituteNameLength;
+        FileName.Buffer = szBaseBuffer + ReparseData->MountPointReparseBuffer.SubstituteNameOffset / sizeof(WCHAR);
+        Status = NtQueryAttributesFile(&ObjAttr, &BasicInfo);
+        bResult = (NT_SUCCESS(Status) && (BasicInfo.FileAttributes & FILE_ATTRIBUTE_DIRECTORY));
+    }
+
+    return bResult;
+}
+
+
+//-----------------------------------------------------------------------------
 // Helper functions
 
 static void BinaryToString(LPBYTE pbData, ULONG cbData, LPTSTR szBuffer, size_t cchBuffer)
@@ -32,193 +199,201 @@ static void BinaryToString(LPBYTE pbData, ULONG cbData, LPTSTR szBuffer, size_t 
         *szBuffer++ = IntToHex[pbData[0] & 0x0F];
         pbData++;
     }
+
+    // Terminate the buffer with zero
+    szBuffer[0] = 0;
 }
 
-static void PrepareReparseNames(
-    PREPARSE_DATA_BUFFER ReparseData,
-    PVOID pvNameBuffer,
-    PUNICODE_STRING SubstName,
-    PWSTR szPrintName,
-    ULONG cbPrintName)
+static LPTSTR FormatReparseTag(ULONG ReparseTag, LPTSTR szBuffer, size_t cchBuffer)
 {
-    LPBYTE pbNameBuffer = (LPBYTE)pvNameBuffer;
+    LPCTSTR szHelperString = _T("");
 
-    // Copy the substitute name
-    memcpy(pbNameBuffer, SubstName->Buffer, SubstName->Length);
-    ReparseData->MountPointReparseBuffer.SubstituteNameOffset = 0;
-    ReparseData->MountPointReparseBuffer.SubstituteNameLength = SubstName->Length;
-
-    // Move the name buffer
-    pbNameBuffer = pbNameBuffer + SubstName->Length + sizeof(WCHAR);
-
-    // Copy the printable name
-    memcpy(pbNameBuffer, szPrintName, cbPrintName);
-    ReparseData->MountPointReparseBuffer.PrintNameOffset = (USHORT)(SubstName->Length + sizeof(WCHAR));
-    ReparseData->MountPointReparseBuffer.PrintNameLength = (USHORT)cbPrintName;
-}
-
-static NTSTATUS Dlg2ReparseData(HWND hDlg, PREPARSE_DATA_BUFFER * PtrReparseData, PULONG PtrTotalLength)
-{
-    PREPARSE_DATA_BUFFER ReparseData = NULL;
-    UNICODE_STRING SubstName;
-    NTSTATUS Status;
-    TCHAR szSubstName[MAX_PATH];
-    TCHAR szPrintName[MAX_PATH];
-    ULONG cbSubstName;
-    ULONG cbPrintName;
-    ULONG TotalLength = 0;
-    HWND hWndChild;
-
-    // Get the substitute name and the printable name
-    cbSubstName = GetDlgItemText(hDlg, IDC_SUBST_NAME, szSubstName, _maxchars(szSubstName)) * sizeof(WCHAR);
-    cbPrintName = GetDlgItemText(hDlg, IDC_PRINT_NAME, szPrintName, _maxchars(szPrintName)) * sizeof(WCHAR);
-    if(cbSubstName == 0)
-        return STATUS_INVALID_PARAMETER;
-
-    // Allocate buffer of the maximum size
-    ReparseData = (PREPARSE_DATA_BUFFER)HeapAlloc(g_hHeap, HEAP_ZERO_MEMORY, MAXIMUM_REPARSE_DATA_BUFFER_SIZE);
-    if(ReparseData == NULL)
-        return STATUS_NO_MEMORY;
-
-    // Get the type of the reparse point
-    hWndChild = GetDlgItem(hDlg, IDC_JUNCTION_TYPE);
-    switch(ComboBox_GetCurSel(hWndChild))
-    {
-        case 0: // IO_REPARSE_TAG_MOUNT_POINT
-
-            //
-            // Prepare the header of REPARSE_DATA_BUFFER:
-            //
-            // - Total data length must be REPARSE_DATA_BUFFER_HEADER_SIZE + sizeof(MountPointReparseBuffer) - sizeof(WCHAR) + filenames
-            // - ReparseDataLength + REPARSE_DATA_BUFFER_HEADER_SIZE must be equal to total data length
-            // - There must be both NT name and DOS name. Both names will be zero-terminated
-            //
-
-            Status = FileNameToUnicodeString(&SubstName, szSubstName);
-            if(NT_SUCCESS(Status))
-            {
-                TotalLength = FIELD_OFFSET(REPARSE_DATA_BUFFER, MountPointReparseBuffer.PathBuffer) +
-                              SubstName.Length + sizeof(WCHAR) + cbPrintName + sizeof(WCHAR);
-
-                // Set the tag and total data size
-                ReparseData->ReparseTag = IO_REPARSE_TAG_MOUNT_POINT;
-                ReparseData->ReparseDataLength = (USHORT)(TotalLength - REPARSE_DATA_BUFFER_HEADER_SIZE);
-
-                // Set both names
-                PrepareReparseNames(ReparseData,
-                                    ReparseData->MountPointReparseBuffer.PathBuffer,
-                                   &SubstName,
-                                    szPrintName,
-                                    cbPrintName);
-                FreeFileNameString(&SubstName);
-            }
-            break;
-
-        case 1: // IO_REPARSE_TAG_SYMLINK
-
-            //
-            // Prepare the header of REPARSE_DATA_BUFFER:
-            //
-            // - Total data length must be REPARSE_DATA_BUFFER_HEADER_SIZE + sizeof(SymbolicLinkReparseBuffer) - sizeof(WCHAR) + filenames
-            // - ReparseDataLength + REPARSE_DATA_BUFFER_HEADER_SIZE must be equal to total data length
-            // - There must be both NT name and DOS name. Both names will be zero-terminated
-            //
-
-            Status = FileNameToUnicodeString(&SubstName, szSubstName);
-            if(NT_SUCCESS(Status))
-            {
-                TotalLength = FIELD_OFFSET(REPARSE_DATA_BUFFER, SymbolicLinkReparseBuffer.PathBuffer) +
-                              SubstName.Length + sizeof(WCHAR) + cbPrintName + sizeof(WCHAR);
-
-                // Set the tag and total data size
-                ReparseData->ReparseTag = IO_REPARSE_TAG_SYMLINK;
-                ReparseData->ReparseDataLength = (USHORT)(TotalLength - REPARSE_DATA_BUFFER_HEADER_SIZE);
-
-                // Set both names
-                PrepareReparseNames(ReparseData,
-                                    ReparseData->SymbolicLinkReparseBuffer.PathBuffer,
-                                   &SubstName,
-                                    szPrintName,
-                                    cbPrintName);
-                FreeFileNameString(&SubstName);
-            }
-            break;
-
-        default:    // Not supported
-            Status = STATUS_NOT_SUPPORTED;
-            break;
-    }
-
-    // If something went wrong, free the data
-    if(!NT_SUCCESS(Status))
-    {
-        HeapFree(g_hHeap, 0, ReparseData);
-        ReparseData = NULL;
-        TotalLength = 0;
-    }
-
-    // Give the buffer and the total length
-    if(PtrReparseData != NULL)
-        PtrReparseData[0] = ReparseData;
-    if(PtrTotalLength != NULL)
-        PtrTotalLength[0] = TotalLength;
-    return Status;
-}
-
-static void ReparseData2Dlg(HWND hDlg, PREPARSE_DATA_BUFFER ReparseData)
-{
-    TCHAR szSubstName[MAX_PATH];
-    TCHAR szPrintName[MAX_PATH];
-    PBYTE pbNameBuffer;
-    HWND hWndChild = GetDlgItem(hDlg, IDC_JUNCTION_TYPE);
-    int ReparseTagIndex = -1;
-
-    // Prepare both buffers
-    memset(szSubstName, 0, sizeof(szSubstName));
-    memset(szPrintName, 0, sizeof(szPrintName));
-
-    // Fill all by the reparse point tag
-    switch(ReparseData->ReparseTag)
+    // For some of the 
+    switch(ReparseTag)
     {
         case IO_REPARSE_TAG_MOUNT_POINT:
-            
-            // Get the pointer to name buffer
-            pbNameBuffer = (PBYTE)(ReparseData->MountPointReparseBuffer.PathBuffer);
-            StringCchCopyNW(szSubstName, _countof(szSubstName), (PWSTR)(pbNameBuffer + ReparseData->MountPointReparseBuffer.SubstituteNameOffset),
-                                                                        ReparseData->MountPointReparseBuffer.SubstituteNameLength / sizeof(WCHAR));
-            StringCchCopyNW(szPrintName, _countof(szPrintName), (PWSTR)(pbNameBuffer + ReparseData->MountPointReparseBuffer.PrintNameOffset),
-                                                                        ReparseData->MountPointReparseBuffer.PrintNameLength / sizeof(WCHAR));
-            ReparseTagIndex = 0;
+            szHelperString = _T(" (IO_REPARSE_TAG_MOUNT_POINT)");
             break;
 
         case IO_REPARSE_TAG_SYMLINK:
-
-            // Get the pointer to name buffer
-            pbNameBuffer = (PBYTE)(ReparseData->SymbolicLinkReparseBuffer.PathBuffer);
-            StringCchCopyNW(szSubstName, _countof(szSubstName), (PWSTR)(pbNameBuffer + ReparseData->SymbolicLinkReparseBuffer.SubstituteNameOffset),
-                                                                        ReparseData->SymbolicLinkReparseBuffer.SubstituteNameLength / sizeof(WCHAR));
-            StringCchCopyNW(szPrintName, _countof(szPrintName), (PWSTR)(pbNameBuffer + ReparseData->SymbolicLinkReparseBuffer.PrintNameOffset),
-                                                                        ReparseData->SymbolicLinkReparseBuffer.PrintNameLength / sizeof(WCHAR));
-            ReparseTagIndex = 1;
+            szHelperString = _T(" (IO_REPARSE_TAG_SYMLINK)");
             break;
 
         case IO_REPARSE_TAG_WIM:
-            BinaryToString(ReparseData->GenericReparseBuffer.DataBuffer, ReparseData->ReparseDataLength, szSubstName, _countof(szSubstName));
-            ReparseTagIndex = 2;
+            szHelperString = _T(" (IO_REPARSE_TAG_WIM)");
             break;
-
-        default:
-            StringCchPrintf(szSubstName, _countof(szSubstName), _T("Unknown reparse tag: %08lX"), ReparseData->ReparseTag);
-            ReparseTagIndex = 3;
     }
 
-    // Select the reparse point index
-    if(ReparseTagIndex != -1)
-        ComboBox_SetCurSel(hWndChild, ReparseTagIndex);
+    // Format the string
+    StringCchPrintf(szBuffer, cchBuffer, _T("%08X%s"), ReparseTag, szHelperString);
+    return szBuffer;
+}
 
-    // Set the substitute and printable name
-    SetDlgItemText(hDlg, IDC_SUBST_NAME, szSubstName);
-    SetDlgItemText(hDlg, IDC_PRINT_NAME, szPrintName);
+static HTREEITEM TreeView_InsertString(
+    HWND hWndTree,
+    HTREEITEM hParent,
+    LPCTSTR szItemText,
+    LPARAM lParam)
+{
+    TVINSERTSTRUCT tvi;
+
+    // Insert the item
+    ZeroMemory(&tvi, sizeof(TVITEM));
+    tvi.hParent = hParent;
+    tvi.hInsertAfter = TVI_LAST;
+    tvi.item.mask = TVIF_TEXT | TVIF_PARAM;
+    tvi.item.pszText = (LPTSTR)szItemText;
+    tvi.item.lParam = lParam;
+    return TreeView_InsertItem(hWndTree, &tvi);
+}
+
+static HTREEITEM TreeView_InsertNameAndValue(
+    HWND hWndTree,
+    HTREEITEM hParent,
+    LPCTSTR szValueName,
+    LPCTSTR szValueText,
+    LPARAM lParam)
+{
+    TCHAR szItemText[MAX_TREE_ITEM_LENGTH];
+
+    // Prepare the item text
+    StringCchPrintf(szItemText, _countof(szItemText), _T("%s: %s"), szValueName, szValueText);
+    return TreeView_InsertString(hWndTree, hParent, szItemText, lParam);
+}
+
+static HTREEITEM TreeView_InsertInteger(
+    HWND hWndTree,
+    HTREEITEM hParent,
+    LPCTSTR szValueName,
+    LPCTSTR szFormat,
+    ULONG IntValue,
+    LPARAM lParam)
+{
+    TCHAR szValueText[0x20];
+
+    // Format the value
+    StringCchPrintf(szValueText, _countof(szValueText), szFormat, IntValue);
+    return TreeView_InsertNameAndValue(hWndTree, hParent, szValueName, szValueText, lParam);
+}
+
+static HTREEITEM TreeView_InsertGuid(
+    HWND hWndTree,
+    HTREEITEM hParent,
+    LPCTSTR szValueName,
+    GUID & Guid,
+    LPARAM lParam)
+{
+    TCHAR szValueText[0x40];
+
+    // Format the value
+    GuidToString(&Guid, szValueText, _countof(szValueText));
+    return TreeView_InsertNameAndValue(hWndTree, hParent, szValueName, szValueText, lParam);
+}
+
+static HTREEITEM TreeView_InsertBinary(
+    HWND hWndTree,
+    HTREEITEM hParent,
+    LPCTSTR szValueName,
+    PVOID pvData,
+    ULONG cbData,
+    LPARAM lParam)
+{
+    HTREEITEM hNewItem = NULL;
+    LPTSTR szValueText;
+    size_t cchLength;
+
+    // Limit the maximum length
+    if(cbData > (MAXIMUM_REPARSE_DATA_BUFFER_SIZE - 8))
+        cbData = (MAXIMUM_REPARSE_DATA_BUFFER_SIZE - 8);
+    cchLength = (cbData * 3) + 1;
+
+    // Allocate buffer for the item text
+    szValueText = new TCHAR[cchLength];
+    if(szValueText != NULL)
+    {
+        // Format the value
+        BinaryToString((LPBYTE)pvData, cbData, szValueText, cchLength);
+
+        // Apply to the tree item
+        hNewItem = TreeView_InsertNameAndValue(hWndTree, hParent, szValueName, szValueText, lParam);
+        delete [] szValueText;
+    }
+
+    return hNewItem;
+}
+
+static HTREEITEM TreeView_InsertStrOffs(
+    HWND hWndTree,
+    HTREEITEM hParent,
+    LPCTSTR szValueName,
+    LPVOID BeginOfStruct,
+    USHORT StringOffset,
+    USHORT StringLength,
+    LPARAM lParam)
+{
+    WCHAR szValueText[MAX_TREE_ITEM_LENGTH];
+    size_t cchStringLength = (StringLength / sizeof(WCHAR));
+
+    // Put the prefix
+    StringCchPrintf(szValueText, MAX_TREE_ITEM_LENGTH, _T("0x%02X \""), StringOffset);
+    StringCchCatN(szValueText, MAX_TREE_ITEM_LENGTH, (LPWSTR)((LPBYTE)BeginOfStruct + StringOffset), cchStringLength);
+    StringCchCat(szValueText, MAX_TREE_ITEM_LENGTH, _T("\""));
+
+    // Insert as tree item
+    return TreeView_InsertNameAndValue(hWndTree, hParent, szValueName, szValueText, lParam);
+}
+
+static void TreeView_InsertSubstName(
+    HWND hWndTree,
+    HTREEITEM hParent,
+    PREPARSE_DATA_BUFFER ReparseData,
+    LPTSTR szBaseBuffer,
+    LPARAM lParam)
+{
+    TreeView_InsertStrOffs(hWndTree, hParent, _T("SubstituteNameOffset"),
+                                              szBaseBuffer,
+                                              ReparseData->MountPointReparseBuffer.SubstituteNameOffset,
+                                              ReparseData->MountPointReparseBuffer.SubstituteNameLength,
+                                              lParam);
+    TreeView_InsertInteger(hWndTree, hParent, _T("SubstituteNameLength"),
+                                              _T("0x%02X"),
+                                              ReparseData->MountPointReparseBuffer.SubstituteNameLength,
+                                              0);
+}
+
+static void TreeView_InsertPrintName(
+    HWND hWndTree,
+    HTREEITEM hParent,
+    PREPARSE_DATA_BUFFER ReparseData,
+    LPTSTR szBaseBuffer,
+    LPARAM lParam)
+{
+    TreeView_InsertStrOffs(hWndTree, hParent, _T("PrintNameOffset"),
+                                              szBaseBuffer,
+                                              ReparseData->MountPointReparseBuffer.PrintNameOffset,
+                                              ReparseData->MountPointReparseBuffer.PrintNameLength,
+                                              lParam);
+    TreeView_InsertInteger(hWndTree, hParent, _T("PrintNameLength"),
+                                              _T("0x%02X"),
+                                              ReparseData->MountPointReparseBuffer.PrintNameLength,
+                                              0);
+}
+
+static bool TreeView_EditString(HWND hWndEdit, LPTSTR szBaseBuffer, USHORT NameOffset, USHORT NameLength)
+{
+    LPTSTR szString;
+
+    // We need to allocate the string
+    szString = (LPTSTR)HeapAlloc(g_hHeap, HEAP_ZERO_MEMORY, NameLength + sizeof(WCHAR));
+    if(szString != NULL)
+    {
+        memcpy(szString, szBaseBuffer + (NameOffset / sizeof(WCHAR)), NameLength);
+        SetWindowText(hWndEdit, szString);
+        HeapFree(g_hHeap, 0, szString);
+        return true;
+    }
+
+    return false;
 }
 
 LPTSTR GetFullHardLinkName(PFILE_LINK_ENTRY_INFORMATION pLinkInfo, LPTSTR szFileName)
@@ -334,16 +509,19 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
 {
     PROPSHEETPAGE * pPage = (PROPSHEETPAGE *)lParam;
     TFileTestData * pData = (TFileTestData *)pPage->lParam;
-    HWND hComboBox;
+    HWND hWndChild;
 
+    // Apply the data to the dialog
     SetDialogData(hDlg, pPage->lParam);
+
+    // Initialize the reparse data
+    InitializeReparseData(pData);
 
     // Configure dialog resizing
     if(pData->bEnableResizing)
     {
         pAnchors = new TAnchors();
         pAnchors->AddAnchor(hDlg, IDC_SYMLINK_FRAME, akLeft | akTop | akRight);
-        pAnchors->AddAnchor(hDlg, IDC_SYMLINK, akLeft | akTop | akRight);
         pAnchors->AddAnchor(hDlg, IDC_SYMLINK_TARGET, akLeft | akTop | akRight);
         pAnchors->AddAnchor(hDlg, IDC_SYMLINK_QUERY, akLeft | akTop);
         pAnchors->AddAnchor(hDlg, IDC_SYMLINK_CREATE, akLeftCenter | akTop);
@@ -354,14 +532,12 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
         pAnchors->AddAnchor(hDlg, IDC_HARDLINK_CREATE, akLeft | akTop);
         pAnchors->AddAnchor(hDlg, IDC_HARDLINK_QUERY, akLeftCenter | akTop);
         pAnchors->AddAnchor(hDlg, IDC_HARDLINK_DELETE, akTop | akRight);
-        pAnchors->AddAnchor(hDlg, IDC_REPARSE_FRAME, akLeft | akTop | akRight);
+        pAnchors->AddAnchor(hDlg, IDC_REPARSE_FRAME, akAll);
         pAnchors->AddAnchor(hDlg, IDC_REPARSE, akLeft | akTop | akRight);
-        pAnchors->AddAnchor(hDlg, IDC_SUBST_NAME, akLeft | akTop | akRight);
-        pAnchors->AddAnchor(hDlg, IDC_PRINT_NAME, akLeft | akTop | akRight);
-        pAnchors->AddAnchor(hDlg, IDC_JUNCTION_TYPE, akLeft | akTop | akRight);
-        pAnchors->AddAnchor(hDlg, IDC_REPARSE_CREATE, akLeft | akTop);
-        pAnchors->AddAnchor(hDlg, IDC_REPARSE_QUERY, akLeftCenter | akTop);
-        pAnchors->AddAnchor(hDlg, IDC_REPARSE_DELETE, akTop | akRight);
+        pAnchors->AddAnchor(hDlg, IDC_REPARSE_DATA, akAll);
+        pAnchors->AddAnchor(hDlg, IDC_REPARSE_CREATE, akLeft | akBottom);
+        pAnchors->AddAnchor(hDlg, IDC_REPARSE_QUERY, akLeftCenter | akBottom);
+        pAnchors->AddAnchor(hDlg, IDC_REPARSE_DELETE, akRight | akBottom);
         pAnchors->AddAnchor(hDlg, IDC_RESULT_FRAME, akLeft | akRight | akBottom);
         pAnchors->AddAnchor(hDlg, IDC_RESULT_STATUS_TITLE, akLeft | akBottom);
         pAnchors->AddAnchor(hDlg, IDC_RESULT_STATUS, akLeft | akRight | akBottom);
@@ -372,10 +548,13 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
     // We need this in order to create symbolic link
     EnablePrivilege(_T("SeCreateSymbolicLinkPrivilege"));
 
+    // Congigure the right-arrow image 
+    AttachIconToEdit(hDlg, GetDlgItem(hDlg, IDC_SYMLINK_TARGET), IDI_RIGHT_ARROW);
+
     // Default number of characters for combo box's edit field is 46.
     // We have to increase it.
-    hComboBox = GetDlgItem(hDlg, IDC_HARDLINK_LIST);
-    ComboBox_LimitText(hComboBox, MAX_PATH);
+    hWndChild = GetDlgItem(hDlg, IDC_HARDLINK_LIST);
+    ComboBox_LimitText(hWndChild, MAX_PATH);
 
     // Pre-fill the dialog
     SetDlgItemText(hDlg, IDC_SYMLINK, _T("\\??\\C:"));
@@ -384,12 +563,9 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
     SetDlgItemText(hDlg, IDC_NEW_HARDLINK, _T("C:\\TestFile_HardLink.bin"));
 
     SetDlgItemText(hDlg, IDC_REPARSE, _T("C:\\Windows_Reparse"));
-    SetDlgItemText(hDlg, IDC_SUBST_NAME, _T("C:\\Windows"));
-    SetDlgItemText(hDlg, IDC_PRINT_NAME, _T("C:\\Windows"));
-    InitDialogControls(hDlg, MAKEINTRESOURCE(IDD_PAGE10_LINKS));
-    hComboBox = GetDlgItem(hDlg, IDC_JUNCTION_TYPE);
-    ComboBox_SetCurSel(hComboBox, 0);
 
+    // Initiate updating of the view
+    PostMessage(hDlg, WM_UPDATE_VIEW, 0, 0);
     return TRUE;
 }                                                                         
 
@@ -401,6 +577,162 @@ static int OnSetActive(HWND /* hDlg */)
 static int OnKillActive(HWND /* hDlg */)
 {
     return FALSE;
+}
+
+static int OnBeginLabelEdit(HWND hDlg, LPNMTVDISPINFO pNMDispInfo)
+{
+    PREPARSE_DATA_BUFFER ReparseData;
+    TFileTestData * pData = GetDialogData(hDlg);
+    TCHAR szItemText[0x200];
+    HWND hTreeView = GetDlgItem(hDlg, IDC_REPARSE_DATA);
+    HWND hWndEdit;
+    BOOL bStartEditing = FALSE;
+
+    // Retrieve the edit control
+    hWndEdit = TreeView_GetEditControl(hTreeView);
+    if(hWndEdit != NULL)
+    {
+        // Get the reparse data
+        ReparseData = pData->ReparseData;
+
+        // Perform the item-specific editing
+        switch(pNMDispInfo->item.lParam)
+        {
+            case ITEM_TYPE_REPARSE_TAG:
+                StringCchPrintf(szItemText, _countof(szItemText), _T("%08X"), ReparseData->ReparseTag);
+                SetWindowText(hWndEdit, szItemText);
+                bStartEditing = TRUE;
+                break;
+
+            case ITEM_TYPE_SUBSTNAME_MP:
+                bStartEditing = TreeView_EditString(hWndEdit,
+                                                    ReparseData->MountPointReparseBuffer.PathBuffer,
+                                                    ReparseData->MountPointReparseBuffer.SubstituteNameOffset,
+                                                    ReparseData->MountPointReparseBuffer.SubstituteNameLength);
+
+            case ITEM_TYPE_PRINTNAME_MP:
+                bStartEditing = TreeView_EditString(hWndEdit,
+                                                    ReparseData->MountPointReparseBuffer.PathBuffer,
+                                                    ReparseData->MountPointReparseBuffer.PrintNameOffset,
+                                                    ReparseData->MountPointReparseBuffer.PrintNameLength);
+                break;
+
+            case ITEM_TYPE_SUBSTNAME_LNK:
+                bStartEditing = TreeView_EditString(hWndEdit,
+                                                    ReparseData->SymbolicLinkReparseBuffer.PathBuffer,
+                                                    ReparseData->SymbolicLinkReparseBuffer.SubstituteNameOffset,
+                                                    ReparseData->SymbolicLinkReparseBuffer.SubstituteNameLength);
+                break;
+
+            case ITEM_TYPE_PRINTNAME_LNK:
+                bStartEditing = TreeView_EditString(hWndEdit,
+                                                    ReparseData->SymbolicLinkReparseBuffer.PathBuffer,
+                                                    ReparseData->SymbolicLinkReparseBuffer.PrintNameLength,
+                                                    ReparseData->SymbolicLinkReparseBuffer.PrintNameLength);
+                break;
+        }
+    }
+
+    // By default, the item is not editable
+    if(bStartEditing == FALSE)
+        SetResultInfo(hDlg, STATUS_CANNOT_EDIT_THIS);
+
+    // Setup the close dialog and start editing (or not)
+    DisableCloseDialog(hDlg, bStartEditing);
+    SetWindowLongPtr(hDlg, DWLP_MSGRESULT, bStartEditing ? FALSE : TRUE);
+    return TRUE;
+}
+
+static int OnEndLabelEdit(HWND hDlg, NMTVDISPINFO * pNMDispInfo)
+{
+    PREPARSE_DATA_BUFFER ReparseData;
+    TFileTestData * pData = GetDialogData(hDlg);
+    DWORD IntValue32 = 0;
+    int nError = ERROR_NOT_SUPPORTED;
+
+    // Get the pointer to the reparse data
+    if(pNMDispInfo->item.pszText == NULL)
+        return FALSE;
+    ReparseData = pData->ReparseData;
+
+    // Perform the item-specific editing
+    switch(pNMDispInfo->item.lParam)
+    {
+        case ITEM_TYPE_REPARSE_TAG:
+            nError = Text2Hex32(pNMDispInfo->item.pszText, &IntValue32);
+            if(nError == ERROR_SUCCESS && IntValue32 != ReparseData->ReparseTag)
+                nError = SetReparseDataTag(ReparseData, IntValue32, pData->cbReparseData);
+            break;
+
+        case ITEM_TYPE_SUBSTNAME_MP:
+            if(ReparseData->ReparseTag == IO_REPARSE_TAG_MOUNT_POINT)
+                nError = SetReparseDataSubstName(ReparseData, ReparseData->MountPointReparseBuffer.PathBuffer, pNMDispInfo->item.pszText); 
+            break;
+
+        case ITEM_TYPE_PRINTNAME_MP:
+            if(ReparseData->ReparseTag == IO_REPARSE_TAG_MOUNT_POINT)
+                nError = SetReparseDataPrintName(ReparseData, ReparseData->MountPointReparseBuffer.PathBuffer, pNMDispInfo->item.pszText); 
+            break;
+
+        case ITEM_TYPE_SUBSTNAME_LNK:
+            if(ReparseData->ReparseTag == IO_REPARSE_TAG_SYMLINK)
+                nError = SetReparseDataSubstName(ReparseData, ReparseData->SymbolicLinkReparseBuffer.PathBuffer, pNMDispInfo->item.pszText); 
+            break;
+
+        case ITEM_TYPE_PRINTNAME_LNK:
+            if(ReparseData->ReparseTag == IO_REPARSE_TAG_SYMLINK)
+                nError = SetReparseDataPrintName(ReparseData, ReparseData->SymbolicLinkReparseBuffer.PathBuffer, pNMDispInfo->item.pszText); 
+            break;
+    }
+
+    // If we are going to accept changes, we need to update the view
+    if(nError == ERROR_SUCCESS)
+    {
+        SetWindowLongPtr(hDlg, DWLP_MSGRESULT, TRUE);
+        PostMessage(hDlg, WM_UPDATE_VIEW, 0, 0);
+    }
+    
+    return TRUE;
+}
+
+static int OnDoubleClick(HWND hDlg, LPNMHDR pNMHDR)
+{
+    PREPARSE_DATA_BUFFER ReparseData;
+    TFileTestData * pData;
+    TVITEM tvi;
+    ULONG ReparseTag;
+
+    // Was it the tree view?
+    if(pNMHDR->idFrom == IDC_REPARSE_DATA)
+    {
+        // Retrieve the item
+        ZeroMemory(&tvi, sizeof(TVITEM));
+        tvi.mask = TVIF_PARAM;
+        tvi.hItem = TreeView_GetSelection(pNMHDR->hwndFrom);
+        if(tvi.hItem != NULL)
+        {
+            // Retrieve the item type
+            TreeView_GetItem(pNMHDR->hwndFrom, &tvi);
+            
+            // If reparse tag, we can give the user a choice
+            if(tvi.lParam == ITEM_TYPE_REPARSE_TAG)
+            {
+                // Retrieve the reparse data
+                pData = GetDialogData(hDlg);
+                ReparseData = pData->ReparseData;
+                ReparseTag = ReparseData->ReparseTag;
+
+                // Let the user choose a new reparse tak
+                if(ValuesDialog(hDlg, &ReparseTag, IDS_CHOOSE_REPARSE_TAG, ReparseTags) == IDOK)
+                {
+                    SetReparseDataTag(ReparseData, ReparseTag, pData->cbReparseData);
+                    PostMessage(hDlg, WM_UPDATE_VIEW, 0, 0);
+                }
+            }
+        }
+    }
+
+    return TRUE;
 }
 
 static int OnSymlinkCreate(HWND hDlg)
@@ -501,6 +833,133 @@ static void OnShowHardlinks(HWND hDlg)
     HWND hCombo = GetDlgItem(hDlg, IDC_HARDLINK_LIST);
 
     ComboBox_ShowDropdown(hCombo, TRUE);
+}
+
+static void OnUpdateView(HWND hDlg)
+{
+    PREPARSE_DATA_BUFFER ReparseData;
+    TFileTestData * pData = GetDialogData(hDlg);
+    HTREEITEM hItem = TVI_ROOT;
+    TCHAR szItemText[MAX_PATH];
+    HWND hWndChild = GetDlgItem(hDlg, IDC_REPARSE_DATA);
+
+    // Free all items in the tree view
+    TreeView_DeleteAllItems(hWndChild);
+    ReparseData = pData->ReparseData;
+
+    // Insert the three common fields from the REPARSE_DATA
+    TreeView_InsertNameAndValue(hWndChild, hItem, _T("Tag"), FormatReparseTag(ReparseData->ReparseTag, szItemText, _countof(szItemText)), ITEM_TYPE_REPARSE_TAG);
+    TreeView_InsertInteger(hWndChild, hItem, _T("ReparseDataLength"), _T("0x%02X"), ReparseData->ReparseDataLength, 0);
+    TreeView_InsertInteger(hWndChild, hItem, _T("Reserved"), _T("0x%02X"), ReparseData->Reserved, 0);
+
+    // Insert the sub-structure
+    switch(ReparseData->ReparseTag)
+    {
+        case IO_REPARSE_TAG_MOUNT_POINT:
+
+            hItem = TreeView_InsertString(hWndChild, hItem, _T("MountPointReparseBuffer"), 0);
+            if(hItem != NULL)
+            {
+                TreeView_InsertSubstName(hWndChild, hItem, ReparseData, ReparseData->MountPointReparseBuffer.PathBuffer, ITEM_TYPE_SUBSTNAME_MP);
+                TreeView_InsertPrintName(hWndChild, hItem, ReparseData, ReparseData->MountPointReparseBuffer.PathBuffer, ITEM_TYPE_PRINTNAME_MP);
+            }
+            break;
+
+        case IO_REPARSE_TAG_SYMLINK:
+
+            hItem = TreeView_InsertString(hWndChild, hItem, _T("SymbolicLinkReparseBuffer"), 0);
+            if(hItem != NULL)
+            {
+                TreeView_InsertSubstName(hWndChild, hItem, ReparseData, ReparseData->SymbolicLinkReparseBuffer.PathBuffer, ITEM_TYPE_SUBSTNAME_LNK);
+                TreeView_InsertPrintName(hWndChild, hItem, ReparseData, ReparseData->SymbolicLinkReparseBuffer.PathBuffer, ITEM_TYPE_PRINTNAME_LNK);
+                TreeView_InsertInteger  (hWndChild, hItem, _T("Flags"), _T("0x%04X"), ReparseData->SymbolicLinkReparseBuffer.Flags, 0);
+            }
+            break;
+
+        case IO_REPARSE_TAG_WIM:
+            hItem = TreeView_InsertString(hWndChild, hItem, _T("WimImageReparseBuffer"), 0);
+            if(hItem != NULL)
+            {
+                TreeView_InsertGuid(hWndChild, hItem, _T("ImageGuid"),
+                                                         ReparseData->WimImageReparseBuffer.ImageGuid,
+                                                         0);
+                TreeView_InsertBinary(hWndChild, hItem, _T("ImagePathHash"),
+                                                         ReparseData->WimImageReparseBuffer.ImagePathHash,
+                                                         sizeof(ReparseData->WimImageReparseBuffer.ImagePathHash), 
+                                                         0);
+            }
+            break;
+
+        default:
+            hItem = TreeView_InsertString(hWndChild, hItem, _T("GenericReparseBuffer"), 0);
+            if(hItem != NULL)
+            {
+                TreeView_InsertBinary(hWndChild, hItem, _T("DataBuffer"),
+                                                         ReparseData->GenericReparseBuffer.DataBuffer, 
+                                                         ReparseData->ReparseDataLength,
+                                                         0);
+            }
+            break;
+    }
+
+    // Expand the tree view
+    TreeView_Expand(hWndChild, hItem, TVE_EXPAND);
+
+
+/*
+    TCHAR szSubstName[MAX_PATH];
+    TCHAR szPrintName[MAX_PATH];
+    PBYTE pbNameBuffer;
+    HWND hWndChild = GetDlgItem(hDlg, IDC_JUNCTION_TYPE);
+    int ReparseTagIndex = -1;
+
+    // Prepare both buffers
+    memset(szSubstName, 0, sizeof(szSubstName));
+    memset(szPrintName, 0, sizeof(szPrintName));
+
+    // Fill all by the reparse point tag
+    switch(ReparseData->ReparseTag)
+    {
+        case IO_REPARSE_TAG_MOUNT_POINT:
+            
+            // Get the pointer to name buffer
+            pbNameBuffer = (PBYTE)(ReparseData->MountPointReparseBuffer.PathBuffer);
+            StringCchCopyNW(szSubstName, _countof(szSubstName), (PWSTR)(pbNameBuffer + ReparseData->MountPointReparseBuffer.SubstituteNameOffset),
+                                                                        ReparseData->MountPointReparseBuffer.SubstituteNameLength / sizeof(WCHAR));
+            StringCchCopyNW(szPrintName, _countof(szPrintName), (PWSTR)(pbNameBuffer + ReparseData->MountPointReparseBuffer.PrintNameOffset),
+                                                                        ReparseData->MountPointReparseBuffer.PrintNameLength / sizeof(WCHAR));
+            ReparseTagIndex = 0;
+            break;
+
+        case IO_REPARSE_TAG_SYMLINK:
+
+            // Get the pointer to name buffer
+            pbNameBuffer = (PBYTE)(ReparseData->SymbolicLinkReparseBuffer.PathBuffer);
+            StringCchCopyNW(szSubstName, _countof(szSubstName), (PWSTR)(pbNameBuffer + ReparseData->SymbolicLinkReparseBuffer.SubstituteNameOffset),
+                                                                        ReparseData->SymbolicLinkReparseBuffer.SubstituteNameLength / sizeof(WCHAR));
+            StringCchCopyNW(szPrintName, _countof(szPrintName), (PWSTR)(pbNameBuffer + ReparseData->SymbolicLinkReparseBuffer.PrintNameOffset),
+                                                                        ReparseData->SymbolicLinkReparseBuffer.PrintNameLength / sizeof(WCHAR));
+            ReparseTagIndex = 1;
+            break;
+
+        case IO_REPARSE_TAG_WIM:
+            BinaryToString(ReparseData->GenericReparseBuffer.DataBuffer, ReparseData->ReparseDataLength, szSubstName, _countof(szSubstName));
+            ReparseTagIndex = 2;
+            break;
+
+        default:
+            StringCchPrintf(szSubstName, _countof(szSubstName), _T("Unknown reparse tag: %08lX"), ReparseData->ReparseTag);
+            ReparseTagIndex = 3;
+    }
+
+    // Select the reparse point index
+    if(ReparseTagIndex != -1)
+        ComboBox_SetCurSel(hWndChild, ReparseTagIndex);
+
+    // Set the substitute and printable name
+    SetDlgItemText(hDlg, IDC_SUBST_NAME, szSubstName);
+    SetDlgItemText(hDlg, IDC_PRINT_NAME, szPrintName);
+*/
 }
 
 static int OnHardlinkCreate(HWND hDlg)
@@ -718,32 +1177,30 @@ static int OnHardlinkDelete(HWND hDlg)
 
 static int OnReparseCreate(HWND hDlg)
 {
-    PREPARSE_DATA_BUFFER pReparseData = NULL;
+    PREPARSE_DATA_BUFFER ReparseData;
+    TFileTestData * pData = GetDialogData(hDlg);
     OBJECT_ATTRIBUTES ObjAttr;
     IO_STATUS_BLOCK IoStatus;
     UNICODE_STRING FileName;
     NTSTATUS Status;
     HANDLE hReparse = NULL;
     TCHAR szReparseName[MAX_PATH];
-    TCHAR szTargetName[MAX_PATH];
     ULONG CreateOptions = FILE_SYNCHRONOUS_IO_ALERT | FILE_OPEN_REPARSE_POINT;
-    ULONG FileAttributes;
-    ULONG Length = 0;
 
     // Get the name of the reparse point
     GetDlgItemText(hDlg, IDC_REPARSE, szReparseName, _maxchars(szReparseName));
-    GetDlgItemText(hDlg, IDC_REPARSE_TARGET, szTargetName, _maxchars(szTargetName));
+    ReparseData = pData->ReparseData;
 
-    // Verify if the reparse point dir/file exists
-    FileAttributes = GetFileAttributes(szTargetName);
-    if(FileAttributes != INVALID_FILE_ATTRIBUTES && (FileAttributes & FILE_ATTRIBUTE_DIRECTORY))
-        CreateOptions |= FILE_DIRECTORY_FILE;
-
-    // Open the reparse point
+    // Prepare the name of the reparse point
     InitializeObjectAttributes(&ObjAttr, &FileName, OBJ_CASE_INSENSITIVE, NULL, NULL);
     Status = FileNameToUnicodeString(&FileName, szReparseName);
     if(NT_SUCCESS(Status))
     {
+        // Get the name of the target. If it doesn't exist, we create new
+        if(ReparseTargetIsDirectory(ReparseData))
+            CreateOptions |= FILE_DIRECTORY_FILE;
+
+        // Create/open the reparse point
         Status = NtCreateFile(&hReparse,
                                GENERIC_WRITE | SYNCHRONIZE,
                               &ObjAttr,
@@ -755,13 +1212,6 @@ static int OnReparseCreate(HWND hDlg)
                                CreateOptions,
                                NULL,
                                0);
-        FreeFileNameString(&FileName);
-    }
-
-    // Set the reparse point
-    if(NT_SUCCESS(Status))
-    {
-        Status = Dlg2ReparseData(hDlg, &pReparseData, &Length);
         if(NT_SUCCESS(Status))
         {
             // Fire the IOCTL
@@ -771,15 +1221,15 @@ static int OnReparseCreate(HWND hDlg)
                                      NULL,
                                     &IoStatus,
                                      FSCTL_SET_REPARSE_POINT,
-                                     pReparseData,
-                                     Length,
+                                     ReparseData,
+                                     GetTotalDataLength(ReparseData),
                                      NULL,
                                      0);
-
-            HeapFree(g_hHeap, 0, pReparseData);
+            // Close the handle
+            NtClose(hReparse);
         }
 
-        NtClose(hReparse);
+        FreeFileNameString(&FileName);
     }
 
     SetResultInfo(hDlg, Status);
@@ -788,37 +1238,32 @@ static int OnReparseCreate(HWND hDlg)
 
 static int OnReparseQuery(HWND hDlg)
 {
-    PREPARSE_DATA_BUFFER pReparseData = NULL;
+    PREPARSE_DATA_BUFFER ReparseData;
+    TFileTestData * pData = GetDialogData(hDlg);
     OBJECT_ATTRIBUTES ObjAttr;
     IO_STATUS_BLOCK IoStatus;
     UNICODE_STRING FileName;
     NTSTATUS Status;
     HANDLE hFile = NULL;
     TCHAR szReparseName[MAX_PATH];
-    ULONG Length = 0x1000;
 
     // Get the name of the reparse point
     GetDlgItemText(hDlg, IDC_REPARSE, szReparseName, _maxchars(szReparseName));
+    ReparseData = pData->ReparseData;
 
     // Open the reparse point
     InitializeObjectAttributes(&ObjAttr, &FileName, OBJ_CASE_INSENSITIVE, NULL, NULL);
     Status = FileNameToUnicodeString(&FileName, szReparseName);
     if(NT_SUCCESS(Status))
     {
+        // Open the reparse point
         Status = NtOpenFile(&hFile,
                              FILE_READ_ATTRIBUTES,
                             &ObjAttr,
                             &IoStatus,
                              FILE_SHARE_READ | FILE_SHARE_WRITE,
                              FILE_OPEN_REPARSE_POINT);
-        FreeFileNameString(&FileName);
-    }
-
-    if(NT_SUCCESS(Status))
-    {
-        // Allocate buffer for the reparse data
-        pReparseData = (PREPARSE_DATA_BUFFER)HeapAlloc(g_hHeap, HEAP_ZERO_MEMORY, Length);
-        if(pReparseData != NULL)
+        if(NT_SUCCESS(Status))
         {
             // Query the reparse point 
             Status = NtFsControlFile(hFile, 
@@ -829,21 +1274,17 @@ static int OnReparseQuery(HWND hDlg)
                                      FSCTL_GET_REPARSE_POINT,
                                      NULL,
                                      0,
-                                     pReparseData,
-                                     Length);
-            if(NT_SUCCESS(Status))
-            {
-                ReparseData2Dlg(hDlg, pReparseData);
-            }
-            HeapFree(g_hHeap, 0, pReparseData);
+                                     pData->ReparseData,
+                                     pData->cbReparseData);
+            // Update the view
+            PostMessage(hDlg, WM_UPDATE_VIEW, 0, 0);
+            NtClose(hFile);
         }
-        else
-        {
-            Status = STATUS_INSUFFICIENT_RESOURCES;
-        }
-        NtClose(hFile);
+
+        FreeFileNameString(&FileName);
     }
 
+    // Show the result to the dialog
     SetResultInfo(hDlg, Status);
     return TRUE;
 }
@@ -868,15 +1309,6 @@ static int OnReparseDelete(HWND hDlg)
     }
 
     SetResultInfo(hDlg, Status);
-    return TRUE;
-}
-
-static int OnSubstNameKillFocus(HWND hDlg)
-{
-    TCHAR szWindowText[MAX_PATH];
-
-    GetDlgItemText(hDlg, IDC_SUBST_NAME, szWindowText, _maxchars(szWindowText));
-    SetDlgItemText(hDlg, IDC_PRINT_NAME, szWindowText);
     return TRUE;
 }
 
@@ -915,15 +1347,10 @@ static int OnCommand(HWND hDlg, UINT nNotify, UINT nIDCtrl)
         }
     }
 
-    if(nNotify == EN_KILLFOCUS && nIDCtrl == IDC_SUBST_NAME)
-    {
-        OnSubstNameKillFocus(hDlg);
-    }
-
     return FALSE;
 }
 
-static int OnNotify(HWND hDlg, NMHDR * pNMHDR)
+static int OnNotify(HWND hDlg, LPNMHDR pNMHDR)
 {
     switch(pNMHDR->code)
     {
@@ -932,6 +1359,15 @@ static int OnNotify(HWND hDlg, NMHDR * pNMHDR)
 
         case PSN_KILLACTIVE:
             return OnKillActive(hDlg);
+
+        case TVN_BEGINLABELEDIT:
+            return OnBeginLabelEdit(hDlg, (LPNMTVDISPINFO)pNMHDR);
+
+        case TVN_ENDLABELEDIT:
+            return OnEndLabelEdit(hDlg, (LPNMTVDISPINFO)pNMHDR);
+
+        case NM_DBLCLK:
+            return OnDoubleClick(hDlg, pNMHDR);
     }
     return FALSE;
 }
@@ -954,6 +1390,10 @@ INT_PTR CALLBACK PageProc10(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
         case WM_SHOW_HARDLINKS:
             OnShowHardlinks(hDlg);
             return FALSE;
+
+        case WM_UPDATE_VIEW:
+            OnUpdateView(hDlg);
+            return TRUE;        
 
         case WM_COMMAND:
             return OnCommand(hDlg, HIWORD(wParam), LOWORD(wParam));

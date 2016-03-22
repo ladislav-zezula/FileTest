@@ -44,7 +44,7 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
         nIndex = ComboBox_AddString(hCombo, pFlags->szFlagText);
         ComboBox_SetItemData(hCombo, nIndex, pFlags->dwValue);
 
-        if(IS_FLAG_SET(pFlags, pData->dwFlags))
+        if(pFlags->dwValue == pData->dwFlags)
             nSelect = nIndex;
     }
 

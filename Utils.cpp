@@ -559,47 +559,55 @@ static VOID CALLBACK BlinkTimerProc(HWND hDlg, UINT uMsg, UINT_PTR idEvent, DWOR
     }
 }
 
+HWND AttachIconToEdit(HWND hDlg, HWND hWndChild, UINT nIDIcon)
+{
+    HICON hIcon;
+    POINT pt;
+    HWND hWndBlink = NULL;
+    RECT rect;
+
+    hIcon = (HICON)LoadImage(g_hInst, MAKEINTRESOURCE(nIDIcon), IMAGE_ICON, 16, 16, LR_SHARED);
+    if(hIcon != NULL)
+    {
+        // Get the position of the edit box window
+        GetWindowRect(hWndChild, &rect);
+        pt.x = rect.left;
+        pt.y = rect.top;
+        ScreenToClient(hDlg, &pt);
+        pt.x = pt.x - 18;
+        pt.y = pt.y + (rect.bottom - rect.top - 16) / 2;
+
+        // Create the window for icon
+        hWndBlink = CreateWindowEx(WS_EX_NOPARENTNOTIFY,
+                                   WC_STATIC,
+                                   NULL,
+                                   WS_CHILD | WS_VISIBLE | SS_ICON,
+                                   pt.x, pt.y, 18, 18,
+                                   hDlg,
+                                   NULL,
+                                   g_hInst,
+                                   NULL);
+        if(hWndBlink != NULL)
+        {
+            // Apply the icon to the icon window
+            SendMessage(hWndBlink, STM_SETICON, (WPARAM)hIcon, 0);
+        }
+    }
+
+    return hWndBlink;
+}
+
 static void CreateBlinkingIcon(HWND hDlg, HWND hWndChild, int nSeverity)
 {
     TFileTestData * pData = GetDialogData(hDlg);
-    HICON hIcon = NULL;
-    POINT pt;
     HWND hWndBlink;
-    RECT rect;
     UINT IconSet[] = {IDI_ICON_INFORMATION, IDI_ICON_ERROR, IDI_ICON_WAIT};
 
     // If there is already a blinker timer, destroy it
     DeleteBlinkTimer(hDlg);
 
-    // Get the appropriate icon
-    assert(nSeverity < _countof(IconSet));
-    hIcon = (HICON)LoadImage(g_hInst, MAKEINTRESOURCE(IconSet[nSeverity]), IMAGE_ICON, 16, 16, LR_SHARED);
-    if(hIcon == NULL)
-        return;
-
-    // Get the position of the child window
-    GetWindowRect(hWndChild, &rect);
-    pt.x = rect.left;
-    pt.y = rect.top;
-    ScreenToClient(hDlg, &pt);
-    pt.x = pt.x - 18;
-    pt.y = pt.y + (rect.bottom - rect.top - 16) / 2;
-
-    // Create the window for icon
-    hWndBlink = CreateWindowEx(WS_EX_NOPARENTNOTIFY,
-                               WC_STATIC,
-                               NULL,
-                               WS_CHILD | WS_VISIBLE | SS_ICON,
-                               pt.x, pt.y, 18, 18,
-                               hDlg,
-                               NULL,
-                               g_hInst,
-                               NULL);
-    if(hWndBlink == NULL)
-        return;
-
-    // Apply the icon to the icon window
-    SendMessage(hWndBlink, STM_SETICON, (WPARAM)hIcon, 0);
+    // Create the icon, left-attached to the edit field
+    hWndBlink = AttachIconToEdit(hDlg, hWndChild, IconSet[nSeverity]);
 
     // Create timer for hiding the window
     pData->BlinkTimer = SetTimer(hDlg, WM_TIMER_BLINK, 800, BlinkTimerProc);
