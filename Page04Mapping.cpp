@@ -307,19 +307,19 @@ static int OnKillActive(HWND hDlg)
 
 static int OnDesiredAccessBrowse(HWND hDlg)
 {
-    FlagsDialog(hDlg, IDC_DESIRED_ACCESS, IDS_DESIRED_ACCESS, DesiredAccessValues);
+    FlagsDialog_OnControl(hDlg, IDC_DESIRED_ACCESS, IDS_DESIRED_ACCESS, DesiredAccessValues);
     return TRUE;
 }
 
 static int OnAllocAttributesBrowse(HWND hDlg)
 {
-    FlagsDialog(hDlg, IDC_ALLOCATION_ATTRIBUTES, IDS_ALLOCATION_ATTRIBUTES, AllocationAttributesValues);
+    FlagsDialog_OnControl(hDlg, IDC_ALLOCATION_ATTRIBUTES, IDS_ALLOCATION_ATTRIBUTES, AllocationAttributesValues);
     return TRUE;
 }
 
 static int OnAllocTypeBrowse(HWND hDlg)
 {
-    FlagsDialog(hDlg, IDC_ALLOCATION_TYPE, IDS_ALLOCATION_TYPE, AllocationTypeValues);
+    FlagsDialog_OnControl(hDlg, IDC_ALLOCATION_TYPE, IDS_ALLOCATION_TYPE, AllocationTypeValues);
     return TRUE;
 }
 

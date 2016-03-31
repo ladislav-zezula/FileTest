@@ -282,19 +282,19 @@ static int OnBrowseTemplateClick(HWND hDlg)
 
 static int OnDesiredAccessClick(HWND hDlg)
 {
-    FlagsDialog(hDlg, IDC_DESIRED_ACCESS, IDS_DESIRED_ACCESS, DesiredAccessValues);
+    FlagsDialog_OnControl(hDlg, IDC_DESIRED_ACCESS, IDS_DESIRED_ACCESS, DesiredAccessValues);
     return TRUE;
 }
 
 static int OnFileAttributesClick(HWND hDlg)
 {
-    FlagsDialog2(hDlg, IDD_FLAGS_AND_ATTRS, IDC_FILE_ATTRIBUTES, FileAttributesValues);
+    FlagsDialog_PreArranged(hDlg, IDD_FLAGS_AND_ATTRS, IDC_FILE_ATTRIBUTES, FileAttributesValues);
     return TRUE;
 }
 
 static int OnShareAccessClick(HWND hDlg)
 {
-    FlagsDialog(hDlg, IDC_SHARE_ACCESS, IDS_SHARE_ACCESS, ShareAccessValues);
+    FlagsDialog_OnControl(hDlg, IDC_SHARE_ACCESS, IDS_SHARE_ACCESS, ShareAccessValues);
     return TRUE;
 }
 

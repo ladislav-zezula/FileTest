@@ -2447,4 +2447,3 @@ void VerifyNtStatusTable()
 }
 */
 #endif  // _DEBUG
-

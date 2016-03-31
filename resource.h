@@ -29,7 +29,7 @@
 #define IDI_ICON_INFORMATION            127
 #define IDD_EAS_EDITOR                  128
 #define IDR_DATA_PATTERN                129
-#define IDD_VALUES_DIALOG               130
+#define IDD_VALUES_DIALOG_OLD           130
 #define IDD_PRIVILEGES                  131
 #define IDD_FILE_TEST                   132
 #define IDD_OBJECT_ID_MORE              133
@@ -45,7 +45,13 @@
 #define IDR_OPLOCK_PRE_WIN7             141
 #define IDD_DIRECTORY_ACTION1           141
 #define IDD_FILE_ACTION                 141
+#define IDD_FLAGS_DIALOG1               142
+#define IDD_VALUES_DIALOG               142
 #define IDI_RIGHT_ARROW                 143
+#define IDD_HELP_ABOUT1                 143
+#define IDD_OBJECT_GUID_HELP            143
+#define IDR_ACL_TYPE_MENU               144
+#define IDS_INTEGRITY_LEVEL             145
 #define IDC_FILE_ATTRIBUTE_READONLY     800
 #define IDC_FILE_ATTRIBUTE_HIDDEN       801
 #define IDC_FILE_ATTRIBUTE_SYSTEM       802
@@ -356,6 +362,7 @@
 #define IDC_SIMPLE_DELETE               1223
 #define IDC_FORCED_DELETE               1224
 #define IDC_REPARSE_DATA                1226
+#define IDC_CHILD_MUSTER                1227
 #define IDS_FLUSH_FILE_BUFFERS_TIP      4000
 #define IDS_SET_SPARSE_TIP              4001
 #define IDS_OPLOCK_BROKE                4002
@@ -423,6 +430,7 @@
 #define IDS_RELATIVE_FILE2              4068
 #define IDS_CHOOSE_REPARSE_TAG          4068
 #define IDS_RELATIVE_FILE3              4069
+#define IDS_ACE_TYPE_NOT_SUPPORTED      4069
 #define IDS_RELATIVE_FILE_TITLE         4070
 #define IDS_DESIRED_ACCESS_RF           4071
 #define IDS_OPEN_OPTIONS_RF             4072
@@ -438,10 +446,11 @@
 #define IDS_OPLOCK_FLAGS                4082
 #define IDS_HELP_ABOUT                  4083
 #define IDS_WANT_TRIM_DATA              4084
-#define IDS_ACE_TYPE_NOT_SUPPORTED      4085
 #define IDS_COPYFILE_FLAGS              4085
 #define IDS_COPY_PROGRESS               4086
+#define IDS_ADS_ACE_MASK                4086
 #define IDS_COPY_CANCELLED              4087
+#define IDS_CUSTOM_VALUE                4088
 #define ID_EDIT_LABEL                   40001
 #define ID_NEW_ACE_BEFORE               40008
 #define ID_NEW_ACE_AFTER                40009
@@ -465,14 +474,22 @@
 #define ID__4                           40042
 #define ID__7                           40043
 #define IDC_DELETE_ON_CLOSE             40044
+#define ID_Menu                         40052
+#define ID__SETTONULLDACL               40053
+#define IDC_SET_NULL_ACL                40054
+#define ID__SETTOEMPTYACL               40055
+#define ID__CANCEL                      40056
+#define IDC_DO_NOTHING                  40057
+#define IDC_SET_EMPTY_DACL              40058
+#define IDC_SET_EMPTY_ACL               40059
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        144
-#define _APS_NEXT_COMMAND_VALUE         40052
-#define _APS_NEXT_CONTROL_VALUE         1227
+#define _APS_NEXT_RESOURCE_VALUE        146
+#define _APS_NEXT_COMMAND_VALUE         40060
+#define _APS_NEXT_CONTROL_VALUE         1228
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

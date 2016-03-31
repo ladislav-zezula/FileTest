@@ -39,9 +39,6 @@
     <ClCompile Include="DlgSimple.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="DlgValues.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="NtStatus2Text.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -79,6 +76,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Page11Streams.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="TAceHelper.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="TDataEditor.cpp">

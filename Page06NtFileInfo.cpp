@@ -1589,11 +1589,7 @@ static int ReloadTreeViewItems(HWND hDlg, HWND hTreeView, HTREEITEM hParentItem)
     while(hItem != NULL)
     {
         // Retrieve data struct associated with treeview item
-        tvi.mask  = TVIF_PARAM;
-        tvi.hItem = hItem;
-        tvi.lParam = 0;
-        TreeView_GetItem(hTreeView, &tvi);
-        pMemberInfo = (TStructMember *)tvi.lParam;
+        pMemberInfo = (TStructMember *)TreeView_GetItemParam(hTreeView, hItem);
 
         // If any structure associated, get its text
         if(pMemberInfo != NULL)
@@ -1643,7 +1639,7 @@ static int FillStructureMembers(
             case TYPE_STRUCT:
                 assert(pMembers->pSubItems != NULL);
 
-                hSubItem = InsertTreeItem(hTreeView, hParentItem, pMembers->szMemberName, NULL);
+                hSubItem = InsertTreeItem(hTreeView, hParentItem, pMembers->szMemberName);
                 nDataLength = FillStructureMembers(hTreeView,
                                                    hSubItem,
                                                    pMembers->pSubItems,
@@ -1653,7 +1649,7 @@ static int FillStructureMembers(
 
             case TYPE_CHAINED_STRUCT:
 
-                hSubItem = InsertTreeItem(hTreeView, hParentItem, pMembers->szMemberName, NULL);
+                hSubItem = InsertTreeItem(hTreeView, hParentItem, pMembers->szMemberName);
                 nDataLength = FillChainedStructMembers(hTreeView, 
                                                        hSubItem,
                                                        pMembers->pSubItems,
@@ -1670,7 +1666,7 @@ static int FillStructureMembers(
                 pHandle = (PHANDLE)pbData;
 
                 // Insert the subitem
-                hSubItem = InsertTreeItem(hTreeView, hParentItem, pMembers->szMemberName, NULL);
+                hSubItem = InsertTreeItem(hTreeView, hParentItem, pMembers->szMemberName);
 
                 // Process the file name as non-null-terminated
                 // array of WCHARs with variable length
@@ -1679,7 +1675,7 @@ static int FillStructureMembers(
                     for(ULONG i = 0; i < *pEntryCount; i++)
                     {
                         StringCchPrintf(szBuffer, _countof(szBuffer), _T("[0x%02X]: %p"), i, *pHandle++);
-                        InsertTreeItem(hTreeView, hSubItem, szBuffer, NULL);
+                        InsertTreeItem(hTreeView, hSubItem, szBuffer);
                         nDataLength += sizeof(UINT_PTR);
                     }
                 }
@@ -1781,7 +1777,7 @@ static int FillDialogWithFileInfo(HWND hDlg, TInfoData * pInfoData, int nInfoCla
     pInfoData += nInfoClass;
     if(pInfoData->szStructName != NULL)
     {
-        hRootItem = InsertTreeItem(hTreeView, TVI_ROOT, pInfoData->szStructName, NULL);
+        hRootItem = InsertTreeItem(hTreeView, TVI_ROOT, pInfoData->szStructName);
         if(hRootItem != NULL && pInfoData->pStructMembers != NULL)
         {
             // Chained structures, like FILE_DIRECTORY_INFORMATION,
@@ -2270,12 +2266,9 @@ static int OnDoubleClick(HWND hDlg, LPNMHDR pNMHDR)
         return TRUE;
 
     // Retrieve the item's data
-    tvi.mask = TVIF_PARAM;
-    tvi.lParam = 0;
-    TreeView_GetItem(hTreeView, &tvi);
-    if(tvi.lParam == 0)
+    pMemberInfo = (TStructMember *)TreeView_GetItemParam(hTreeView, tvi.hItem);
+    if(pMemberInfo == NULL)
         return TRUE;
-    pMemberInfo = (TStructMember *)tvi.lParam;
 
     // If the member info a file ID?
     if(pMemberInfo->nDataType == TYPE_FILEID64)

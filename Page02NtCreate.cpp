@@ -399,7 +399,7 @@ static int OnBrowseFileClick(HWND hDlg)
 
 static int OnObjAtributesFlags(HWND hDlg)
 {
-    FlagsDialog(hDlg, IDC_OBJ_ATTR_FLAGS, IDS_OBJECT_ATTRIBUTES_FLAGS, ObjAttrFlagsValues);
+    FlagsDialog_OnControl(hDlg, IDC_OBJ_ATTR_FLAGS, IDS_OBJECT_ATTRIBUTES_FLAGS, ObjAttrFlagsValues);
     return TRUE;
 }
 
@@ -416,13 +416,13 @@ static int OnDesiredAccessClick(HWND hDlg)
     }
 
     // Show the dialog for desired access
-    FlagsDialog(hDlg, IDC_DESIRED_ACCESS, IDS_DESIRED_ACCESS, DesiredAccessValues);
+    FlagsDialog_OnControl(hDlg, IDC_DESIRED_ACCESS, IDS_DESIRED_ACCESS, DesiredAccessValues);
     return TRUE;
 }
 
 static int OnFileAttributesClick(HWND hDlg)
 {
-    FlagsDialog(hDlg, IDC_FILE_ATTRIBUTES, IDS_FILE_ATTRIBUTES, FileAttributesValues);
+    FlagsDialog_OnControl(hDlg, IDC_FILE_ATTRIBUTES, IDS_FILE_ATTRIBUTES, FileAttributesValues);
     return TRUE;
 }
 
@@ -439,7 +439,7 @@ static int OnShareAccessClick(HWND hDlg)
     }
 
     // Show the dialog for desired access
-    FlagsDialog(hDlg, IDC_SHARE_ACCESS, IDS_SHARE_ACCESS, ShareAccessValues);
+    FlagsDialog_OnControl(hDlg, IDC_SHARE_ACCESS, IDS_SHARE_ACCESS, ShareAccessValues);
     return TRUE;
 }
 
@@ -456,7 +456,7 @@ static int OnCreateOptionsClick(HWND hDlg)
     }
 
     // Show the dialog for desired access
-    FlagsDialog(hDlg, IDC_CREATE_OPTIONS, IDS_CREATE_OPTIONS, CreateOptionsValues);
+    FlagsDialog_OnControl(hDlg, IDC_CREATE_OPTIONS, IDS_CREATE_OPTIONS, CreateOptionsValues);
     return TRUE;
 }
 

@@ -87,8 +87,30 @@
 #define TokenIntegrityLevel        (TOKEN_INFORMATION_CLASS)0x19
 #endif	// TokenElevationType
 
+#ifndef ADS_RIGHT_DELETE
+#define ADS_RIGHT_DS_CREATE_CHILD           0x1
+#define ADS_RIGHT_DS_DELETE_CHILD           0x2
+#define ADS_RIGHT_ACTRL_DS_LIST     	    0x4
+#define ADS_RIGHT_DS_SELF           	    0x8
+#define ADS_RIGHT_DS_READ_PROP      	    0x10
+#define ADS_RIGHT_DS_WRITE_PROP     	    0x20
+#define ADS_RIGHT_DS_DELETE_TREE            0x40
+#define ADS_RIGHT_DS_LIST_OBJECT            0x80
+#define ADS_RIGHT_DS_CONTROL_ACCESS         0x100
+#define ADS_RIGHT_DELETE            	    0x10000
+#define ADS_RIGHT_READ_CONTROL       	    0x20000
+#define ADS_RIGHT_WRITE_DAC         	    0x40000
+#define ADS_RIGHT_WRITE_OWNER               0x80000
+#define ADS_RIGHT_SYNCHRONIZE               0x100000
+#define ADS_RIGHT_ACCESS_SYSTEM_SECURITY    0x1000000
+#define ADS_RIGHT_GENERIC_READ              0x80000000
+#define ADS_RIGHT_GENERIC_WRITE             0x40000000
+#define ADS_RIGHT_GENERIC_EXECUTE           0x20000000
+#define ADS_RIGHT_GENERIC_ALL               0x10000000
+#endif
+
 //-----------------------------------------------------------------------------
-// Token definitions  (not included in VS 2005 SDK)
+// Mandatory label definitions (not included in VS 2005 SDK)
 
 #ifndef LABEL_SECURITY_INFORMATION
 #define LABEL_SECURITY_INFORMATION       (0x00000010L)
@@ -99,8 +121,32 @@
 #define SE_GROUP_INTEGRITY_ENABLED         (0x00000040L)
 #endif // SE_GROUP_INTEGRITY
 
-#ifndef SYSTEM_MANDATORY_LABEL_ACE_TYPE
+#ifndef ACCESS_ALLOWED_COMPOUND_ACE_TYPE
+#define ACCESS_ALLOWED_COMPOUND_ACE_TYPE        (0x4)
+#define ACCESS_MAX_MS_V3_ACE_TYPE               (0x4)
+#endif
+
+#ifndef ACCESS_MIN_MS_OBJECT_ACE_TYPE
+#define ACCESS_MIN_MS_OBJECT_ACE_TYPE           (0x5)
+#define ACCESS_ALLOWED_OBJECT_ACE_TYPE          (0x5)
+#define ACCESS_DENIED_OBJECT_ACE_TYPE           (0x6)
+#define SYSTEM_AUDIT_OBJECT_ACE_TYPE            (0x7)
+#define SYSTEM_ALARM_OBJECT_ACE_TYPE            (0x8)
+#define ACCESS_MAX_MS_OBJECT_ACE_TYPE           (0x8)
+#define ACCESS_MAX_MS_V4_ACE_TYPE               (0x8)
+#endif
+
+#ifndef ACCESS_ALLOWED_CALLBACK_ACE_TYPE
+#define ACCESS_ALLOWED_CALLBACK_ACE_TYPE        (0x9)
+#define ACCESS_DENIED_CALLBACK_ACE_TYPE         (0xA)
+#define ACCESS_ALLOWED_CALLBACK_OBJECT_ACE_TYPE (0xB)
+#define ACCESS_DENIED_CALLBACK_OBJECT_ACE_TYPE  (0xC)
+#define SYSTEM_AUDIT_CALLBACK_ACE_TYPE          (0xD)
+#define SYSTEM_ALARM_CALLBACK_ACE_TYPE          (0xE)
+#define SYSTEM_AUDIT_CALLBACK_OBJECT_ACE_TYPE   (0xF)
+#define SYSTEM_ALARM_CALLBACK_OBJECT_ACE_TYPE   (0x10)
 #define SYSTEM_MANDATORY_LABEL_ACE_TYPE         (0x11)
+#define ACCESS_MAX_MS_V5_ACE_TYPE               (0x11)
 #endif
 
 // Access mask for the mandatory label ACE
@@ -112,7 +158,9 @@
 #define SYSTEM_MANDATORY_LABEL_VALID_MASK (SYSTEM_MANDATORY_LABEL_NO_WRITE_UP   | \
                                            SYSTEM_MANDATORY_LABEL_NO_READ_UP    | \
                                            SYSTEM_MANDATORY_LABEL_NO_EXECUTE_UP)
+#endif  // SYSTEM_MANDATORY_LABEL_NO_WRITE_UP
 
+#ifndef SECURITY_MANDATORY_LABEL_AUTHORITY
 #define SECURITY_MANDATORY_LABEL_AUTHORITY          {0,0,0,0,0,16}
 #define SECURITY_MANDATORY_UNTRUSTED_RID            (0x00000000L)
 #define SECURITY_MANDATORY_LOW_RID                  (0x00001000L)
@@ -120,20 +168,13 @@
 #define SECURITY_MANDATORY_HIGH_RID                 (0x00003000L)
 #define SECURITY_MANDATORY_SYSTEM_RID               (0x00004000L)
 #define SECURITY_MANDATORY_PROTECTED_PROCESS_RID    (0x00005000L)
+#endif  // SECURITY_MANDATORY_LABEL_AUTHORITY
 
-// Structure of mandatory label ACE
-typedef struct _SYSTEM_MANDATORY_LABEL_ACE {
-    ACE_HEADER Header;
-    ACCESS_MASK Mask;
-    DWORD SidStart;
-} SYSTEM_MANDATORY_LABEL_ACE, *PSYSTEM_MANDATORY_LABEL_ACE;
+//-----------------------------------------------------------------------------
+// Definitions for token mandatory label
 
-//
-// The SID in the SYSTEM_MANDATORY_LABEL_ACE has the following format:
-//
-// - IdentifierAuthority is set to SECURITY_MANDATORY_LABEL_AUTHORITY
-// - The last subauthority is set to one of the SECURITY_MANDATORY_XXXX values
-//           
+#ifndef ACCESS_MAX_MS_V5_ACE_TYPE
+
 typedef struct _TOKEN_MANDATORY_LABEL
 {
     SID_AND_ATTRIBUTES Label;
@@ -149,7 +190,134 @@ typedef enum _TOKEN_ELEVATION_TYPE {
 typedef struct _TOKEN_ELEVATION {
     DWORD TokenIsElevated;
 } TOKEN_ELEVATION, *PTOKEN_ELEVATION;
-#endif // SYSTEM_MANDATORY_LABEL_NO_WRITE_UP
+
+#endif  // ACCESS_MAX_MS_V5_ACE_TYPE
+
+//-----------------------------------------------------------------------------
+// Additional ACE types version 4 (not included in VS 2005 SDK)
+
+#ifndef ACCESS_MAX_MS_V4_ACE_TYPE
+
+typedef struct _ACCESS_ALLOWED_OBJECT_ACE {
+    ACE_HEADER Header;
+    ACCESS_MASK Mask;
+    DWORD Flags;
+    GUID ObjectType;
+    GUID InheritedObjectType;
+    DWORD SidStart;
+} ACCESS_ALLOWED_OBJECT_ACE, *PACCESS_ALLOWED_OBJECT_ACE;
+
+typedef struct _ACCESS_DENIED_OBJECT_ACE {
+    ACE_HEADER Header;
+    ACCESS_MASK Mask;
+    DWORD Flags;
+    GUID ObjectType;
+    GUID InheritedObjectType;
+    DWORD SidStart;
+} ACCESS_DENIED_OBJECT_ACE, *PACCESS_DENIED_OBJECT_ACE;
+
+typedef struct _SYSTEM_AUDIT_OBJECT_ACE {
+    ACE_HEADER Header;
+    ACCESS_MASK Mask;
+    DWORD Flags;
+    GUID ObjectType;
+    GUID InheritedObjectType;
+    DWORD SidStart;
+} SYSTEM_AUDIT_OBJECT_ACE, *PSYSTEM_AUDIT_OBJECT_ACE;
+
+typedef struct _SYSTEM_ALARM_OBJECT_ACE {
+    ACE_HEADER Header;
+    ACCESS_MASK Mask;
+    DWORD Flags;
+    GUID ObjectType;
+    GUID InheritedObjectType;
+    DWORD SidStart;
+} SYSTEM_ALARM_OBJECT_ACE, *PSYSTEM_ALARM_OBJECT_ACE;
+#endif
+
+//-----------------------------------------------------------------------------
+// Additional ACE types version 5 (not included in VS 2005 SDK)
+
+#ifndef ACCESS_MAX_MS_V5_ACE_TYPE
+
+typedef struct _ACCESS_ALLOWED_CALLBACK_ACE {
+    ACE_HEADER Header;
+    ACCESS_MASK Mask;
+    DWORD SidStart;
+    // Opaque resouce manager specific data
+} ACCESS_ALLOWED_CALLBACK_ACE, *PACCESS_ALLOWED_CALLBACK_ACE;
+
+typedef struct _ACCESS_DENIED_CALLBACK_ACE {
+    ACE_HEADER Header;
+    ACCESS_MASK Mask;
+    DWORD SidStart;
+    // Opaque resouce manager specific data
+} ACCESS_DENIED_CALLBACK_ACE, *PACCESS_DENIED_CALLBACK_ACE;
+
+typedef struct _ACCESS_ALLOWED_CALLBACK_OBJECT_ACE {
+    ACE_HEADER Header;
+    ACCESS_MASK Mask;
+    DWORD Flags;
+    GUID ObjectType;
+    GUID InheritedObjectType;
+    DWORD SidStart;
+    // Opaque resouce manager specific data
+} ACCESS_ALLOWED_CALLBACK_OBJECT_ACE, *PACCESS_ALLOWED_CALLBACK_OBJECT_ACE;
+
+typedef struct _ACCESS_DENIED_CALLBACK_OBJECT_ACE {
+    ACE_HEADER Header;
+    ACCESS_MASK Mask;
+    DWORD Flags;
+    GUID ObjectType;
+    GUID InheritedObjectType;
+    DWORD SidStart;
+    // Opaque resouce manager specific data
+} ACCESS_DENIED_CALLBACK_OBJECT_ACE, *PACCESS_DENIED_CALLBACK_OBJECT_ACE;
+
+typedef struct _SYSTEM_AUDIT_CALLBACK_ACE {
+    ACE_HEADER Header;
+    ACCESS_MASK Mask;
+    DWORD SidStart;
+    // Opaque resouce manager specific data
+} SYSTEM_AUDIT_CALLBACK_ACE, *PSYSTEM_AUDIT_CALLBACK_ACE;
+
+typedef struct _SYSTEM_ALARM_CALLBACK_ACE {
+    ACE_HEADER Header;
+    ACCESS_MASK Mask;
+    DWORD SidStart;
+    // Opaque resouce manager specific data
+} SYSTEM_ALARM_CALLBACK_ACE, *PSYSTEM_ALARM_CALLBACK_ACE;
+
+typedef struct _SYSTEM_AUDIT_CALLBACK_OBJECT_ACE {
+    ACE_HEADER Header;
+    ACCESS_MASK Mask;
+    DWORD Flags;
+    GUID ObjectType;
+    GUID InheritedObjectType;
+    DWORD SidStart;
+    // Opaque resouce manager specific data
+} SYSTEM_AUDIT_CALLBACK_OBJECT_ACE, *PSYSTEM_AUDIT_CALLBACK_OBJECT_ACE;
+
+typedef struct _SYSTEM_ALARM_CALLBACK_OBJECT_ACE {
+    ACE_HEADER Header;
+    ACCESS_MASK Mask;
+    DWORD Flags;
+    GUID ObjectType;
+    GUID InheritedObjectType;
+    DWORD SidStart;
+    // Opaque resouce manager specific data
+} SYSTEM_ALARM_CALLBACK_OBJECT_ACE, *PSYSTEM_ALARM_CALLBACK_OBJECT_ACE;
+
+typedef struct _SYSTEM_MANDATORY_LABEL_ACE {
+    ACE_HEADER Header;
+    ACCESS_MASK Mask;
+    DWORD SidStart;
+} SYSTEM_MANDATORY_LABEL_ACE, *PSYSTEM_MANDATORY_LABEL_ACE;
+
+#endif  // ACCESS_MAX_MS_V5_ACE_TYPE
+
+//-----------------------------------------------------------------------------
+// Object ID definitions (not included in VS 2005 SDK)
 
 typedef BOOL (WINAPI * ADDMANDATORYACE)(PACL pAcl,
                                         DWORD dwAceRevision,

@@ -415,10 +415,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\DlgValues.cpp"
-				>
-			</File>
-			<File
 				RelativePath=".\FileTest.rc"
 				>
 			</File>
@@ -472,6 +468,10 @@
 			</File>
 			<File
 				RelativePath=".\Page11Streams.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\TAceHelper.cpp"
 				>
 			</File>
 			<File
@@ -542,6 +542,10 @@
 			</File>
 			<File
 				RelativePath=".\resource.h"
+				>
+			</File>
+			<File
+				RelativePath=".\TAceHelper.h"
 				>
 			</File>
 			<File

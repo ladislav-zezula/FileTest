@@ -2,6 +2,11 @@
   FileTest history
   ================
 
+ Version 2.6.1.529
+
+ - Improved editor of the security descriptor
+ - Improved editor of the reparse point
+
  Version 2.6.0.524
  
  - Fixed dialog cleanup

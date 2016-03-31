@@ -86,6 +86,36 @@ static void SetTokenObjectIntegrityLevel(DWORD dwIntegrityLevel)
     FreeSid(pSid);
 }
 
+#ifdef _DEBUG
+//static TFlagInfo ReparseTags[] =
+//{
+//    FLAG_INFO_ENTRY(IO_REPARSE_TAG_MOUNT_POINT),
+//    FLAG_INFO_ENTRY(IO_REPARSE_TAG_SYMLINK),
+//    FLAG_INFO_ENTRY(IO_REPARSE_TAG_WIM),
+//    FLAG_INFO_END
+//};
+
+static void DebugCode_TEST()
+{
+    //DWORD dwValue = 0x123;
+    //
+    //ValuesDialog(NULL, &dwValue, IDS_CHOOSE_REPARSE_TAG, ReparseTags);
+    //ExitProcess(dwValue);
+
+    //{
+    //    OBJECT_ATTRIBUTES ObjAttr;
+    //    IO_STATUS_BLOCK IoStatus;
+    //    UNICODE_STRING FileName;
+
+    //    EnablePrivilege(SE_SECURITY_NAME);
+    //    EnablePrivilege(SE_TAKE_OWNERSHIP_NAME);
+    //    InitializeObjectAttributes(&ObjAttr, &FileName, 0, NULL, NULL);
+    //    RtlInitUnicodeString(&FileName, L"\\??\\y:\\WINDOWS\\$NtUninstallKB25256$");
+    //    NtCreateFile(&pData->hFile, READ_CONTROL, &ObjAttr, &IoStatus, NULL, 0, 0x07, FILE_OPEN, FILE_OPEN_REPARSE_POINT | FILE_DIRECTORY_FILE, NULL, 0);
+    //}
+}
+#endif
+
 //-----------------------------------------------------------------------------
 // WinMain
 
@@ -94,6 +124,7 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
     TFileTestData * pData;
     DWORD dwDesiredAccess = GENERIC_READ;
     DWORD dwShareAccess = FILE_SHARE_READ;
+    DWORD dwCreateOptions = 0;
     DWORD dwCopyFileFlags = 0;
     DWORD dwMoveFileFlags = 0;
     bool bAsynchronousOpen = false;
@@ -146,6 +177,10 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
             if(!_tcsnicmp(szArg, _T("ShareAccess:"), 12))
                 Text2Hex32(szArg+12, &dwShareAccess);
 
+            // Check for changed create options
+            if(!_tcsnicmp(szArg, _T("CreateOptions:"), 14))
+                Text2Hex32(szArg+14, &dwCreateOptions);
+
             if(!_tcsnicmp(szArg, _T("CopyFileFlags:"), 14))
                 Text2Hex32(szArg+14, &dwCopyFileFlags);
 
@@ -153,20 +188,14 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
                 Text2Hex32(szArg+14, &dwMoveFileFlags);
 
             // Check for asynchronous open
-            if(!_tcsnicmp(szArg, _T("AsyncOpen:"), 10))
-                Text2Bool(szArg+10, &bAsynchronousOpen);
+            if(!_tcsicmp(szArg, _T("AsyncOpen")))
+                bAsynchronousOpen = true;
         }
     }
 
     // Set default file name
     if(pData->szFileName1[0] == 0)
         StringCchCopy(pData->szFileName1, _countof(pData->szFileName1), _T("C:\\TestFile.bin"));
-
-#ifdef _DEBUG
-//  EnablePrivilege(SE_TAKE_OWNERSHIP_NAME);
-//  RemoveDirectory_DEBUG(pData->szFileName1);
-//  ExitProcess(0);
-#endif
 
     //
     // DEVELOPMENT CODE: Build the NT status table from the NTSTATUS.h
@@ -222,7 +251,7 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
     pData->dwDesiredAccess       = dwDesiredAccess;
     pData->dwFileAttributes      = FILE_ATTRIBUTE_NORMAL;
     pData->dwShareAccess         = dwShareAccess;
-    pData->dwCreateOptions       = 0;
+    pData->dwCreateOptions       = dwCreateOptions;
     pData->dwObjAttrFlags        = OBJ_CASE_INSENSITIVE;
     pData->dwMoveFileFlags       = MOVEFILE_COPY_ALLOWED;
     pData->dwOplockLevel         = OPLOCK_LEVEL_CACHE_READ | OPLOCK_LEVEL_CACHE_WRITE;
@@ -242,6 +271,10 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
     pData->dwSectAllocAttributes = SEC_COMMIT;
     pData->dwSectWin32Protect    = PAGE_READONLY;
 
+#ifdef _DEBUG
+    DebugCode_TEST();    
+#endif
+
     // Call the dialog
     FileTestDialog(NULL, pData);
 
@@ -259,6 +292,3 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
     UnloadDynamicLoadedAPIs();
     return 0;
 }
-
-void main(void)
-{}

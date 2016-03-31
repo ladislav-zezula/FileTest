@@ -218,7 +218,6 @@
     <ClCompile Include="DlgFlags.cpp" />
     <ClCompile Include="DlgPrivileges.cpp" />
     <ClCompile Include="DlgSimple.cpp" />
-    <ClCompile Include="DlgValues.cpp" />
     <ClCompile Include="NtStatus2Text.cpp" />
     <ClCompile Include="Page00Transaction.cpp" />
     <ClCompile Include="Page01Create.cpp" />
@@ -232,6 +231,7 @@
     <ClCompile Include="Page09Security.cpp" />
     <ClCompile Include="Page10Links.cpp" />
     <ClCompile Include="Page11Streams.cpp" />
+    <ClCompile Include="TAceHelper.cpp" />
     <ClCompile Include="TDataEditor.cpp" />
     <ClCompile Include="TToolTip.cpp" />
     <ClCompile Include="Utils.cpp" />

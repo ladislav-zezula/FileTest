@@ -699,35 +699,28 @@ static int OnDoubleClick(HWND hDlg, LPNMHDR pNMHDR)
 {
     PREPARSE_DATA_BUFFER ReparseData;
     TFileTestData * pData;
-    TVITEM tvi;
+    LPARAM lParam;
     ULONG ReparseTag;
 
     // Was it the tree view?
     if(pNMHDR->idFrom == IDC_REPARSE_DATA)
     {
-        // Retrieve the item
-        ZeroMemory(&tvi, sizeof(TVITEM));
-        tvi.mask = TVIF_PARAM;
-        tvi.hItem = TreeView_GetSelection(pNMHDR->hwndFrom);
-        if(tvi.hItem != NULL)
-        {
-            // Retrieve the item type
-            TreeView_GetItem(pNMHDR->hwndFrom, &tvi);
+        // Retrieve the item param
+        lParam = TreeView_GetItemParam(pNMHDR->hwndFrom, TreeView_GetSelection(pNMHDR->hwndFrom));
             
-            // If reparse tag, we can give the user a choice
-            if(tvi.lParam == ITEM_TYPE_REPARSE_TAG)
-            {
-                // Retrieve the reparse data
-                pData = GetDialogData(hDlg);
-                ReparseData = pData->ReparseData;
-                ReparseTag = ReparseData->ReparseTag;
+        // If reparse tag, we can give the user a choice
+        if(lParam == ITEM_TYPE_REPARSE_TAG)
+        {
+            // Retrieve the reparse data
+            pData = GetDialogData(hDlg);
+            ReparseData = pData->ReparseData;
+            ReparseTag = ReparseData->ReparseTag;
 
-                // Let the user choose a new reparse tak
-                if(ValuesDialog(hDlg, &ReparseTag, IDS_CHOOSE_REPARSE_TAG, ReparseTags) == IDOK)
-                {
-                    SetReparseDataTag(ReparseData, ReparseTag, pData->cbReparseData);
-                    PostMessage(hDlg, WM_UPDATE_VIEW, 0, 0);
-                }
+            // Let the user choose a new reparse tak
+            if(ValuesDialog(hDlg, &ReparseTag, IDS_CHOOSE_REPARSE_TAG, ReparseTags) == IDOK)
+            {
+                SetReparseDataTag(ReparseData, ReparseTag, pData->cbReparseData);
+                PostMessage(hDlg, WM_UPDATE_VIEW, 0, 0);
             }
         }
     }

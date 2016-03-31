@@ -123,3 +123,8 @@ INT_PTR DirectoryActionDialog(HWND hParent)
 {
     return DialogBox(g_hInst, MAKEINTRESOURCE(IDD_DIRECTORY_ACTION), hParent, DialogProc);
 }
+
+INT_PTR ObjectGuidHelpDialog(HWND hParent)
+{
+    return DialogBox(g_hInst, MAKEINTRESOURCE(IDD_OBJECT_GUID_HELP), hParent, DialogProc);
+}

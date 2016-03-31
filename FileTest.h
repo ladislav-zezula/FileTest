@@ -30,6 +30,7 @@
 #include "ntstatus.h"
 #include "ntdll.h"
 #include "Utils.h"
+#include "TAceHelper.h"
 #include "TAnchors.h"
 #include "TToolTip.h"
 #include "TDataEditor.h"
@@ -66,6 +67,7 @@
 #define WM_START_WORK               (WM_USER + 0x1005)
 #define WM_WORK_COMPLETE            (WM_USER + 0x1006)
 #define WM_UPDATE_VIEW              (WM_USER + 0x1007)
+#define WM_DEFER_ITEM_TEXT          (WM_USER + 0x1008)  // WPARAM = hItem, LPARAM = LPTSTR
 
 #define STATUS_INVALID_DATA_FORMAT  0xC1110001
 #define STATUS_CANNOT_EDIT_THIS     0xC1110002
@@ -423,8 +425,13 @@ LPTSTR FindNextPathSeparator(LPTSTR szPathPart);
 ULONG GetEaEntrySize(PFILE_FULL_EA_INFORMATION EaInfo);
 
 DWORD TreeView_GetChildCount(HWND hTreeView, HTREEITEM hItem);
-HTREEITEM InsertTreeItem(HWND hTreeView, HTREEITEM hParentItem, HTREEITEM hInsertAfter, LPCTSTR szText, PVOID pParam);
-HTREEITEM InsertTreeItem(HWND hTreeView, HTREEITEM hParentItem, LPCTSTR szText, PVOID pParam);
+LPARAM TreeView_GetItemParam(HWND hTreeView, HTREEITEM hItem);
+LPARAM TreeView_DeferItemText(HWND hTreeView, HTREEITEM hItem);
+HTREEITEM TreeView_SetTreeItem(HWND hTreeView, HTREEITEM hItem, LPCTSTR szText, LPARAM lParam);
+HTREEITEM InsertTreeItem(HWND hTreeView, HTREEITEM hParent, HTREEITEM hInsertAfter, LPCTSTR szText, PVOID pParam);
+HTREEITEM InsertTreeItem(HWND hTreeView, HTREEITEM hParent, LPCTSTR szText, PVOID pParam);
+HTREEITEM InsertTreeItem(HWND hTreeView, HTREEITEM hParent, LPCTSTR szText, LPARAM lParam = 0);
+void TreeView_DeleteChildren(HWND hTreeView, HTREEITEM hParent);
 
 BOOL GetTokenElevation(PBOOL pbElevated);
 BOOL GetTokenVirtualizationEnabled(PBOOL pbEnabled);
@@ -445,6 +452,8 @@ NTSTATUS ConvertToNtName(HWND hDlg, UINT nIDEdit);
 int      ConvertToWin32Name(HWND hDlg, UINT nIDEdit);
 
 LPTSTR FlagsToString(TFlagInfo * pFlags, LPTSTR szBuffer, size_t cchBuffer, DWORD dwFlags, bool bNewLineSeparated);
+LPTSTR NamedValueToString(TFlagInfo * pFlags, LPTSTR szBuffer, size_t cchBuffer, LPCTSTR szFormat, DWORD dwFlags);
+LPTSTR GuidValueToString(LPTSTR szBuffer, size_t cchBuffer, LPCTSTR szFormat, LPGUID PtrGuid);
 
 void FileIDToString(TFileTestData * pData, ULONGLONG FileId, LPTSTR szBuffer);
 void ObjectIDToString(PBYTE pbObjId, LPCTSTR szFileName, LPTSTR szObjectID);
@@ -455,6 +464,8 @@ int ExecuteContextMenuForDlgItem(HWND hDlg, UINT nIDCtrl, UINT nIDMenu);
 
 NTSTATUS NtDeleteReparsePoint(HANDLE ObjectHandle);
 NTSTATUS NtDeleteReparsePoint(POBJECT_ATTRIBUTES PtrObjectAttributes);
+
+BOOL WINAPI MyAddMandatoryAce(PACL pAcl, DWORD dwAceRevision, DWORD dwAceFlags, DWORD MandatoryPolicy, PSID pLabelSid);
 
 //-----------------------------------------------------------------------------
 // Conversion of FILETIME to text and back
@@ -481,13 +492,14 @@ BOOL GetSupportedDateTimeFormats(
 INT_PTR HelpAboutDialog(HWND hParent);
 INT_PTR ValuesDialog(HWND hWndParent, PDWORD pdwValue, UINT nIDTitle, TFlagInfo * pFlags);
 INT_PTR FlagsDialog(HWND hWndParent, LPDWORD pdwFlags, UINT nIDTitle, TFlagInfo * pFlags);
-INT_PTR FlagsDialog(HWND hWndParent, UINT nIDValue, UINT nIDTitle, TFlagInfo * pFlags);
-INT_PTR FlagsDialog2(HWND hWndParent, UINT nIDDialog, UINT nIDCtrl, TFlagInfo * pFlags);
+INT_PTR FlagsDialog_OnControl(HWND hWndParent, UINT nIDCtrl, UINT nIDTitle, TFlagInfo * pFlags);
+INT_PTR FlagsDialog_PreArranged(HWND hWndParent, UINT nIDDialog, UINT nIDCtrl, TFlagInfo * pFlags);
 INT_PTR EaEditorDialog(HWND hParent, PFILE_FULL_EA_INFORMATION * pEaInfo);
 INT_PTR PrivilegesDialog(HWND hParent);
 INT_PTR ObjectIDActionDialog(HWND hParent);
 INT_PTR FileActionDialog(HWND hParent);
 INT_PTR DirectoryActionDialog(HWND hParent);
+INT_PTR ObjectGuidHelpDialog(HWND hParent);
 INT_PTR CopyFileDialog(HWND hParent, TFileTestData * pData);
 
 TApcEntry * CreateApcEntry(TWindowData * pData, UINT ApcType, size_t cbApcSize);
@@ -525,9 +537,5 @@ INT_PTR CALLBACK PageProc11(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 //-----------------------------------------------------------------------------
 // Debugging functions
-
-#ifdef _DEBUG
-int RemoveDirectory_DEBUG(LPCTSTR szDirName);
-#endif
 
 #endif // __TESTFILE_H__

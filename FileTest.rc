@@ -109,8 +109,8 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 2,6,0,528
- PRODUCTVERSION 2,6,0,528
+ FILEVERSION 2,6,1,530
+ PRODUCTVERSION 2,6,1,530
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -127,13 +127,13 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Ladislav Zezula"
             VALUE "FileDescription", "Interactive File System API Test"
-            VALUE "FileVersion", "2, 6, 0, 528"
+            VALUE "FileVersion", "2, 6, 1, 530\0"
             VALUE "InternalName", "FileTest"
-            VALUE "LegalCopyright", "Copyright © 2004 - 2014 Ladislav Zezula"
+            VALUE "LegalCopyright", "Copyright © 2004 - 2016 Ladislav Zezula"
             VALUE "LegalTrademarks", "http://www.zezula.net"
             VALUE "OriginalFilename", "FileTest.exe"
             VALUE "ProductName", "FileTest"
-            VALUE "ProductVersion", "2, 6, 0, 528"
+            VALUE "ProductVersion", "2, 6, 1, 530\0"
         END
     END
     BLOCK "VarFileInfo"
@@ -192,6 +192,16 @@ BEGIN
         MENUITEM "&2. FSCTL_REQUEST_OPLOCK_LEVEL_2", IDC_REQUEST_OPLOCK_2
         MENUITEM "&3. FSCTL_REQUEST_BATCH_OPLOCK", IDC_REQUEST_BATCH_OPLOCK
         MENUITEM "&4. FSCTL_REQUEST_FILTER_OPLOCK", IDC_REQUEST_FILTER_OPLOCK
+    END
+END
+
+IDR_ACL_TYPE_MENU MENU 
+BEGIN
+    POPUP "_ACL_TYPE_MENU_"
+    BEGIN
+        MENUITEM "Set to &NULL Acl",            IDC_SET_NULL_ACL
+        MENUITEM "Set to &Empty Acl",           IDC_SET_EMPTY_ACL
+        MENUITEM "&Cancel",                     IDC_DO_NOTHING
     END
 END
 
@@ -548,7 +558,7 @@ STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSM
 FONT 8, "MS Shell Dlg", 0, 0, 0x1
 BEGIN
     GROUPBOX        "",IDC_GROUPBOX,7,4,240,27
-    CONTROL         "",IDC_CHECKBOX,"Button",BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP,13,14,226,10
+    CONTROL         "",IDC_CHILD_MUSTER,"Button",BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP,13,14,226,10
     PUSHBUTTON      "Select All",IDC_SELECT_ALL,7,39,50,14,WS_GROUP
     PUSHBUTTON      "Clear All",IDC_CLEAR_ALL,61,39,50,14
     DEFPUSHBUTTON   "OK",IDOK,197,39,50,14
@@ -585,7 +595,7 @@ BEGIN
     PUSHBUTTON      "Cancel",IDCANCEL,225,271,50,14
 END
 
-IDD_VALUES_DIALOG DIALOGEX 0, 0, 242, 92
+IDD_VALUES_DIALOG_OLD DIALOGEX 0, 0, 242, 92
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
 FONT 8, "MS Shell Dlg", 0, 0, 0x1
 BEGIN
@@ -814,6 +824,27 @@ BEGIN
     PUSHBUTTON      "Cancel",IDCANCEL,21,69,167,14
 END
 
+IDD_VALUES_DIALOG DIALOGEX 0, 0, 254, 60
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    GROUPBOX        "",IDC_GROUPBOX,7,4,240,27
+    CONTROL         "",IDC_CHILD_MUSTER,"Button",BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,13,14,226,10
+    DEFPUSHBUTTON   "OK",IDOK,197,39,50,14,WS_GROUP
+END
+
+IDD_OBJECT_GUID_HELP DIALOGEX 0, 0, 224, 67
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "List of Object Guids"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    GROUPBOX        "",-1,7,4,209,37
+    LTEXT           "For more information about object GUIDs, see",IDC_VERSION,13,13,167,8
+    CONTROL         "https://msdn.microsoft.com/en-us/library/cc223512.aspx",IDC_FILETEST_WEB,
+                    "Button",BS_OWNERDRAW | BS_LEFT | WS_TABSTOP,13,24,198,9
+    DEFPUSHBUTTON   "Close",IDOK,167,46,50,14
+END
+
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -943,7 +974,7 @@ BEGIN
         BOTTOMMARGIN, 285
     END
 
-    IDD_VALUES_DIALOG, DIALOG
+    IDD_VALUES_DIALOG_OLD, DIALOG
     BEGIN
         LEFTMARGIN, 7
         RIGHTMARGIN, 235
@@ -1021,6 +1052,22 @@ BEGIN
         RIGHTMARGIN, 203
         TOPMARGIN, 7
         BOTTOMMARGIN, 95
+    END
+
+    IDD_VALUES_DIALOG, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 247
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 53
+    END
+
+    IDD_OBJECT_GUID_HELP, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 217
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 60
     END
 END
 #endif    // APSTUDIO_INVOKED
@@ -1179,6 +1226,7 @@ BEGIN
     IDS_ENTER_DIRECTORY_NAME "NULL <Enter a directory name>"
     IDS_RELATIVE_FILE_HELP  "The relative file (OBJECT_ATTRIBUTES::RootDirectory) will be open with the following options:\n\nDesiredAcces: \t%08X (%s)\nShare Access: \t%08X (%s)\nOpenOptions:\t%08X (%s)\n\nHold Shift and click the appropriate button to change."
     IDS_CHOOSE_REPARSE_TAG  "Choose a new reparse tag value"
+    IDS_ACE_TYPE_NOT_SUPPORTED "This ACE is not supported."
     IDS_RELATIVE_FILE_TITLE "Relative File"
     IDS_DESIRED_ACCESS_RF   "Desired Access (Relative File)"
     IDS_OPEN_OPTIONS_RF     "Open Options (Relative File)"
@@ -1201,7 +1249,14 @@ BEGIN
     IDS_HELP_ABOUT          "About FileTest ..."
     IDS_WANT_TRIM_DATA      "Data was pasted to the editor.\nDo you want to trim the data length?"
     IDS_COPYFILE_FLAGS      "Flags for File Copy"
+    IDS_ADS_ACE_MASK        "Ads ACE Mask"
     IDS_COPY_CANCELLED      "Cancelling ..."
+    IDS_CUSTOM_VALUE        "Custom Value"
+END
+
+STRINGTABLE 
+BEGIN
+    IDS_INTEGRITY_LEVEL     "Integrity Level"
 END
 
 #endif    // English (U.S.) resources

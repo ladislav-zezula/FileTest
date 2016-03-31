@@ -151,56 +151,20 @@ static NTSTATUS NtTakeOwnershipObject(HANDLE ObjectHandle)
     return Status;
 }
 
-// Sets the access-control list for a handle to "Everyone:AccessMask"
-// The handle must be open for WRITE_DAC access
-static NTSTATUS NtSetObjectAccessForEveryone(
-    IN HANDLE ObjectHandle,
-    IN ACCESS_MASK AccessMask)
+// Gives the object a NULL Dacl, granting access to everyone
+// https://technet.microsoft.com/en-us/library/cc781716%28v=ws.10%29.aspx
+static NTSTATUS NtSetObjectNullDacl(IN HANDLE ObjectHandle)
 {
-    SID_IDENTIFIER_AUTHORITY SiaEveryone = SECURITY_WORLD_SID_AUTHORITY;
     SECURITY_DESCRIPTOR sd;
     NTSTATUS Status;
-    ULONG cbAclLength = 0;
-    PSID pSidEveryone = NULL; 
-    PACL pAcl = NULL;
-
-    // Get the SID of Everyone
-    Status = RtlAllocateAndInitializeSid(&SiaEveryone, 1, 0, 0, 0, 0, 0, 0, 0, 0, &pSidEveryone);
-
-    // Allocate space for ACL
-    if(NT_SUCCESS(Status))
-    {
-        ULONG dwSidLength = RtlLengthSid(pSidEveryone);
-
-        // Create ACL for full access to the file
-        cbAclLength = sizeof(ACL) + sizeof(ACCESS_ALLOWED_ACE) + dwSidLength - sizeof(DWORD);
-        pAcl = (PACL)RtlAllocateHeap(RtlProcessHeap(), 0, cbAclLength);
-        if(pAcl == NULL)
-            Status = STATUS_INSUFFICIENT_RESOURCES;
-    }
-
-    // Create the Access control list with one ACE
-    if(NT_SUCCESS(Status))
-    {
-        Status = RtlCreateAcl(pAcl, cbAclLength, ACL_REVISION);
-    }
-
-    // Add the ACE to the ACL
-    if(NT_SUCCESS(Status))
-    {
-        Status = RtlAddAccessAllowedAce(pAcl, ACL_REVISION, AccessMask, pSidEveryone);
-    }
 
     // Initialize the blank security descriptor
-    if(NT_SUCCESS(Status))
-    {
-        Status = RtlCreateSecurityDescriptor(&sd, SECURITY_DESCRIPTOR_REVISION);
-    }
+    Status = RtlCreateSecurityDescriptor(&sd, SECURITY_DESCRIPTOR_REVISION);
 
     // Set the ACL to the security descriptor
     if(NT_SUCCESS(Status))
     {
-        Status = RtlSetDaclSecurityDescriptor(&sd, TRUE, pAcl, FALSE);
+        Status = RtlSetDaclSecurityDescriptor(&sd, TRUE, NULL, FALSE);
     }
 
     // Apply the security information to the handle
@@ -209,11 +173,6 @@ static NTSTATUS NtSetObjectAccessForEveryone(
         Status = NtSetSecurityObject(ObjectHandle, DACL_SECURITY_INFORMATION, &sd);
     }
 
-    // Free buffers
-    if(pAcl != NULL)
-        RtlFreeHeap(RtlProcessHeap(), 0, pAcl);
-    if(pSidEveryone != NULL)
-        RtlFreeSid(pSidEveryone);
     return Status;
 }
 
@@ -260,7 +219,7 @@ static NTSTATUS NtSetFileAccessToEveryone(POBJECT_ATTRIBUTES ObjAttr, ACCESS_MAS
     // If succeeded, write the file security
     if(NT_SUCCESS(Status))
     {
-        Status = NtSetObjectAccessForEveryone(FileHandle, AccessMask);
+        Status = NtSetObjectNullDacl(FileHandle);
         NtClose(FileHandle);
     }
 
@@ -314,7 +273,7 @@ static NTSTATUS NtRemoveSingleFile(POBJECT_ATTRIBUTES PtrObjectAttributes)
     return Status;
 }
 
-static NTSTATUS NtRemoveFsObject(
+static NTSTATUS NtDeleteFsObject(
     POBJECT_ATTRIBUTES PtrObjectAttributes,     // OBJECT_ATTRIBUTES of the object to be deleted
     PVOID WorkBuffer,                           // Work buffer to be used for queries
     ULONG WorkBufferSize,                       // Size of the work buffer
@@ -432,7 +391,7 @@ static NTSTATUS NtRemoveFsObject(
 
                     // Delete the files/directories in the directory itself
                     // Note that the content of the work buffer is destroyed after this call
-                    Status = NtRemoveFsObject(&ChildAttr, WorkBuffer, WorkBufferSize, IsSubdirectory);
+                    Status = NtDeleteFsObject(&ChildAttr, WorkBuffer, WorkBufferSize, IsSubdirectory);
                     if(!NT_SUCCESS(Status))
                         break;
                 }
@@ -440,9 +399,14 @@ static NTSTATUS NtRemoveFsObject(
         }
     }
 
-    // Delete the file/directory
+    // Close the file/directory handle. This causes it to be deleted.
+    // Note that we need to preserve a previous failed status.
     if(DirHandle != NULL)
-        Status = NtClose(DirHandle);
+    {
+        NTSTATUS DelStatus = NtClose(DirHandle);
+        Status = (NT_SUCCESS(Status)) ? DelStatus : Status;
+    }
+
     return Status;
 }
 
@@ -482,7 +446,7 @@ static int RemoveDirectoryTree(LPCTSTR szDirName)
         {
             // Call the recursive function
             InitializeObjectAttributes(&ObjAttr, &PathName, OBJ_CASE_INSENSITIVE, NULL, NULL);
-            Status = NtRemoveFsObject(&ObjAttr, WorkBuffer, WorkBufferSize, TRUE);
+            Status = NtDeleteFsObject(&ObjAttr, WorkBuffer, WorkBufferSize, TRUE);
             FreeFileNameString(&PathName);
 
             // Free the work buffer
@@ -1418,9 +1382,3 @@ INT_PTR CALLBACK PageProc05(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
     return FALSE;
 }
 
-#ifdef _DEBUG
-int RemoveDirectory_DEBUG(LPCTSTR szDirName)
-{
-    return RemoveDirectoryTree(szDirName);
-}
-#endif

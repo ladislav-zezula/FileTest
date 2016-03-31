@@ -429,8 +429,37 @@ DWORD TreeView_GetChildCount(HWND hTreeView, HTREEITEM hItem)
     return dwChildCount;
 }
 
+LPARAM TreeView_GetItemParam(HWND hTreeView, HTREEITEM hItem)
+{
+    TVITEM tvi;
 
-HTREEITEM InsertTreeItem(HWND hTreeView, HTREEITEM hParentItem, HTREEITEM hInsertAfter, LPCTSTR szText, PVOID pParam)
+    // Retrieve the item param
+    tvi.mask   = TVIF_PARAM;
+    tvi.hItem  = hItem;
+    tvi.lParam = 0;
+    TreeView_GetItem(hTreeView, &tvi);
+
+    // Return the parameter
+    return tvi.lParam;
+}
+
+HTREEITEM TreeView_SetTreeItem(HWND hTreeView, HTREEITEM hItem, LPCTSTR szText, LPARAM lParam)
+{
+    TVITEM tvi;
+
+    // Retrieve the item param
+    tvi.mask    = TVIF_TEXT | TVIF_PARAM;
+    tvi.hItem   = hItem;
+    tvi.lParam  = lParam;
+    tvi.pszText = (LPTSTR)szText;
+    if(!TreeView_SetItem(hTreeView, &tvi))
+        hItem = NULL;
+
+    // Return the parameter
+    return hItem;
+}
+
+HTREEITEM InsertTreeItem(HWND hTreeView, HTREEITEM hParent, HTREEITEM hInsertAfter, LPCTSTR szText, PVOID pParam)
 {
     TVINSERTSTRUCT tvis;
 
@@ -439,7 +468,7 @@ HTREEITEM InsertTreeItem(HWND hTreeView, HTREEITEM hParentItem, HTREEITEM hInser
         hInsertAfter = TVI_LAST;
     
     // Insert the item to the tree
-    tvis.hParent      = hParentItem;
+    tvis.hParent      = hParent;
     tvis.hInsertAfter = hInsertAfter;
     tvis.item.mask    = TVIF_TEXT | TVIF_PARAM;
     tvis.item.pszText = (LPTSTR)szText;
@@ -447,9 +476,23 @@ HTREEITEM InsertTreeItem(HWND hTreeView, HTREEITEM hParentItem, HTREEITEM hInser
     return TreeView_InsertItem(hTreeView, &tvis);
 }
 
-HTREEITEM InsertTreeItem(HWND hTreeView, HTREEITEM hParentItem, LPCTSTR szText, PVOID pParam)
+HTREEITEM InsertTreeItem(HWND hTreeView, HTREEITEM hParent, LPCTSTR szText, PVOID pParam)
 {
-    return InsertTreeItem(hTreeView, hParentItem, NULL, szText, pParam);
+    return InsertTreeItem(hTreeView, hParent, NULL, szText, pParam);
+}
+
+HTREEITEM InsertTreeItem(HWND hTreeView, HTREEITEM hParent, LPCTSTR szText, LPARAM lParam)
+{
+    return InsertTreeItem(hTreeView, hParent, TVI_LAST, szText, (PVOID)lParam);
+}
+
+void TreeView_DeleteChildren(HWND hTreeView, HTREEITEM hParent)
+{
+    HTREEITEM hItem;
+
+    // Remove all children, if any
+    while((hItem = TreeView_GetChild(hTreeView, hParent)) != NULL)
+        TreeView_DeleteItem(hTreeView, hItem);
 }
 
 //-----------------------------------------------------------------------------
@@ -1348,6 +1391,33 @@ LPTSTR FlagsToString(TFlagInfo * pFlags, LPTSTR szBuffer, size_t cchBuffer, DWOR
     return szSaveBuffer;
 }
 
+LPTSTR NamedValueToString(TFlagInfo * pFlags, LPTSTR szBuffer, size_t cchBuffer, LPCTSTR szFormat, DWORD dwFlags)
+{
+    LPTSTR szSaveBuffer = szBuffer;
+    LPTSTR szBufferEnd = szBuffer + cchBuffer;
+
+    // Print the format and value
+    StringCchPrintfEx(szBuffer, cchBuffer, &szBuffer, NULL, 0, szFormat, dwFlags);
+
+    // Format the flags as user-friendly value
+    if(dwFlags != 0)
+        FlagsToString(pFlags, szBuffer, (szBufferEnd - szBuffer), dwFlags, false);
+
+    // Return the start of the buffer
+    return szSaveBuffer;
+}
+
+LPTSTR GuidValueToString(LPTSTR szBuffer, size_t cchBuffer, LPCTSTR szFormat, LPGUID PtrGuid)
+{
+    LPTSTR szSaveBuffer = szBuffer;
+    TCHAR szGuidText[0x40];
+
+    GuidToString(PtrGuid, szGuidText, _countof(szGuidText));
+    StringCchPrintf(szBuffer, cchBuffer, szFormat, szGuidText);
+    return szSaveBuffer;
+}
+
+
 //-----------------------------------------------------------------------------
 // File ID and object ID support
 
@@ -1587,3 +1657,42 @@ NTSTATUS NtDeleteReparsePoint(POBJECT_ATTRIBUTES PtrObjectAttributes)
 
     return Status;
 }
+
+//-----------------------------------------------------------------------------
+// Local functions - Mandatory label ACE
+
+typedef BOOL (WINAPI * ADD_MANDATORY_ACE)(
+    IN OUT PACL pAcl,
+    IN DWORD dwAceRevision,
+    IN DWORD AceFlags,
+    IN DWORD MandatoryPolicy,
+    IN PSID pLabelSid
+    );
+
+static ADD_MANDATORY_ACE PfnAddMandatoryAce = NULL;
+
+BOOL WINAPI MyAddMandatoryAce(PACL pAcl, DWORD dwAceRevision, DWORD dwAceFlags, DWORD MandatoryPolicy, PSID pSid)
+{
+    HMODULE hAdvapi32;
+
+    // If the pointer to that function is not resolved, do it
+    if(PfnAddMandatoryAce == NULL)
+    {
+        // Attempt to retrieve the pointer from Advapi32
+        hAdvapi32 = GetModuleHandle(_T("Advapi32.dll"));
+        if(hAdvapi32 == NULL)
+            return FALSE;
+
+        // Attempt to retrieve the address
+        PfnAddMandatoryAce = (ADD_MANDATORY_ACE)GetProcAddress(hAdvapi32, "AddMandatoryAce");
+        if(PfnAddMandatoryAce == NULL)
+            return FALSE;
+    }
+
+    // Call the function
+    return PfnAddMandatoryAce(pAcl, dwAceRevision, dwAceFlags, MandatoryPolicy, pSid);
+}
+
+// TODO: 
+// AddAccessAllowedObjectAce
+// AddAccessDeniedObjectAce
