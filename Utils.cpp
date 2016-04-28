@@ -1661,36 +1661,13 @@ NTSTATUS NtDeleteReparsePoint(POBJECT_ATTRIBUTES PtrObjectAttributes)
 //-----------------------------------------------------------------------------
 // Local functions - Mandatory label ACE
 
-typedef BOOL (WINAPI * ADD_MANDATORY_ACE)(
-    IN OUT PACL pAcl,
-    IN DWORD dwAceRevision,
-    IN DWORD AceFlags,
-    IN DWORD MandatoryPolicy,
-    IN PSID pLabelSid
-    );
-
-static ADD_MANDATORY_ACE PfnAddMandatoryAce = NULL;
-
 BOOL WINAPI MyAddMandatoryAce(PACL pAcl, DWORD dwAceRevision, DWORD dwAceFlags, DWORD MandatoryPolicy, PSID pSid)
 {
-    HMODULE hAdvapi32;
-
-    // If the pointer to that function is not resolved, do it
-    if(PfnAddMandatoryAce == NULL)
-    {
-        // Attempt to retrieve the pointer from Advapi32
-        hAdvapi32 = GetModuleHandle(_T("Advapi32.dll"));
-        if(hAdvapi32 == NULL)
-            return FALSE;
-
-        // Attempt to retrieve the address
-        PfnAddMandatoryAce = (ADD_MANDATORY_ACE)GetProcAddress(hAdvapi32, "AddMandatoryAce");
-        if(PfnAddMandatoryAce == NULL)
-            return FALSE;
-    }
+    if(pfnAddMandatoryAce == NULL)
+        return FALSE;
 
     // Call the function
-    return PfnAddMandatoryAce(pAcl, dwAceRevision, dwAceFlags, MandatoryPolicy, pSid);
+    return pfnAddMandatoryAce(pAcl, dwAceRevision, dwAceFlags, MandatoryPolicy, pSid);
 }
 
 // TODO: 

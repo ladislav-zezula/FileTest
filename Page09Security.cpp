@@ -934,7 +934,7 @@ static HTREEITEM TreeView_InsertAceItem(
     HTREEITEM hItem;
 
     // Insert the "root" item with ACE type
-    hItem = InsertTreeItem(hTreeView, hParent, hInsertAfter, GetAceTypeString(pAceHeader->AceType), (PVOID)(TREE_ITEM_ACE | pAceHeader->AceType));
+    hItem = InsertTreeItem(hTreeView, hParent, hInsertAfter, GetAceTypeString(pAceHeader->AceType), (PVOID)(ULONG_PTR)(TREE_ITEM_ACE | pAceHeader->AceType));
     if(hItem != NULL)
     {
         // Fill the ACE structure
