@@ -1583,8 +1583,6 @@ static int ReloadTreeViewItems(HWND hDlg, HWND hTreeView, HTREEITEM hParentItem)
     TVITEM tvi;
     TCHAR szItemText[1024];
 
-    ZeroMemory(&tvi, sizeof(TVITEM));
-
     // Process all items at the same level
     while(hItem != NULL)
     {
@@ -1597,7 +1595,9 @@ static int ReloadTreeViewItems(HWND hDlg, HWND hTreeView, HTREEITEM hParentItem)
             // Get the item text
             if(DataToItemText(pMemberInfo, szItemText, _maxchars(szItemText), FALSE) == ERROR_SUCCESS)
             {
+                ZeroMemory(&tvi, sizeof(TVITEM));
                 tvi.mask    = TVIF_TEXT;
+                tvi.hItem   = hItem;
                 tvi.pszText = szItemText;
                 TreeView_SetItem(hTreeView, &tvi);
             }
@@ -2248,6 +2248,7 @@ static int OnDoubleClick(HWND hDlg, LPNMHDR pNMHDR)
     TStructMember * pMemberInfo;
     TFileTestData * pData = GetDialogData(hDlg);
     PLARGE_INTEGER pliValue;
+    HTREEITEM hItem;
     LPCTSTR szFormat = _T("%s: %08X-%08X (%s)");
     LPTSTR szFileName = NULL;
     LPTSTR szItemText = NULL;
@@ -2261,12 +2262,12 @@ static int OnDoubleClick(HWND hDlg, LPNMHDR pNMHDR)
     hTreeView = GetDlgItem(hDlg, (int)pNMHDR->idFrom);
 
     // Retrieve the selected item
-    tvi.hItem = TreeView_GetSelection(hTreeView);
-    if(tvi.hItem == NULL)
+    hItem = TreeView_GetSelection(hTreeView);
+    if(hItem == NULL)
         return TRUE;
 
     // Retrieve the item's data
-    pMemberInfo = (TStructMember *)TreeView_GetItemParam(hTreeView, tvi.hItem);
+    pMemberInfo = (TStructMember *)TreeView_GetItemParam(hTreeView, hItem);
     if(pMemberInfo == NULL)
         return TRUE;
 
@@ -2274,7 +2275,7 @@ static int OnDoubleClick(HWND hDlg, LPNMHDR pNMHDR)
     if(pMemberInfo->nDataType == TYPE_FILEID64)
     {
         // If the file name is not there yet, query the file name
-        if(FileIdHasFileName(hTreeView, tvi.hItem) == false)
+        if(FileIdHasFileName(hTreeView, hItem) == false)
         {
             szFileName = FileIDToFileName(pData->szFileName1, pMemberInfo->pbDataPtr, pMemberInfo->nMemberSize);
             if(szFileName != NULL)
@@ -2283,15 +2284,19 @@ static int OnDoubleClick(HWND hDlg, LPNMHDR pNMHDR)
                 szItemText = new TCHAR[nLength];
                 if(szItemText != NULL)
                 {
+                    // Format the item text
                     pliValue = (PLARGE_INTEGER)pMemberInfo->pbDataPtr;
-
                     StringCchPrintf(szItemText, nLength,
                                                 szFormat,
                                                 pMemberInfo->szMemberName,
                                                 pliValue->HighPart,
                                                 pliValue->LowPart,
                                                 szFileName);
+                    
+                    // Apply the item text to the tree view                    
+                    ZeroMemory(&tvi, sizeof(TVITEM));
                     tvi.mask = TVIF_TEXT;
+                    tvi.hItem = hItem;
                     tvi.pszText = szItemText;
                     TreeView_SetItem(hTreeView, &tvi);
                     delete [] szItemText;
