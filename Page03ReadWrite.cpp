@@ -177,7 +177,7 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
         pAnchors->AddAnchor(hDlg, IDC_UNLOCK_FILE, akTop | akRightCenter);
         pAnchors->AddAnchor(hDlg, IDC_NTLOCK_FILE, akLeftCenter | akTop);
         pAnchors->AddAnchor(hDlg, IDC_NTUNLOCK_FILE, akRight | akTop);
-        pAnchors->AddAnchor(hDlg, IDC_FILL_DATA, akLeft | akTop);
+        pAnchors->AddAnchor(hDlg, IDC_FILL_DATA_MENU, akLeft | akTop);
         pAnchors->AddAnchor(hDlg, IDC_GET_FILE_SIZE, akTop | akRightCenter);
         pAnchors->AddAnchor(hDlg, IDC_SET_FILE_POINTER, akLeftCenter | akTop);
         pAnchors->AddAnchor(hDlg, IDC_SET_END_OF_FILE, akTop | akRight);
@@ -558,8 +558,8 @@ static int OnCommand(HWND hDlg, UINT nNotify, UINT nIDCtrl)
             case IDC_NTUNLOCK_FILE:
                 return OnLockUnlockFile(hDlg, nIDCtrl);
 
-            case IDC_FILL_DATA:
-                return ExecuteContextMenuForDlgItem(hDlg, IDC_FILL_DATA, IDR_DATA_PATTERN);
+            case IDC_FILL_DATA_MENU:
+                return ExecuteContextMenuForDlgItem(hDlg, g_hMenu_FillData, IDC_FILL_DATA_MENU);
 
             case IDC_FILL_DATA_ZEROS:
             case IDC_FILL_DATA_PATTERN:

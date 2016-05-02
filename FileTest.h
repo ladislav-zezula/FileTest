@@ -383,6 +383,13 @@ extern HANDLE g_hHeap;
 extern DWORD g_dwWinVer;
 extern TCHAR g_szInitialDirectory[MAX_PATH];
 
+extern HMENU g_hMenu_NtCreate;
+extern HMENU g_hMenu_FillData;
+extern HMENU g_hMenu_DelDirectory;
+extern HMENU g_hMenu_ReqOplock;
+extern HMENU g_hMenu_AclType;
+extern HMENU g_hMenu_Ace;
+
 extern RTLGETCURRENTTRANSACTION pfnRtlGetCurrentTransaction;
 extern RTLSETCURRENTTRANSACTION pfnRtlSetCurrentTransaction;
 extern CREATETRANSACTION        pfnCreateTransaction;
@@ -461,8 +468,8 @@ void FileIDToString(TFileTestData * pData, ULONGLONG FileId, LPTSTR szBuffer);
 void ObjectIDToString(PBYTE pbObjId, LPCTSTR szFileName, LPTSTR szObjectID);
 int  StringToFileID(LPCTSTR szFileOrObjId, LPTSTR szVolume, PVOID pvFileObjId, PDWORD pLength);
 
-int ExecuteContextMenu(HWND hWndParent, UINT nIDMenu, LPARAM lParam);
-int ExecuteContextMenuForDlgItem(HWND hDlg, UINT nIDCtrl, UINT nIDMenu);
+int ExecuteContextMenu(HWND hWndParent, HMENU hMenu, LPARAM lParam);
+int ExecuteContextMenuForDlgItem(HWND hWndParent, HMENU hMenu, UINT nIDCtrl);
 
 NTSTATUS NtDeleteReparsePoint(HANDLE ObjectHandle);
 NTSTATUS NtDeleteReparsePoint(POBJECT_ATTRIBUTES PtrObjectAttributes);
@@ -500,7 +507,6 @@ INT_PTR EaEditorDialog(HWND hParent, PFILE_FULL_EA_INFORMATION * pEaInfo);
 INT_PTR PrivilegesDialog(HWND hParent);
 INT_PTR ObjectIDActionDialog(HWND hParent);
 INT_PTR FileActionDialog(HWND hParent);
-INT_PTR DirectoryActionDialog(HWND hParent);
 INT_PTR ObjectGuidHelpDialog(HWND hParent);
 INT_PTR CopyFileDialog(HWND hParent, TFileTestData * pData);
 

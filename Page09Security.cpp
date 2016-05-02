@@ -1267,9 +1267,10 @@ static SECURITY_INFORMATION GetWantedSecurityInfo(HWND hDlg)
     return SecInfo;
 }
 
-static void UpdateContextMenu(HWND hTreeView, HTREEITEM hItem, HMENU hSubMenu)
+static void UpdateContextMenu(HWND hTreeView, HTREEITEM hItem, HMENU hMainMenu)
 {
     HTREEITEM hNextItem;
+    HMENU hSubMenu = GetSubMenu(hMainMenu, 0);
     UINT uEnable = MF_GRAYED;
 
     // Move ACE up is only allowed when the ACE is not the first one
@@ -2071,10 +2072,11 @@ static int OnEndLabelEdit(HWND hDlg, LPNMTVDISPINFO pTVDispInfo)
 static int OnTVContextMenu(HWND hDlg, LPARAM lParam)
 {
     HTREEITEM hItem;
+    POINT pt;
     LPARAM ItemParam;
+    HMENU hMainMenu = NULL;
     HWND hTreeView = GetDlgItem(hDlg, IDC_SECURITY);
     RECT rect;
-    UINT nIDMenu = 0;
 
     // Get the selected item
     hItem = TreeView_GetSelection(hTreeView);
@@ -2086,37 +2088,33 @@ static int OnTVContextMenu(HWND hDlg, LPARAM lParam)
         // NULL DACL or Empty DACL -> Exec context menu of that item type
         if(ItemParam == TREE_ITEM_NULL_ACL || ItemParam == TREE_ITEM_EMPTY_ACL)
         {
-            nIDMenu = IDR_ACL_TYPE_MENU;
+            hMainMenu = g_hMenu_AclType;    // IDR_ACL_TYPE_MENU
         }
 
         if(IsTreeItemAce(ItemParam))
         {
-            nIDMenu = IDR_ACE_MENU;
+            hMainMenu = g_hMenu_Ace;        // IDR_ACE_MENU
         }
-    }
 
-    // If we picked a menu, execute it
-    if(nIDMenu != 0)
-    {
-        HMENU hMainMenu = LoadMenu(g_hInst, MAKEINTRESOURCE(nIDMenu));
-        HMENU hSubMenu = GetSubMenu(hMainMenu, 0);
-
-        // Get the position where the menu item will be
-        rect.left = GET_X_LPARAM(lParam);
-        rect.top = GET_Y_LPARAM(lParam);
-        if(rect.left == -1 && rect.top == -1)
+        // If we picked a menu, execute it
+        if(hMainMenu != 0)
         {
-            TreeView_GetItemRect(hTreeView, hItem, &rect, TRUE); 
-            ClientToScreen(hTreeView, (LPPOINT)&rect);
-        }
+            // Update the menu
+            UpdateContextMenu(hTreeView, hItem, hMainMenu);
 
-        // Set the window to foreground due to capture mouse events
-        UpdateContextMenu(hTreeView, hItem, hSubMenu);
-        SetForegroundWindow(hDlg);
-        TrackPopupMenu(hSubMenu, (TPM_LEFTBUTTON | TPM_RIGHTBUTTON), rect.left, rect.top, 0, hDlg, NULL);
-        PostMessage(hDlg, WM_NULL, 0, 0);
-        DestroyMenu(hMainMenu);
-        return TRUE;
+            // If we don't have the coords, make them from the tree item
+            if(lParam == 0xFFFFFFFF)
+            {
+                TreeView_GetItemRect(hTreeView, hItem, &rect, TRUE); 
+                pt.x = rect.left;
+                pt.y = rect.bottom;
+                ClientToScreen(hTreeView, &pt);
+                lParam = MAKELPARAM(pt.x, pt.y);
+            }
+
+            // Execute the menu
+            return ExecuteContextMenu(hDlg, hMainMenu, lParam);
+        }
     }
 
     return FALSE;

@@ -127,13 +127,13 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Ladislav Zezula"
             VALUE "FileDescription", "Interactive File System API Test"
-            VALUE "FileVersion", "2, 6, 1, 530\0"
+            VALUE "FileVersion", "2, 6, 1, 530"
             VALUE "InternalName", "FileTest"
             VALUE "LegalCopyright", "Copyright © 2004 - 2016 Ladislav Zezula"
             VALUE "LegalTrademarks", "http://www.zezula.net"
             VALUE "OriginalFilename", "FileTest.exe"
             VALUE "ProductName", "FileTest"
-            VALUE "ProductVersion", "2, 6, 1, 530\0"
+            VALUE "ProductVersion", "2, 6, 1, 530"
         END
     END
     BLOCK "VarFileInfo"
@@ -160,7 +160,7 @@ BEGIN
     END
 END
 
-IDR_DATA_PATTERN MENU 
+IDR_FILL_DATA_MENU MENU 
 BEGIN
     POPUP "__DATA_PATTERN__"
     BEGIN
@@ -170,9 +170,9 @@ BEGIN
     END
 END
 
-IDR_QUICK_ACCESS_SELECTION MENU 
+IDR_NTCREATE_MENU MENU 
 BEGIN
-    POPUP "__QUICK_ACCESS__"
+    POPUP "__NTCREATE_MENU__"
     BEGIN
         MENUITEM "&1. Access: RdWr, Share: RdWr, Asynchronous", IDC_RDWR_ASYNC
         MENUITEM "&2. Access: RdWr, Share: RdWr, Synchronous", IDC_RDWR_SYNC
@@ -184,7 +184,7 @@ BEGIN
     END
 END
 
-IDR_OPLOCK_PRE_WIN7 MENU 
+IDR_REQUEST_OPLOCK_MENU MENU 
 BEGIN
     POPUP "__OPLOCK_TYPE__"
     BEGIN
@@ -202,6 +202,15 @@ BEGIN
         MENUITEM "Set to &NULL Acl",            IDC_SET_NULL_ACL
         MENUITEM "Set to &Empty Acl",           IDC_SET_EMPTY_ACL
         MENUITEM "&Cancel",                     IDC_DO_NOTHING
+    END
+END
+
+IDR_DELETE_DIRECTORY_MENU MENU 
+BEGIN
+    POPUP "__DELETE_DIRECTORY__"
+    BEGIN
+        MENUITEM "The Single &Directory",       IDC_DELETE_DIRECTORY_SINGLE
+        MENUITEM "The Entire &Tree",            IDC_DELETE_DIRECTORY_TREE
     END
 END
 
@@ -359,7 +368,7 @@ BEGIN
     PUSHBUTTON      "UnlockFile",IDC_UNLOCK_FILE,83,70,65,14,WS_GROUP
     PUSHBUTTON      "NtLockFile",IDC_NTLOCK_FILE,159,70,65,14,WS_GROUP
     PUSHBUTTON      "UnlockFile",IDC_NTUNLOCK_FILE,235,70,65,14,WS_GROUP
-    PUSHBUTTON      "Fill Data",IDC_FILL_DATA,7,88,65,14
+    PUSHBUTTON      "Fill Data",IDC_FILL_DATA_MENU,7,88,65,14
     PUSHBUTTON      "GetFileSize",IDC_GET_FILE_SIZE,83,88,65,14
     PUSHBUTTON      "SetFilePointer",IDC_SET_FILE_POINTER,159,88,65,14
     PUSHBUTTON      "SetEndOfFile",IDC_SET_END_OF_FILE,235,88,65,14
@@ -388,7 +397,7 @@ BEGIN
     PUSHBUTTON      "DeleteFile (F1)",IDC_DELETE_FILE,219,53,74,14
     PUSHBUTTON      "Copy Options ...",IDC_COPY_OPTIONS,11,71,74,14
     PUSHBUTTON      "Move Options ...",IDC_MOVE_OPTIONS,115,71,74,14
-    PUSHBUTTON      "Delete Dir (F1)",IDC_DELETE_DIRECTORY,219,71,74,14
+    PUSHBUTTON      "Delete Dir (F1)",IDC_DELETE_DIRECTORY_MENU,219,71,74,14
     GROUPBOX        " File ID and Object ID (if supported)",IDC_FILEID_FRAME,7,93,293,51,WS_GROUP
     PUSHBUTTON      "Get File ID",IDC_FILE_ID_GET,11,106,74,14
     EDITTEXT        IDC_FILE_ID,89,106,170,14,ES_AUTOHSCROLL | ES_READONLY
@@ -640,17 +649,6 @@ BEGIN
     PUSHBUTTON      "Create or Get Object ID (FSCTL_CREATE_OR_GET_OBJECT_ID)",IDC_CREATE_OR_GET,16,22,234,19,WS_GROUP
     PUSHBUTTON      "Get Object ID (FSCTL_GET_OBJECT_ID)",IDC_GET_OBJECT_ID,16,49,234,19
     PUSHBUTTON      "Set Object ID (FSCTL_SET_OBJECT_ID)",IDC_SET_OBJECT_ID,16,76,234,19
-END
-
-IDD_DIRECTORY_ACTION DIALOGEX 0, 0, 210, 102
-STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
-CAPTION "Do the selected action for"
-FONT 8, "MS Shell Dlg", 0, 0, 0x1
-BEGIN
-    GROUPBOX        "",IDC_STATIC,7,4,196,90
-    PUSHBUTTON      "Just the single directory",IDC_SINGLE_DIRECTORY,22,19,167,14
-    PUSHBUTTON      "The entire directory tree",IDC_DIRECTORY_TREE,21,44,167,14
-    PUSHBUTTON      "Cancel",IDCANCEL,21,69,167,14
 END
 
 IDD_PAGE04_MAPPING DIALOGEX 0, 0, 308, 340
@@ -996,14 +994,6 @@ BEGIN
         RIGHTMARGIN, 258
         TOPMARGIN, 7
         BOTTOMMARGIN, 104
-    END
-
-    IDD_DIRECTORY_ACTION, DIALOG
-    BEGIN
-        LEFTMARGIN, 7
-        RIGHTMARGIN, 203
-        TOPMARGIN, 7
-        BOTTOMMARGIN, 95
     END
 
     IDD_PAGE04_MAPPING, DIALOG

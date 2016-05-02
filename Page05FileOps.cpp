@@ -513,7 +513,7 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
         pAnchors->AddAnchor(hDlg, IDC_MOVE_FILE, akLeftCenter | akTop);
         pAnchors->AddAnchor(hDlg, IDC_MOVE_OPTIONS, akLeftCenter | akTop);
         pAnchors->AddAnchor(hDlg, IDC_DELETE_FILE, akTop | akRight);
-        pAnchors->AddAnchor(hDlg, IDC_DELETE_DIRECTORY, akTop | akRight);
+        pAnchors->AddAnchor(hDlg, IDC_DELETE_DIRECTORY_MENU, akTop | akRight);
 
         pAnchors->AddAnchor(hDlg, IDC_FILEID_FRAME, akLeft | akTop | akRight);
         pAnchors->AddAnchor(hDlg, IDC_FILE_ID, akLeft | akTop | akRight);
@@ -696,7 +696,7 @@ static int OnDeleteFileClick(HWND hDlg)
     return TRUE;
 }
 
-static int OnDeleteDirectoryClick(HWND hDlg)
+static int OnDeleteDirectory(HWND hDlg, bool bEntireTree)
 {
     TFileTestData * pData = GetDialogData(hDlg);
     int nError = ERROR_SUCCESS;
@@ -705,21 +705,16 @@ static int OnDeleteDirectoryClick(HWND hDlg)
     SaveDialog(hDlg);
 
     // Choose what exactly to do
-    switch(DirectoryActionDialog(hDlg))
+    if(bEntireTree == FALSE)
     {
-        case IDC_SINGLE_DIRECTORY:
-            if(!RemoveDirectory(pData->szFileName1))
-                nError = GetLastError();
-            break;
-
-        case IDC_DIRECTORY_TREE:
-            nError = RemoveDirectoryTree(pData->szFileName1);
-            break;
-
-        default:
-            return TRUE;
+        if(!RemoveDirectory(pData->szFileName1))
+            nError = GetLastError();
     }
-    
+    else
+    {
+        nError = RemoveDirectoryTree(pData->szFileName1);
+    }
+
     SetResultInfo(hDlg, nError);
     return TRUE;
 }
@@ -1269,8 +1264,14 @@ static int OnCommand(HWND hDlg, UINT nNotify, UINT nIDCtrl)
             case IDC_DELETE_FILE:
                 return OnDeleteFileClick(hDlg);
 
-            case IDC_DELETE_DIRECTORY:
-                return OnDeleteDirectoryClick(hDlg);
+            case IDC_DELETE_DIRECTORY_MENU:
+                return ExecuteContextMenuForDlgItem(hDlg, g_hMenu_DelDirectory, IDC_DELETE_DIRECTORY_MENU);
+
+            case IDC_DELETE_DIRECTORY_SINGLE:
+                return OnDeleteDirectory(hDlg, FALSE);
+
+            case IDC_DELETE_DIRECTORY_TREE:
+                return OnDeleteDirectory(hDlg, TRUE);
 
             case IDC_FILE_ID_GET:
                 return OnFileIdGetClick(hDlg);
@@ -1297,7 +1298,7 @@ static int OnCommand(HWND hDlg, UINT nNotify, UINT nIDCtrl)
                 return OnSendAsynchronousFsctl(hDlg, FSCTL_SET_SPARSE);
 
             case IDC_REQUEST_OPLOCK_MENU:
-                return ExecuteContextMenuForDlgItem(hDlg, IDC_REQUEST_OPLOCK_MENU, IDR_OPLOCK_PRE_WIN7);
+                return ExecuteContextMenuForDlgItem(hDlg, g_hMenu_ReqOplock, IDC_REQUEST_OPLOCK_MENU);
 
             case IDC_REQUEST_OPLOCK_1:
                 return OnSendAsynchronousFsctl(hDlg, FSCTL_REQUEST_OPLOCK_LEVEL_1);

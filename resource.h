@@ -28,22 +28,22 @@
 #define IDI_ICON_WARNING                126
 #define IDI_ICON_INFORMATION            127
 #define IDD_EAS_EDITOR                  128
-#define IDR_DATA_PATTERN                129
+#define IDR_FILL_DATA_MENU              129
 #define IDD_VALUES_DIALOG_OLD           130
 #define IDD_PRIVILEGES                  131
 #define IDD_FILE_TEST                   132
 #define IDD_OBJECT_ID_MORE              133
-#define IDD_DIRECTORY_ACTION            134
 #define IDD_DATA_EDITOR                 137
 #define IDD_HELP_ABOUT                  138
 #define IDR_QUICK_ACCESS_SELECTION      139
 #define IDD_CREATEFILE_FLAGS            139
 #define IDD_FLAGS_AND_ATTRS             139
+#define IDR_NTCREATEFILE_MENU           139
+#define IDR_NTCREATE_MENU               139
 #define IDI_ICON1                       140
 #define IDI_ICON_WAIT                   140
 #define IDD_COPY_FILE                   140
-#define IDR_OPLOCK_PRE_WIN7             141
-#define IDD_DIRECTORY_ACTION1           141
+#define IDR_REQUEST_OPLOCK_MENU         141
 #define IDD_FILE_ACTION                 141
 #define IDD_FLAGS_DIALOG1               142
 #define IDD_VALUES_DIALOG               142
@@ -52,6 +52,7 @@
 #define IDD_OBJECT_GUID_HELP            143
 #define IDR_ACL_TYPE_MENU               144
 #define IDS_INTEGRITY_LEVEL             145
+#define IDR_DELETE_DIRECTORY_MENU       145
 #define IDC_FILE_ATTRIBUTE_READONLY     800
 #define IDC_FILE_ATTRIBUTE_HIDDEN       801
 #define IDC_FILE_ATTRIBUTE_SYSTEM       802
@@ -180,7 +181,7 @@
 #define IDC_CHECKBOX28                  1069
 #define IDC_WRITE_FILE                  1071
 #define IDC_BYTES_TRANSFERRED           1072
-#define IDC_FILL_DATA                   1073
+#define IDC_FILL_DATA_MENU              1073
 #define IDC_FILE_NAME1                  1074
 #define IDC_FILE_NAME2                  1075
 #define IDC_FILE_NAME1_BROWSE           1076
@@ -200,7 +201,7 @@
 #define IDC_GET_FILE_ATTRIBUTES         1089
 #define IDC_DEFAULT                     1089
 #define IDC_DEFAULT_LENGTH              1089
-#define IDC_DELETE_DIRECTORY            1090
+#define IDC_DELETE_DIRECTORY_MENU       1090
 #define IDC_NT_QUERY_ATTRIBUTES_FILE    1091
 #define IDC_FILE_INFO_CLASS             1093
 #define IDC_IOSTATUS_INFO               1096
@@ -287,11 +288,9 @@
 #define IDC_MOVE_OPTIONS                1161
 #define IDC_SYMLINK_CREATE              1161
 #define IDC_CREATE_OR_GET               1161
-#define IDC_DIRECTORY_TREE              1161
 #define IDC_FILETEST_WEB                1161
 #define IDC_SYMLINK                     1162
 #define IDC_GET_OBJECT_ID               1162
-#define IDC_SINGLE_DIRECTORY            1162
 #define IDC_COPY_OPTIONS                1162
 #define IDC_SYMLINK_TARGET              1163
 #define IDC_SET_OBJECT_ID               1163
@@ -482,13 +481,15 @@
 #define IDC_DO_NOTHING                  40057
 #define IDC_SET_EMPTY_DACL              40058
 #define IDC_SET_EMPTY_ACL               40059
+#define IDC_DELETE_DIRECTORY_SINGLE     40060
+#define IDC_DELETE_DIRECTORY_TREE       40061
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        146
-#define _APS_NEXT_COMMAND_VALUE         40060
+#define _APS_NEXT_COMMAND_VALUE         40062
 #define _APS_NEXT_CONTROL_VALUE         1228
 #define _APS_NEXT_SYMED_VALUE           101
 #endif

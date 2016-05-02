@@ -1547,9 +1547,8 @@ int StringToFileID(
     return nError;
 }
 
-int ExecuteContextMenu(HWND hWndParent, UINT nIDMenu, LPARAM lParam)
+int ExecuteContextMenu(HWND hWndParent, HMENU hMainMenu, LPARAM lParam)
 {
-    HMENU hMainMenu = LoadMenu(g_hInst, MAKEINTRESOURCE(nIDMenu));
     HMENU hSubMenu = GetSubMenu(hMainMenu, 0);
     POINT pt;
 
@@ -1571,16 +1570,16 @@ int ExecuteContextMenu(HWND hWndParent, UINT nIDMenu, LPARAM lParam)
         SetForegroundWindow(hWndParent);
         TrackPopupMenu(hSubMenu, (TPM_LEFTBUTTON | TPM_RIGHTBUTTON), pt.x, pt.y, 0, hWndParent, NULL);
         PostMessage(hWndParent, WM_NULL, 0, 0);
-        DestroyMenu(hMainMenu);
+        return TRUE;
     }
 
-    return TRUE;
+    return FALSE;
 }
 
-int ExecuteContextMenuForDlgItem(HWND hDlg, UINT nIDCtrl, UINT nIDMenu)
+int ExecuteContextMenuForDlgItem(HWND hWndParent, HMENU hMainMenu, UINT nIDCtrl)
 {
     LPARAM lParam;
-    HWND hWndChild = GetDlgItem(hDlg, nIDCtrl);
+    HWND hWndChild = GetDlgItem(hWndParent, nIDCtrl);
     RECT rect;
 
     // Calculate position of the menu
@@ -1588,7 +1587,7 @@ int ExecuteContextMenuForDlgItem(HWND hDlg, UINT nIDCtrl, UINT nIDMenu)
     lParam = MAKELPARAM(rect.left, rect.bottom);
 
     // Execute the context menu
-    return ExecuteContextMenu(hDlg, nIDMenu, lParam);
+    return ExecuteContextMenu(hWndParent, hMainMenu, lParam);
 }
 
 NTSTATUS NtDeleteReparsePoint(HANDLE ObjectHandle)

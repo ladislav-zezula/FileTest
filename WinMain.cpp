@@ -27,6 +27,13 @@ HANDLE g_hHeap;
 DWORD g_dwWinVer;
 TCHAR g_szInitialDirectory[MAX_PATH];
 
+HMENU g_hMenu_NtCreate = NULL;          // IDR_NTCREATE_MENU
+HMENU g_hMenu_FillData = NULL;          // IDR_FILL_DATA_MENU
+HMENU g_hMenu_DelDirectory = NULL;      // IDR_DELETE_DIRECTORY_MENU
+HMENU g_hMenu_ReqOplock = NULL;         // IDR_REQUEST_OPLOCK_MENU
+HMENU g_hMenu_AclType = NULL;           // IDR_ACL_TYPE_MENU
+HMENU g_hMenu_Ace = NULL;               // IDR_ACE_MENU
+
 //-----------------------------------------------------------------------------
 // Local functions
 
@@ -235,6 +242,14 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
     // we have to set the FILE_SYNCHRONOUS_IO_NONALERT into CreateOptions
     // and SYNCHRONIZE into DesiredAccess.
     //
+
+    // Pre-load menus so they don't generate any FS requests when loaded
+    g_hMenu_NtCreate     = LoadMenu(g_hInst, MAKEINTRESOURCE(IDR_NTCREATE_MENU));
+    g_hMenu_FillData     = LoadMenu(g_hInst, MAKEINTRESOURCE(IDR_FILL_DATA_MENU));
+    g_hMenu_DelDirectory = LoadMenu(g_hInst, MAKEINTRESOURCE(IDR_DELETE_DIRECTORY_MENU));
+    g_hMenu_ReqOplock    = LoadMenu(g_hInst, MAKEINTRESOURCE(IDR_REQUEST_OPLOCK_MENU));
+    g_hMenu_AclType      = LoadMenu(g_hInst, MAKEINTRESOURCE(IDR_ACL_TYPE_MENU));
+    g_hMenu_Ace          = LoadMenu(g_hInst, MAKEINTRESOURCE(IDR_ACE_MENU));
 
     // Allocate default size for the FileInfo.
     pData->pbNtInfoBuff = (LPBYTE)HeapAlloc(g_hHeap, HEAP_ZERO_MEMORY, INITIAL_FILEINFO_BUFFER_SIZE);
