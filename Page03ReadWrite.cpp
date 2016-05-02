@@ -559,7 +559,7 @@ static int OnCommand(HWND hDlg, UINT nNotify, UINT nIDCtrl)
                 return OnLockUnlockFile(hDlg, nIDCtrl);
 
             case IDC_FILL_DATA_MENU:
-                return ExecuteContextMenuForDlgItem(hDlg, g_hMenu_FillData, IDC_FILL_DATA_MENU);
+                return ExecuteContextMenuForDlgItem(hDlg, FindContextMenu(IDR_FILL_DATA_MENU), IDC_FILL_DATA_MENU);
 
             case IDC_FILL_DATA_ZEROS:
             case IDC_FILL_DATA_PATTERN:

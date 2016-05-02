@@ -828,7 +828,7 @@ INT_PTR CALLBACK PageProc02(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
             return TRUE;
 
         case WM_CONTEXTMENU:
-            return ExecuteContextMenu(hDlg, g_hMenu_NtCreate, lParam);
+            return ExecuteContextMenu(hDlg, FindContextMenu(IDR_NTCREATE_MENU), lParam);
 
         case WM_COMMAND:
             return OnCommand(hDlg, HIWORD(wParam), LOWORD(wParam));

@@ -1265,7 +1265,7 @@ static int OnCommand(HWND hDlg, UINT nNotify, UINT nIDCtrl)
                 return OnDeleteFileClick(hDlg);
 
             case IDC_DELETE_DIRECTORY_MENU:
-                return ExecuteContextMenuForDlgItem(hDlg, g_hMenu_DelDirectory, IDC_DELETE_DIRECTORY_MENU);
+                return ExecuteContextMenuForDlgItem(hDlg, FindContextMenu(IDR_DELETE_DIRECTORY_MENU), IDC_DELETE_DIRECTORY_MENU);
 
             case IDC_DELETE_DIRECTORY_SINGLE:
                 return OnDeleteDirectory(hDlg, FALSE);
@@ -1298,7 +1298,7 @@ static int OnCommand(HWND hDlg, UINT nNotify, UINT nIDCtrl)
                 return OnSendAsynchronousFsctl(hDlg, FSCTL_SET_SPARSE);
 
             case IDC_REQUEST_OPLOCK_MENU:
-                return ExecuteContextMenuForDlgItem(hDlg, g_hMenu_ReqOplock, IDC_REQUEST_OPLOCK_MENU);
+                return ExecuteContextMenuForDlgItem(hDlg, FindContextMenu(IDR_REQUEST_OPLOCK_MENU), IDC_REQUEST_OPLOCK_MENU);
 
             case IDC_REQUEST_OPLOCK_1:
                 return OnSendAsynchronousFsctl(hDlg, FSCTL_REQUEST_OPLOCK_LEVEL_1);

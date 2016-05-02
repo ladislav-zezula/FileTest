@@ -21,18 +21,13 @@
 //-----------------------------------------------------------------------------
 // Global variables
 
+TContextMenu g_ContextMenus[MAX_CONTEXT_MENUS];
 HINSTANCE g_hInst;
 TToolTip g_Tooltip;
 HANDLE g_hHeap;
 DWORD g_dwWinVer;
 TCHAR g_szInitialDirectory[MAX_PATH];
-
-HMENU g_hMenu_NtCreate = NULL;          // IDR_NTCREATE_MENU
-HMENU g_hMenu_FillData = NULL;          // IDR_FILL_DATA_MENU
-HMENU g_hMenu_DelDirectory = NULL;      // IDR_DELETE_DIRECTORY_MENU
-HMENU g_hMenu_ReqOplock = NULL;         // IDR_REQUEST_OPLOCK_MENU
-HMENU g_hMenu_AclType = NULL;           // IDR_ACL_TYPE_MENU
-HMENU g_hMenu_Ace = NULL;               // IDR_ACE_MENU
+DWORD g_dwMenuCount = 0;
 
 //-----------------------------------------------------------------------------
 // Local functions
@@ -92,6 +87,31 @@ static void SetTokenObjectIntegrityLevel(DWORD dwIntegrityLevel)
 
     FreeSid(pSid);
 }
+
+BOOL CALLBACK EnumMenusProc(HMODULE hModule, LPCTSTR lpszType, LPTSTR lpszName, LONG_PTR /* lParam */)
+{
+    // Only take menus
+    if(lpszType == RT_MENU)
+    {
+        // Debug code check
+        assert(g_dwMenuCount < MAX_CONTEXT_MENUS);
+
+        // Check if the number of context menus is in range
+        if(g_dwMenuCount < MAX_CONTEXT_MENUS)
+        {
+            // Insert the menu entry
+            g_ContextMenus[g_dwMenuCount].szMenuName = lpszName;
+            g_ContextMenus[g_dwMenuCount].hMenu = LoadMenu(hModule, lpszName);
+
+            // Increment the menu count
+            g_dwMenuCount++;
+        }
+    }
+
+    // Keep enumerating
+    return TRUE;
+}
+
 
 #ifdef _DEBUG
 //static TFlagInfo ReparseTags[] =
@@ -244,12 +264,8 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
     //
 
     // Pre-load menus so they don't generate any FS requests when loaded
-    g_hMenu_NtCreate     = LoadMenu(g_hInst, MAKEINTRESOURCE(IDR_NTCREATE_MENU));
-    g_hMenu_FillData     = LoadMenu(g_hInst, MAKEINTRESOURCE(IDR_FILL_DATA_MENU));
-    g_hMenu_DelDirectory = LoadMenu(g_hInst, MAKEINTRESOURCE(IDR_DELETE_DIRECTORY_MENU));
-    g_hMenu_ReqOplock    = LoadMenu(g_hInst, MAKEINTRESOURCE(IDR_REQUEST_OPLOCK_MENU));
-    g_hMenu_AclType      = LoadMenu(g_hInst, MAKEINTRESOURCE(IDR_ACL_TYPE_MENU));
-    g_hMenu_Ace          = LoadMenu(g_hInst, MAKEINTRESOURCE(IDR_ACE_MENU));
+    memset(g_ContextMenus, 0, sizeof(g_ContextMenus));
+    EnumResourceNames(g_hInst, RT_MENU, EnumMenusProc, NULL);
 
     // Allocate default size for the FileInfo.
     pData->pbNtInfoBuff = (LPBYTE)HeapAlloc(g_hHeap, HEAP_ZERO_MEMORY, INITIAL_FILEINFO_BUFFER_SIZE);

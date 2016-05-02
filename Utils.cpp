@@ -1547,6 +1547,20 @@ int StringToFileID(
     return nError;
 }
 
+HMENU FindContextMenu(UINT nIDMenu)
+{
+    // Search the pre-loaded menu array
+    for(size_t i = 0; i < MAX_CONTEXT_MENUS; i++)
+    {
+        if(g_ContextMenus[i].szMenuName == MAKEINTRESOURCE(nIDMenu))
+            return g_ContextMenus[i].hMenu;
+    }
+
+    // Chould never happen, but anyway
+    assert(false);
+    return LoadMenu(g_hInst, MAKEINTRESOURCE(nIDMenu));
+}
+
 int ExecuteContextMenu(HWND hWndParent, HMENU hMainMenu, LPARAM lParam)
 {
     HMENU hSubMenu = GetSubMenu(hMainMenu, 0);

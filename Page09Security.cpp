@@ -2088,12 +2088,12 @@ static int OnTVContextMenu(HWND hDlg, LPARAM lParam)
         // NULL DACL or Empty DACL -> Exec context menu of that item type
         if(ItemParam == TREE_ITEM_NULL_ACL || ItemParam == TREE_ITEM_EMPTY_ACL)
         {
-            hMainMenu = g_hMenu_AclType;    // IDR_ACL_TYPE_MENU
+            hMainMenu = FindContextMenu(IDR_ACL_TYPE_MENU);
         }
 
         if(IsTreeItemAce(ItemParam))
         {
-            hMainMenu = g_hMenu_Ace;        // IDR_ACE_MENU
+            hMainMenu = FindContextMenu(IDR_ACE_MENU);
         }
 
         // If we picked a menu, execute it
