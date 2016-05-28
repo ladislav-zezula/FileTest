@@ -1,0 +1,40 @@
+NOT_LEAN_AND_MEAN=1
+TARGETNAME=FileTest
+TARGETTYPE=PROGRAM
+USE_MSVCRT=1
+UMTYPE=windows
+
+C_DEFINES=$(C_DEFINES) -DUNICODE -D_UNICODE
+
+SDK_LIB_PATH=$(SDK_LIB_PATH);..\aaa\lib32;..\aaa\lib64
+
+INCLUDES=$(WDKDIR)\inc\mfc42;..\aaa\inc
+
+SOURCES=DateTime.cpp          \
+        DlgCopyFile.cpp       \
+        DlgDataEditor.cpp     \
+        DlgEaEditor.cpp       \
+        DlgEasEditor.cpp      \
+        DlgFileTest.cpp       \
+        DlgFlags.cpp          \
+        DlgPrivileges.cpp     \
+        DlgSimple.cpp         \
+        NtStatus2Text.cpp     \
+        Page00Transaction.cpp \
+        Page01Create.cpp      \
+        Page02NtCreate.cpp    \
+        Page03ReadWrite.cpp   \
+        Page04Mapping.cpp     \
+        Page05FileOps.cpp     \
+        Page06NtFileInfo.cpp  \
+        Page07NtFsInfo.cpp    \
+        Page08Ea.cpp          \
+        Page09Security.cpp    \
+        Page10Links.cpp       \
+        Page11Streams.cpp     \
+        TAceHelper.cpp        \
+        TDataEditor.cpp       \
+        TToolTip.cpp          \
+        Utils.cpp             \
+        WinMain.cpp           \
+        FileTest.rc

@@ -64,7 +64,7 @@ static LPCTSTR StringFromBytes(LARGE_INTEGER & ByteCount, LPTSTR szBuffer)
         // Put one digit
         if(szBuffer > szSaveBuffer && (nDigitIndex % 3) == 0)
             *szBuffer++ = _T(' ');
-        *szBuffer++ = (DWORD)(Value64 % 10) + _T('0');
+        *szBuffer++ = (TCHAR)((Value64 % 10) + _T('0'));
 
         // Shift the input value
         if((Value64 = Value64 / 10) == 0)

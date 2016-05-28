@@ -565,7 +565,7 @@ static bool RecalcCaretXY(TEditorData * pData, bool * bNeedRedraw)
 
     // Calculate the Y-position of the caret
     pData->nCaretY = 0;
-    if(pData->nLines > 0 && pData->nCaretLine >= 0)
+    if(pData->nLines > 0 && pData->nCaretLine > pData->nTopIndex)
         pData->nCaretY = ((int)(pData->nCaretLine - pData->nTopIndex) * pData->nCharHeight);
     
     // Calculate the X-position of the caret
@@ -648,7 +648,7 @@ static void MousePosToCaretPos(TEditorData * pData,
     nCaretCol = (nMouseX / pData->nAveCharWidth);
 
     // Get line text where the caret is
-    if(0 <= nCaretLine && nCaretLine < pData->nLines)
+    if(nCaretLine < pData->nLines)
     {
         // Get the text of the line
         nLineLength = FormatOneLine(pData, nCaretLine);
@@ -777,7 +777,6 @@ static void MoveTopIndexAndCaretTo(
         // Check for moving the top index out of bounds
         nMaxTopIndex = pData->nLines - nPageSize;
         nNewTopIndex = (nNewTopIndex > nMaxTopIndex) ? nMaxTopIndex : nNewTopIndex;
-        nNewTopIndex = (nNewTopIndex < 0) ? 0 : nNewTopIndex;
 
         // Check if we are actually changing the top index
         if(nNewTopIndex != pData->nTopIndex)
@@ -788,7 +787,6 @@ static void MoveTopIndexAndCaretTo(
 
         // Check for moving the caret line out of bounds
         nNewCaretLine = (nNewCaretLine > (pData->nLines - 1)) ? (pData->nLines - 1) : nNewCaretLine;
-        nNewCaretLine = (nNewCaretLine < 0) ? 0 : nNewCaretLine;
 
         // Check for moving the caret column out of bounds
         nNewCaretCol = (nNewCaretCol < 0) ? 0 : nNewCaretCol;

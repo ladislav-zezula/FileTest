@@ -23,12 +23,12 @@
 
 #define WIN32_NO_STATUS 
 #include <windows.h>
+#undef WIN32_NO_STATUS 
 #include <windowsx.h>
 #include <ShlObj.h>
 #include <winioctl.h>
 #include <strsafe.h>
 
-#undef WIN32_NO_STATUS 
 #include "ntstatus.h"
 #include "ntdll.h"
 #include "Utils.h"

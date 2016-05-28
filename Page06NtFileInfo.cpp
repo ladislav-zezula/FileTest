@@ -882,6 +882,7 @@ static LPTSTR WStringToItemText(
 
 static LPTSTR CreateFullName(LPCTSTR szDirectory, LPCWSTR szPlainName, ULONG cbPlainName)
 {
+    LPCTSTR szFormat = (szPlainName[0] == _T(':')) ? _T("%s%.*s") : _T("%s\\%.*s");
     LPTSTR szFileName;
     size_t cchLength;
 
@@ -895,7 +896,7 @@ static LPTSTR CreateFullName(LPCTSTR szDirectory, LPCWSTR szPlainName, ULONG cbP
         // this, which is fine. FileTest is not supposed to correct
         // the user's input, but to send anything the user wants into the FS
         StringCchPrintf(szFileName, cchLength,
-                                    _T("%s\\%.*s"),
+                                    szFormat,
                                     szDirectory,
                                     cbPlainName / sizeof(WCHAR),
                                     szPlainName);
@@ -2315,8 +2316,8 @@ static int OnDoubleClick(HWND hDlg, LPNMHDR pNMHDR)
         }
     }
 
-    // Doubleclick on a subdirectory name creates
-    // the full path of the subdirectory and switches to the "NtCreate"
+    // Doubleclick on a subdirectory or stream name
+    // creates a full path and switches to "NtCreate"
     if(pMemberInfo->nDataType == TYPE_WNAME_L32B)
     {
         HWND hWndParent = GetParent(hDlg);

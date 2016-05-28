@@ -2,6 +2,10 @@
   FileTest history
   ================
 
+ Version 2.6.1.546
+
+ - Double-click on stream name creates proper full path
+
  Version 2.6.1.529
 
  - Improved editor of the security descriptor
