@@ -192,6 +192,7 @@ struct TFileTestData : public TWindowData
     PFILE_FULL_EA_INFORMATION pFileEa;      // Extended attributes for NtCreate
     ACCESS_MASK   dwDesiredAccess;
     LONGLONG      AllocationSize;
+    ULONG         IsDefaultFileName1:1;     // TRUE: The file name was created as default
     
     ULONG         dwDesiredAccessRF;        // Desired Access for the relative file
     ULONG         dwOpenOptionsRF;          // Create Options for the relative file

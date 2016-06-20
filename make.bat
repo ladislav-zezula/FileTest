@@ -15,6 +15,7 @@ echo Building %EXE_NAME%.exe 32-bit (free) ...
 set DDKBUILDENV=
 call %WDKDIR%\bin\setenv.bat %WDKDIR%\ fre
 cd \Ladik\Appdir\FileTest
+set LIB=%LIB%;..\aaa\lib32
 build.exe -czgw
 echo.
 
@@ -28,11 +29,11 @@ del buildfre_wlh_x86.log
 echo.
 
 :BUILD_EXE_64
-echo Building %EXE_NAME%.exe 64-bit (free) ...
-set DDKBUILDENV=
-call %WDKDIR%\bin\setenv.bat %WDKDIR%\ fre x64
-cd \Ladik\Appdir\FileTest
-build.exe -czgw
+rem echo Building %EXE_NAME%.exe 64-bit (free) ...
+rem set DDKBUILDENV=
+rem call %WDKDIR%\bin\setenv.bat %WDKDIR%\ fre x64
+rem cd \Ladik\Appdir\FileTest
+rem build.exe -czgw
 echo.
 
 :COPY_EXE_64
@@ -45,7 +46,7 @@ del buildfre_wlh_amd64.log
 echo.
 
 rem Increment build number ...
-mkbuildnum %EXE_NAME%.rc
+rem mkbuildnum %EXE_NAME%.rc
 
 rem Clean temporary files ...
 if exist build.bat del build.bat

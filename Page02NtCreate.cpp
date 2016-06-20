@@ -824,7 +824,7 @@ INT_PTR CALLBACK PageProc02(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
         case WM_DRAWITEM:
             if(wParam == IDC_RELATIVE_FILE_HELP)
-                DrawURLButton(hDlg, (LPDRAWITEMSTRUCT)lParam, FALSE);
+                DrawURLButton(hDlg, (LPDRAWITEMSTRUCT)lParam);
             return TRUE;
 
         case WM_CONTEXTMENU:

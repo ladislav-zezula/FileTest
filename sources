@@ -6,9 +6,9 @@ UMTYPE=windows
 
 C_DEFINES=$(C_DEFINES) -DUNICODE -D_UNICODE
 
-SDK_LIB_PATH=$(SDK_LIB_PATH);..\aaa\lib32;..\aaa\lib64
-
 INCLUDES=$(WDKDIR)\inc\mfc42;..\aaa\inc
+
+UTILSLIBPATH=..\aaa\lib32
 
 SOURCES=DateTime.cpp          \
         DlgCopyFile.cpp       \
@@ -38,3 +38,14 @@ SOURCES=DateTime.cpp          \
         Utils.cpp             \
         WinMain.cpp           \
         FileTest.rc
+
+TARGETLIBS=$(SDK_LIB_PATH)\ntdll.lib        \
+           $(SDK_LIB_PATH)\kernel32.lib     \
+           $(SDK_LIB_PATH)\advapi32.lib     \
+           $(SDK_LIB_PATH)\user32.lib       \
+           $(SDK_LIB_PATH)\comctl32.lib     \
+           $(SDK_LIB_PATH)\comdlg32.lib     \
+           $(SDK_LIB_PATH)\shell32.lib      \
+           $(SDK_LIB_PATH)\Version.lib      \
+           $(UTILSLIBPATH)\UtilsRUS.lib
+           

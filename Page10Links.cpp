@@ -387,7 +387,7 @@ static bool TreeView_EditString(HWND hWndEdit, LPTSTR szBaseBuffer, USHORT NameO
     szString = (LPTSTR)HeapAlloc(g_hHeap, HEAP_ZERO_MEMORY, NameLength + sizeof(WCHAR));
     if(szString != NULL)
     {
-        memcpy(szString, szBaseBuffer + (NameOffset / sizeof(WCHAR)), NameLength);
+        memcpy(szString, (LPBYTE)szBaseBuffer + NameOffset, NameLength);
         SetWindowText(hWndEdit, szString);
         HeapFree(g_hHeap, 0, szString);
         return true;
@@ -509,6 +509,7 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
 {
     PROPSHEETPAGE * pPage = (PROPSHEETPAGE *)lParam;
     TFileTestData * pData = (TFileTestData *)pPage->lParam;
+    LPCTSTR szReparseName;
     HWND hWndChild;
 
     // Apply the data to the dialog
@@ -562,7 +563,8 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
     SetDlgItemText(hDlg, IDC_HARDLINK_LIST, _T("C:\\TestFile.bin"));
     SetDlgItemText(hDlg, IDC_NEW_HARDLINK, _T("C:\\TestFile_HardLink.bin"));
 
-    SetDlgItemText(hDlg, IDC_REPARSE, _T("C:\\Windows_Reparse"));
+    szReparseName = (pData->IsDefaultFileName1) ? _T("C:\\Windows_Reparse") : pData->szFileName1;
+    SetDlgItemText(hDlg, IDC_REPARSE, szReparseName);
 
     // Initiate updating of the view
     PostMessage(hDlg, WM_UPDATE_VIEW, 0, 0);
@@ -627,7 +629,7 @@ static int OnBeginLabelEdit(HWND hDlg, LPNMTVDISPINFO pNMDispInfo)
             case ITEM_TYPE_PRINTNAME_LNK:
                 bStartEditing = TreeView_EditString(hWndEdit,
                                                     ReparseData->SymbolicLinkReparseBuffer.PathBuffer,
-                                                    ReparseData->SymbolicLinkReparseBuffer.PrintNameLength,
+                                                    ReparseData->SymbolicLinkReparseBuffer.PrintNameOffset,
                                                     ReparseData->SymbolicLinkReparseBuffer.PrintNameLength);
                 break;
         }

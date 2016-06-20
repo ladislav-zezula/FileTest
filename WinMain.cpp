@@ -222,7 +222,10 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
 
     // Set default file name
     if(pData->szFileName1[0] == 0)
+    {
         StringCchCopy(pData->szFileName1, _countof(pData->szFileName1), _T("C:\\TestFile.bin"));
+        pData->IsDefaultFileName1 = TRUE;
+    }
 
     //
     // DEVELOPMENT CODE: Build the NT status table from the NTSTATUS.h
