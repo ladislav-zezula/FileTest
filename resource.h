@@ -227,6 +227,7 @@
 #define IDC_MAXIMUM_LENGTH              1109
 #define IDC_REQUEST_BATCH_OPLOCK        1109
 #define IDC_REQUEST_FILTER_OPLOCK       1110
+#define IDC_SEARCH_MASK                 1110
 #define IDC_CREATE_TRANSACTION_HINT     1111
 #define IDC_REQUEST_OPLOCK_WIN7         1111
 #define IDC_BREAK_ACKNOWLEDGE_1         1112
@@ -362,9 +363,13 @@
 #define IDC_FORCED_DELETE               1224
 #define IDC_REPARSE_DATA                1226
 #define IDC_CHILD_MUSTER                1227
+#define IDC_BUTTON2                     1229
+#define IDC_SEARCH_MASK_TITLE           1229
 #define IDS_FLUSH_FILE_BUFFERS_TIP      4000
 #define IDS_SET_SPARSE_TIP              4001
 #define IDS_OPLOCK_BROKE                4002
+#define IDS_FILE_INFO_CLASS             4003
+#define IDS_VOLUME_INFO_CLASS           4004
 #define IDS_NOFILESELECTED              4010
 #define IDS_INVALIDACCESS               4011
 #define IDS_OPERATIONCOMPLETE           4012
@@ -450,6 +455,7 @@
 #define IDS_ADS_ACE_MASK                4086
 #define IDS_COPY_CANCELLED              4087
 #define IDS_CUSTOM_VALUE                4088
+#define IDS_DATA_LENGTH                 4089
 #define ID_EDIT_LABEL                   40001
 #define ID_NEW_ACE_BEFORE               40008
 #define ID_NEW_ACE_AFTER                40009
@@ -490,7 +496,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        146
 #define _APS_NEXT_COMMAND_VALUE         40062
-#define _APS_NEXT_CONTROL_VALUE         1228
+#define _APS_NEXT_CONTROL_VALUE         1230
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

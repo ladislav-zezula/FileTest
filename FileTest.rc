@@ -127,13 +127,13 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Ladislav Zezula"
             VALUE "FileDescription", "Interactive File System API Test"
-            VALUE "FileVersion", "2, 6, 1, 550\0"
+            VALUE "FileVersion", "2, 6, 1, 550"
             VALUE "InternalName", "FileTest"
             VALUE "LegalCopyright", "Copyright © 2004 - 2016 Ladislav Zezula"
             VALUE "LegalTrademarks", "http://www.zezula.net"
             VALUE "OriginalFilename", "FileTest.exe"
             VALUE "ProductName", "FileTest"
-            VALUE "ProductVersion", "2, 6, 1, 550\0"
+            VALUE "ProductVersion", "2, 6, 1, 550"
         END
     END
     BLOCK "VarFileInfo"
@@ -425,13 +425,16 @@ STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CONTROL | WS_CHILD | WS_CAPT
 CAPTION "NtFileInfo"
 FONT 8, "MS Shell Dlg", 0, 0, 0x1
 BEGIN
-    COMBOBOX        IDC_FILE_INFO_CLASS,7,19,293,262,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
-    LTEXT           "Input/output length:",IDC_INPUT_LENGTH_TITLE,12,38,70,14,SS_CENTERIMAGE
-    EDITTEXT        IDC_INPUT_LENGTH,86,38,105,14,ES_AUTOHSCROLL | ES_NUMBER
-    PUSHBUTTON      "Default",IDC_DEFAULT_LENGTH,196,38,50,14
-    PUSHBUTTON      "Maximum",IDC_MAXIMUM_LENGTH,251,38,50,14
-    CTEXT           "This function is not supported (yet)",IDC_COMMENT,7,57,294,206,SS_CENTERIMAGE | SS_SUNKEN
-    CONTROL         "",IDC_FILE_INFO,"SysTreeView32",TVS_HASBUTTONS | TVS_HASLINES | TVS_LINESATROOT | TVS_EDITLABELS | TVS_DISABLEDRAGDROP | TVS_TRACKSELECT | TVS_INFOTIP | WS_HSCROLL | WS_TABSTOP,7,57,294,206,WS_EX_CLIENTEDGE
+    LTEXT           "File Information Class",IDC_STATIC,7,8,294,8
+    COMBOBOX        IDC_FILE_INFO_CLASS,7,18,293,262,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Query Directory Mask",IDC_SEARCH_MASK_TITLE,7,34,145,8
+    EDITTEXT        IDC_SEARCH_MASK,7,44,145,14,ES_AUTOHSCROLL
+    LTEXT           "Input Data Length",IDC_INPUT_LENGTH_TITLE,156,34,145,8
+    EDITTEXT        IDC_INPUT_LENGTH,156,44,97,14,ES_AUTOHSCROLL | ES_NUMBER
+    PUSHBUTTON      "Def",IDC_DEFAULT_LENGTH,257,44,20,14
+    PUSHBUTTON      "Max",IDC_MAXIMUM_LENGTH,281,44,20,14
+    CTEXT           "This function is not supported (yet)",IDC_COMMENT,7,63,294,200,SS_CENTERIMAGE | SS_SUNKEN
+    CONTROL         "",IDC_FILE_INFO,"SysTreeView32",TVS_HASBUTTONS | TVS_HASLINES | TVS_LINESATROOT | TVS_EDITLABELS | TVS_DISABLEDRAGDROP | TVS_TRACKSELECT | TVS_INFOTIP | WS_HSCROLL | WS_TABSTOP,7,63,294,200,WS_EX_CLIENTEDGE
     PUSHBUTTON      "NtQueryInformationFile",IDC_QUERY_INFO,7,267,86,14,WS_GROUP
     PUSHBUTTON      "NtQueryDirectoryFile",IDC_QUERY_DIR,110,267,86,14
     PUSHBUTTON      "NtSetInformationFile",IDC_SET_INFO,216,267,85,14
@@ -440,7 +443,6 @@ BEGIN
     EDITTEXT        IDC_RESULT_STATUS,73,294,220,14,ES_AUTOHSCROLL | ES_READONLY
     LTEXT           "IoStatus.Info:",IDC_IOSTATUS_INFO_TITLE,13,313,54,14,SS_CENTERIMAGE
     EDITTEXT        IDC_IOSTATUS_INFO,73,313,220,14,ES_AUTOHSCROLL | ES_READONLY
-    LTEXT           "File Information Class",IDC_FILE_INFO_CLASS_TITLE,7,8,274,8
 END
 
 IDD_PAGE07_NTVOLINFO DIALOGEX 0, 0, 308, 340
@@ -448,14 +450,14 @@ STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CONTROL | WS_CHILD | WS_CAPT
 CAPTION "NtVolInfo"
 FONT 8, "MS Shell Dlg", 0, 0, 0x1
 BEGIN
-    LTEXT           "Volume Information Class",IDC_VOL_INFO_CLASS_TITLE,7,8,274,8
-    COMBOBOX        IDC_VOL_INFO_CLASS,7,19,293,262,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
-    LTEXT           "Input/output length:",IDC_INPUT_LENGTH_TITLE,12,38,70,14,SS_CENTERIMAGE
-    EDITTEXT        IDC_INPUT_LENGTH,86,38,105,14,ES_AUTOHSCROLL | ES_NUMBER
-    PUSHBUTTON      "Default",IDC_DEFAULT_LENGTH,196,38,50,14
-    PUSHBUTTON      "Maximum",IDC_MAXIMUM_LENGTH,251,38,50,14
-    CTEXT           "This function is not supported (yet)",IDC_COMMENT,7,57,294,204,SS_CENTERIMAGE | SS_SUNKEN
-    CONTROL         "",IDC_FILE_INFO,"SysTreeView32",TVS_HASBUTTONS | TVS_HASLINES | TVS_LINESATROOT | TVS_EDITLABELS | TVS_DISABLEDRAGDROP | TVS_TRACKSELECT | TVS_INFOTIP | WS_HSCROLL | WS_TABSTOP,7,57,294,206,WS_EX_CLIENTEDGE
+    LTEXT           "Volume Information Class",IDC_STATIC,7,8,293,8
+    COMBOBOX        IDC_VOL_INFO_CLASS,7,18,293,262,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Input Data Length",IDC_INPUT_LENGTH_TITLE,7,34,293,8
+    EDITTEXT        IDC_INPUT_LENGTH,7,44,246,14,ES_AUTOHSCROLL | ES_NUMBER
+    PUSHBUTTON      "Def",IDC_DEFAULT_LENGTH,257,44,20,14
+    PUSHBUTTON      "Max",IDC_MAXIMUM_LENGTH,281,44,20,14
+    CTEXT           "This function is not supported (yet)",IDC_COMMENT,7,63,294,198,SS_CENTERIMAGE | SS_SUNKEN
+    CONTROL         "",IDC_FILE_INFO,"SysTreeView32",TVS_HASBUTTONS | TVS_HASLINES | TVS_LINESATROOT | TVS_EDITLABELS | TVS_DISABLEDRAGDROP | TVS_TRACKSELECT | TVS_INFOTIP | WS_HSCROLL | WS_TABSTOP,7,63,294,200,WS_EX_CLIENTEDGE
     PUSHBUTTON      "NtQueryVolumeInformationFile",IDC_QUERY_VOL_INFO,7,267,125,14,WS_GROUP
     PUSHBUTTON      "NtSetVolumeInformationFile",IDC_SET_VOL_INFO,176,267,125,14
     GROUPBOX        " Result ",IDC_RESULT_FRAME,7,284,294,48,WS_GROUP
@@ -1138,6 +1140,8 @@ BEGIN
                             "Flushes all file buffers to disk using FlushFileBuffers API"
     IDS_SET_SPARSE_TIP      "Changes the file to sparse file using FSCTL_SET_SPARSE"
     IDS_OPLOCK_BROKE        "The oplock originally granted to the caller (%s) has been broken to %s."
+    IDS_FILE_INFO_CLASS     "File Information class"
+    IDS_VOLUME_INFO_CLASS   "Volume Information class"
     IDS_NOFILESELECTED      "No file selected."
     IDS_INVALIDACCESS       "Invalid access. Please, choose ANSI or Unicode access."
     IDS_OPERATIONCOMPLETE   "Operation complete, no errors."
@@ -1242,6 +1246,7 @@ BEGIN
     IDS_ADS_ACE_MASK        "Ads ACE Mask"
     IDS_COPY_CANCELLED      "Cancelling ..."
     IDS_CUSTOM_VALUE        "Custom Value"
+    IDS_DATA_LENGTH         "In/Out Data Length"
 END
 
 STRINGTABLE 

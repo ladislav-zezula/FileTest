@@ -17,6 +17,8 @@
 #define WM_RELOADITEMS       (WM_USER + 0x1000)
 #define WM_SHOW_DATE_FORMATS (WM_USER + 0x1001)
 
+static UNICODE_STRING NullString = RTL_CONSTANT_STRING(L"NULL");
+
 //-----------------------------------------------------------------------------
 // Description of data structures for file info classes
 
@@ -1576,6 +1578,39 @@ static void EnableOrDisableButtons(HWND hDlg)
         EnableDlgItems(hDlg, bEnable, IDC_QUERY_VOL_INFO, IDC_SET_VOL_INFO, 0);
 }
 
+static PUNICODE_STRING GetQueryDirectoryMask(HWND hDlg, UINT nID)
+{
+    PUNICODE_STRING FileMask;
+    SIZE_T cbToAllocate;
+    SIZE_T cbFileMask;
+    HWND hWndChild = GetDlgItem(hDlg, nID);
+    int nTextLength;
+
+    // Retrieve the length of the mask
+    nTextLength = GetWindowTextLength(hWndChild);
+    cbFileMask  = (nTextLength * sizeof(WCHAR));
+    cbToAllocate = sizeof(UNICODE_STRING) + cbFileMask + sizeof(WCHAR);
+    FileMask = (PUNICODE_STRING)HeapAlloc(g_hHeap, HEAP_ZERO_MEMORY, cbToAllocate);
+    if(FileMask != NULL)
+    {
+        // Initialize the self-relative UNICODE_STRING
+        FileMask->MaximumLength = (USHORT)(cbFileMask + sizeof(WCHAR));
+        FileMask->Length = (USHORT)(cbFileMask);
+        FileMask->Buffer = (LPWSTR)(FileMask + 1);
+
+        // Copy the string
+        GetWindowText(hWndChild, FileMask->Buffer, nTextLength + 1);
+
+        // Special case: If the text is "NULL", then a NULL UNICODE_STRING is returned
+        if(!RtlCompareUnicodeString(FileMask, &NullString, TRUE))
+        {
+            HeapFree(g_hHeap, 0, FileMask);
+            FileMask = NULL;
+        }
+    }
+
+    return FileMask;
+}
 
 static int ReloadTreeViewItems(HWND hDlg, HWND hTreeView, HTREEITEM hParentItem)
 {
@@ -1809,7 +1844,8 @@ static int FillDialogWithFileInfo(HWND hDlg, TInfoData * pInfoData, int nInfoCla
     // Enable/disable input length and setinfo button
     EnableDlgItems(hDlg, bEnable, IDC_INPUT_LENGTH_TITLE,
                                   IDC_INPUT_LENGTH,
-                                  IDC_DEFAULT,
+                                  IDC_DEFAULT_LENGTH,
+                                  IDC_MAXIMUM_LENGTH,
                                   0);
 
     // Enable/disable the buttons
@@ -1944,7 +1980,7 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
     TFileTestData * pData;
     PROPSHEETPAGE * pPage = (PROPSHEETPAGE *)lParam;
     TAnchors * pAnchors = NULL;
-    HWND hCombo;
+    HWND hWndChild;
 
     // Allocate the buffer for file information class.
     // Hopefully the struct size will never exceed 32 KB
@@ -1973,6 +2009,9 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
         pAnchors->AddAnchor(hDlg, IDC_FILE_INFO_CLASS, akLeft | akTop | akRight);
         pAnchors->AddAnchor(hDlg, IDC_VOL_INFO_CLASS_TITLE, akLeft | akTop | akRight);
         pAnchors->AddAnchor(hDlg, IDC_VOL_INFO_CLASS, akLeft | akTop | akRight);
+//      pAnchors->AddAnchor(hDlg, IDC_SEARCH_MASK_TITLE, akLeft | akTop);
+//      pAnchors->AddAnchor(hDlg, IDC_SEARCH_MASK, akLeft | akTop);
+        pAnchors->AddAnchor(hDlg, IDC_INPUT_LENGTH_TITLE, akLeft | akTop | akRight);
         pAnchors->AddAnchor(hDlg, IDC_INPUT_LENGTH, akLeft | akTop | akRight);
         pAnchors->AddAnchor(hDlg, IDC_DEFAULT_LENGTH, akTop | akRight);
         pAnchors->AddAnchor(hDlg, IDC_MAXIMUM_LENGTH, akTop | akRight);
@@ -1991,13 +2030,13 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
     }
 
     // Fill the combo box with names of file information classes
-    hCombo = GetDlgItem(hDlg, IDC_FILE_INFO_CLASS);
-    if(hCombo != NULL)
+    hWndChild = GetDlgItem(hDlg, IDC_FILE_INFO_CLASS);
+    if(hWndChild != NULL)
     {
         // Fill all info classes for NtSetInformationFile
-        FillComboBoxFiltered(hCombo, FileInfoData, _T(""));
-        ComboBox_SetCurSel(hCombo, (int)InitialFileInfo - 1);
-        SetFocus(hCombo);
+        FillComboBoxFiltered(hWndChild, FileInfoData, _T(""));
+        ComboBox_SetCurSel(hWndChild, (int)InitialFileInfo - 1);
+        SetFocus(hWndChild);
 
         // Initialize tree view with structure for current
         // file information class
@@ -2005,20 +2044,28 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
     }
 
     // Fill the combo box with names of volume information classes
-    hCombo = GetDlgItem(hDlg, IDC_VOL_INFO_CLASS);
-    if(hCombo != NULL)
+    hWndChild = GetDlgItem(hDlg, IDC_VOL_INFO_CLASS);
+    if(hWndChild != NULL)
     {
         // Fill all info classes for NtSetVolumeInformationFile
-        FillComboBoxFiltered(hCombo, FsInfoData, _T(""));
-        ComboBox_SetCurSel(hCombo, (int)InitialFsInfo - 1);
-        SetFocus(hCombo);
+        FillComboBoxFiltered(hWndChild, FsInfoData, _T(""));
+        ComboBox_SetCurSel(hWndChild, (int)InitialFsInfo - 1);
+        SetFocus(hWndChild);
 
         // Initialize tree view with structure for current
         // file information class
         FillDialogWithFileInfo(hDlg, FsInfoData, (int)InitialFsInfo);
     }
 
+    // Configure the search mask edit box
+    hWndChild = GetDlgItem(hDlg, IDC_SEARCH_MASK);
+    if(hWndChild != NULL)
+        SetWindowText(hWndChild, _T("NULL"));
+
+    // Initialize the in/out data length
     Hex2DlgText32(hDlg, IDC_INPUT_LENGTH, pData->cbNtInfoBuff);
+
+    // Configure the buttons
     EnableOrDisableButtons(hDlg);
     return TRUE;
 }
@@ -2493,6 +2540,7 @@ static int OnQueryDirClick(HWND hDlg)
     FILE_INFORMATION_CLASS FileInfoClass;
     TFileTestData * pData = GetDialogData(hDlg);
     IO_STATUS_BLOCK IoStatus = {0};
+    PUNICODE_STRING FileMask = NULL;
     TInfoData * pInfoData;
     NTSTATUS Status = STATUS_SUCCESS;
     HANDLE hEvent = NULL;
@@ -2510,6 +2558,9 @@ static int OnQueryDirClick(HWND hDlg)
 
     // Get the file information class
     FileInfoClass = (FILE_INFORMATION_CLASS)((pInfoData - FileInfoData) + 1);
+
+    // Get the input mask
+    FileMask = GetQueryDirectoryMask(hDlg, IDC_SEARCH_MASK);
 
     // Get the input length
     DlgText2Hex32(hDlg, IDC_INPUT_LENGTH, &Length);
@@ -2542,7 +2593,7 @@ static int OnQueryDirClick(HWND hDlg)
                                       Length, 
                                       FileInfoClass,
                                       FALSE,
-                                      NULL,
+                                      FileMask,
                                       TRUE);
 
         // If the operation is pending, we have to wait until it's complete
@@ -2556,11 +2607,13 @@ static int OnQueryDirClick(HWND hDlg)
     // If succeeded, we have to fill the dialog with file info
     if(NT_SUCCESS(Status) || Status == STATUS_BUFFER_OVERFLOW)
         FillDialogWithFileInfo(hDlg, FileInfoData, (int)FileInfoClass);
+    SetResultInfo(hDlg, Status, NULL, IoStatus.Information);
 
     // Set the result status and return
-    SetResultInfo(hDlg, Status, NULL, IoStatus.Information);
     if(hEvent != NULL)
         CloseHandle(hEvent);
+    if(FileMask != NULL)
+        HeapFree(g_hHeap, 0, FileMask);
     return TRUE;
 }
 
