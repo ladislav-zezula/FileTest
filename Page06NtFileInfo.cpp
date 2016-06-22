@@ -1861,6 +1861,16 @@ static int FillDialogWithFileInfo(HWND hDlg, TInfoData * pInfoData, int nInfoCla
     return nInputLength;
 }
 
+static void FillDialogWithMasks(HWND hWndCombo)
+{
+    ComboBox_InsertString(hWndCombo, -1, _T("NULL"));
+    ComboBox_InsertString(hWndCombo, -1, _T("*"));
+    ComboBox_InsertString(hWndCombo, -1, _T("*.*"));
+    ComboBox_InsertString(hWndCombo, -1, _T("*.exe"));
+
+    ComboBox_SetCurSel(hWndCombo, 0);
+}
+
 VOID CALLBACK TimerTooltipProc(HWND hDlg, UINT /* uMsg */, UINT_PTR /* idEvent */, DWORD /* dwTime */)
 {
     // Destroy the tooltip window
@@ -2060,7 +2070,7 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
     // Configure the search mask edit box
     hWndChild = GetDlgItem(hDlg, IDC_SEARCH_MASK);
     if(hWndChild != NULL)
-        SetWindowText(hWndChild, _T("NULL"));
+        FillDialogWithMasks(hWndChild);
 
     // Initialize the in/out data length
     Hex2DlgText32(hDlg, IDC_INPUT_LENGTH, pData->cbNtInfoBuff);
@@ -2807,19 +2817,23 @@ static int OnCommand(HWND hDlg, UINT nNotify, UINT nIDCtrl)
         }
     }
 
-    // Provide more convenient item search than the default one
-    if(nNotify == CBN_EDITUPDATE)
+    // Extra handling for comboboxes with info class
+    if(nIDCtrl == IDC_FILE_INFO_CLASS || nIDCtrl == IDC_VOL_INFO_CLASS)
     {
-        OnComboBoxEditUpdate(hDlg, nIDCtrl, (nIDCtrl == IDC_FILE_INFO_CLASS) ? FileInfoData : FsInfoData);
-        return TRUE;
+        switch(nNotify)
+        {
+            // Provide more convenient item search than the default one    
+            case CBN_EDITUPDATE:
+                OnComboBoxEditUpdate(hDlg, nIDCtrl, (nIDCtrl == IDC_FILE_INFO_CLASS) ? FileInfoData : FsInfoData);
+                return TRUE;
+
+            // If the selection has been changed, reflect it in the dialog
+            case CBN_SELENDOK:
+                OnComboBoxItemSelected(hDlg, nIDCtrl, (nIDCtrl == IDC_FILE_INFO_CLASS) ? FileInfoData : FsInfoData);
+                return TRUE;
+        }
     }
 
-    // If the selection has been changed, reflect it in the dialog
-    if(nNotify == CBN_SELENDOK)
-    {
-        OnComboBoxItemSelected(hDlg, nIDCtrl, (nIDCtrl == IDC_FILE_INFO_CLASS) ? FileInfoData : FsInfoData);
-        return TRUE;
-    }
     return FALSE;
 }
 

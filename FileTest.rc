@@ -109,8 +109,8 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 2,6,1,550
- PRODUCTVERSION 2,6,1,550
+ FILEVERSION 2,6,1,552
+ PRODUCTVERSION 2,6,1,552
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -127,13 +127,13 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Ladislav Zezula"
             VALUE "FileDescription", "Interactive File System API Test"
-            VALUE "FileVersion", "2, 6, 1, 550"
+            VALUE "FileVersion", "2, 6, 1, 552\0"
             VALUE "InternalName", "FileTest"
             VALUE "LegalCopyright", "Copyright © 2004 - 2016 Ladislav Zezula"
             VALUE "LegalTrademarks", "http://www.zezula.net"
             VALUE "OriginalFilename", "FileTest.exe"
             VALUE "ProductName", "FileTest"
-            VALUE "ProductVersion", "2, 6, 1, 550"
+            VALUE "ProductVersion", "2, 6, 1, 552\0"
         END
     END
     BLOCK "VarFileInfo"
@@ -428,7 +428,7 @@ BEGIN
     LTEXT           "File Information Class",IDC_STATIC,7,8,294,8
     COMBOBOX        IDC_FILE_INFO_CLASS,7,18,293,262,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
     LTEXT           "Query Directory Mask",IDC_SEARCH_MASK_TITLE,7,34,145,8
-    EDITTEXT        IDC_SEARCH_MASK,7,44,145,14,ES_AUTOHSCROLL
+    COMBOBOX        IDC_SEARCH_MASK,7,44,145,88,CBS_DROPDOWN | WS_VSCROLL | WS_TABSTOP
     LTEXT           "Input Data Length",IDC_INPUT_LENGTH_TITLE,156,34,145,8
     EDITTEXT        IDC_INPUT_LENGTH,156,44,97,14,ES_AUTOHSCROLL | ES_NUMBER
     PUSHBUTTON      "Def",IDC_DEFAULT_LENGTH,257,44,20,14

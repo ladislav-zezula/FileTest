@@ -2,6 +2,8 @@
   FileTest history
   ================
 
+ - The user can now specify a search mask for NtQueryDirectoryFile
+
  Version 2.6.1.546
 
  - Double-click on stream name creates proper full path

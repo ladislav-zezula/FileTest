@@ -363,8 +363,8 @@
 #define IDC_FORCED_DELETE               1224
 #define IDC_REPARSE_DATA                1226
 #define IDC_CHILD_MUSTER                1227
-#define IDC_BUTTON2                     1229
 #define IDC_SEARCH_MASK_TITLE           1229
+#define IDC_COMBO1                      1230
 #define IDS_FLUSH_FILE_BUFFERS_TIP      4000
 #define IDS_SET_SPARSE_TIP              4001
 #define IDS_OPLOCK_BROKE                4002
@@ -496,7 +496,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        146
 #define _APS_NEXT_COMMAND_VALUE         40062
-#define _APS_NEXT_CONTROL_VALUE         1230
+#define _APS_NEXT_CONTROL_VALUE         1231
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif
