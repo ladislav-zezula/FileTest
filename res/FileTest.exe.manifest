@@ -1,14 +1,15 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <assembly manifestVersion="1.0" xmlns="urn:schemas-microsoft-com:asm.v1">
 
-  <assemblyIdentity
-    version="1.0.0.0"
-    processorArchitecture="*"
-    name="Ladik.FileTest"
-    type="win32"
-  />
-
   <description>A tool for testing file system functions</description>
+
+  <assemblyIdentity version="1.0.0.0" processorArchitecture="*" name="Ladik.FileTest" type="win32" />
+
+  <application xmlns="urn:schemas-microsoft-com:asm.v3">
+    <windowsSettings>
+      <dpiAware xmlns="http://schemas.microsoft.com/SMI/2005/WindowsSettings">True</dpiAware>
+    </windowsSettings>
+  </application>
 
   <dependency>
     <dependentAssembly>

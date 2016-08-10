@@ -112,7 +112,6 @@ BOOL CALLBACK EnumMenusProc(HMODULE hModule, LPCTSTR lpszType, LPTSTR lpszName, 
     return TRUE;
 }
 
-
 #ifdef _DEBUG
 //static TFlagInfo ReparseTags[] =
 //{
