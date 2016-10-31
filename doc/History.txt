@@ -2,7 +2,10 @@
   FileTest history
   ================
 
+ Version 2.6.1.553
+
  - The user can now specify a search mask for NtQueryDirectoryFile
+ - DPI awareness
 
  Version 2.6.1.546
 

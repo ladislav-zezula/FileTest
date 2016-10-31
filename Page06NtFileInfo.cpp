@@ -884,24 +884,31 @@ static LPTSTR WStringToItemText(
 
 static LPTSTR CreateFullName(LPCTSTR szDirectory, LPCWSTR szPlainName, ULONG cbPlainName)
 {
-    LPCTSTR szFormat = (szPlainName[0] == _T(':')) ? _T("%s%.*s") : _T("%s\\%.*s");
     LPTSTR szFileName;
+    LPTSTR szFilePtr;
+    size_t cchDirectory = _tcslen(szDirectory);
     size_t cchLength;
 
     // Allocate buffer
-    cchLength = _tcslen(szDirectory) + 1 + (cbPlainName / sizeof(WCHAR)) + 1; 
-    szFileName = new TCHAR[cchLength];
+    cchLength = cchDirectory + 1 + (cbPlainName / sizeof(WCHAR)) + 1; 
+    szFileName = szFilePtr = new TCHAR[cchLength];
     if(szFileName != NULL)
     {
-        // Construct the full name. Note that if there already is
-        // a backslash in the directory name, it will be doubled by
-        // this, which is fine. FileTest is not supposed to correct
-        // the user's input, but to send anything the user wants into the FS
-        StringCchPrintf(szFileName, cchLength,
-                                    szFormat,
-                                    szDirectory,
-                                    cbPlainName / sizeof(WCHAR),
-                                    szPlainName);
+        // Do we need a backslash?
+        if(cchDirectory > 0)
+        {
+            // Copy the directory name
+            memcpy(szFilePtr, szDirectory, cchDirectory * sizeof(TCHAR));
+            szFilePtr += cchDirectory;
+
+            // Add backslash if needed
+            if(szFilePtr[-1] != _T('\\'))
+                *szFilePtr++ = _T('\\');
+        }
+
+        // Copy the plain name
+        memcpy(szFilePtr, szPlainName, cbPlainName);
+        szFilePtr[cbPlainName / sizeof(TCHAR)] = 0;
     }
     
     return szFileName;
