@@ -127,13 +127,13 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Ladislav Zezula"
             VALUE "FileDescription", "Interactive File System API Test"
-            VALUE "FileVersion", "2, 6, 1, 555\0"
+            VALUE "FileVersion", "2, 6, 1, 555"
             VALUE "InternalName", "FileTest"
             VALUE "LegalCopyright", "Copyright © 2004 - 2016 Ladislav Zezula"
             VALUE "LegalTrademarks", "http://www.zezula.net"
             VALUE "OriginalFilename", "FileTest.exe"
             VALUE "ProductName", "FileTest"
-            VALUE "ProductVersion", "2, 6, 1, 555\0"
+            VALUE "ProductVersion", "2, 6, 1, 555"
         END
     END
     BLOCK "VarFileInfo"
@@ -1142,6 +1142,7 @@ BEGIN
     IDS_OPLOCK_BROKE        "The oplock originally granted to the caller (%s) has been broken to %s."
     IDS_FILE_INFO_CLASS     "File Information class"
     IDS_VOLUME_INFO_CLASS   "Volume Information class"
+    IDS_ENTER_FLAGS         "Enter Flags"
     IDS_NOFILESELECTED      "No file selected."
     IDS_INVALIDACCESS       "Invalid access. Please, choose ANSI or Unicode access."
     IDS_OPERATIONCOMPLETE   "Operation complete, no errors."

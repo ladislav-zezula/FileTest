@@ -38,7 +38,7 @@ TStructMember FileDirectoryInformationMembers[] =
     {_T("ChangeTime"),      TYPE_FILETIME, sizeof(LARGE_INTEGER)},
     {_T("EndOfFile"),       TYPE_UINT64,   sizeof(LARGE_INTEGER)},
     {_T("AllocationSize"),  TYPE_UINT64,   sizeof(LARGE_INTEGER)},
-    {_T("FileAttributes"),  TYPE_UINT32,   sizeof(ULONG)},
+    {_T("FileAttributes"),  TYPE_FLAG32,   sizeof(ULONG), NULL, {(TStructMember *)FileAttributesValues}},
     {_T("FileNameLength"),  TYPE_UINT32,   sizeof(ULONG)},
     {_T("FileName"),        TYPE_WNAME_L32B, FIELD_OFFSET(FILE_DIRECTORY_INFORMATION, FileNameLength)},
     {NULL}
@@ -54,13 +54,12 @@ TStructMember FileFullDirectoryInformationMembers[] =
     {_T("ChangeTime"),      TYPE_FILETIME, sizeof(LARGE_INTEGER)},
     {_T("EndOfFile"),       TYPE_UINT64,   sizeof(LARGE_INTEGER)},
     {_T("AllocationSize"),  TYPE_UINT64,   sizeof(LARGE_INTEGER)},
-    {_T("FileAttributes"),  TYPE_UINT32,   sizeof(ULONG)},
+    {_T("FileAttributes"),  TYPE_FLAG32,   sizeof(ULONG), NULL, {(TStructMember *)FileAttributesValues}},
     {_T("FileNameLength"),  TYPE_UINT32,   sizeof(ULONG)},
     {_T("EaSize"),          TYPE_UINT32,   sizeof(ULONG)},
     {_T("FileName"),        TYPE_WNAME_L32B,  FIELD_OFFSET(FILE_FULL_DIR_INFORMATION, FileNameLength)},
     {NULL}
 };
-
 
 TStructMember FileBothDirectoryInformationMembers[] =
 {                                            
@@ -72,7 +71,7 @@ TStructMember FileBothDirectoryInformationMembers[] =
     {_T("ChangeTime"),      TYPE_FILETIME,   sizeof(LARGE_INTEGER)},
     {_T("EndOfFile"),       TYPE_UINT64,     sizeof(LARGE_INTEGER)},
     {_T("AllocationSize"),  TYPE_UINT64,     sizeof(LARGE_INTEGER)},
-    {_T("FileAttributes"),  TYPE_UINT32,     sizeof(ULONG)},
+    {_T("FileAttributes"),  TYPE_FLAG32,     sizeof(ULONG), NULL, {(TStructMember *)FileAttributesValues}},
     {_T("FileNameLength"),  TYPE_UINT32,     sizeof(ULONG)},
     {_T("EaSize"),          TYPE_UINT32,     sizeof(ULONG)},
     {_T("ShortNameLength"), TYPE_UINT8,      sizeof(BYTE)},       // Although CCHAR, it has 2 bytes because of alignment
@@ -82,17 +81,15 @@ TStructMember FileBothDirectoryInformationMembers[] =
     {NULL}
 };
 
-
 TStructMember FileBasicInformationMembers[] =
 {
     {_T("CreationTime"),    TYPE_FILETIME,   sizeof(LARGE_INTEGER)},
     {_T("LastAccessTime"),  TYPE_FILETIME,   sizeof(LARGE_INTEGER)},
     {_T("LastWriteTime"),   TYPE_FILETIME,   sizeof(LARGE_INTEGER)},
     {_T("ChangeTime"),      TYPE_FILETIME,   sizeof(LARGE_INTEGER)},
-    {_T("FileAttributes"),  TYPE_UINT32,     sizeof(ULONG)},
+    {_T("FileAttributes"),  TYPE_FLAG32,   sizeof(ULONG), NULL, {(TStructMember *)FileAttributesValues}},
     {NULL, TYPE_NONE, 0}
 };
-
 
 TStructMember FileStandardInformationMembers[] =
 {
@@ -104,13 +101,11 @@ TStructMember FileStandardInformationMembers[] =
     {NULL, TYPE_NONE, 0}
 };
 
-
 TStructMember FileInternalInformationMembers[] =
 {
     {_T("IndexNumber"),     TYPE_FILEID64, sizeof(LARGE_INTEGER)},
     {NULL, TYPE_NONE, 0}
 };
-
 
 TStructMember FileEaInformationMembers[] =
 {
@@ -118,13 +113,11 @@ TStructMember FileEaInformationMembers[] =
     {NULL, TYPE_NONE, 0}
 };
 
-
 TStructMember FileAccessInformationMembers[] =
 {
     {_T("AccessFlags"),     TYPE_UINT32, sizeof(ACCESS_MASK)},
     {NULL, TYPE_NONE, 0}
 };
-
 
 TStructMember FileNameInformationMembers[] =
 {
@@ -171,13 +164,11 @@ TStructMember FileNamesInformationMembers[] =
     {NULL, TYPE_NONE, 0}
 };
 
-
 TStructMember FileDispositionInformationMembers[] =
 {
     {_T("DeleteFile"),      TYPE_BOOLEAN, sizeof(BOOLEAN)},
     {NULL, TYPE_NONE, 0}
 };
-
 
 TStructMember FilePositionInformationMembers[] =
 {
@@ -196,13 +187,11 @@ TStructMember FileFullEaInformationMembers[] =
     {NULL, TYPE_NONE, 0}
 };
 
-
 TStructMember FileModeInformationMembers[] =
 {
     {_T("Mode"),            TYPE_UINT32, sizeof(ULONG)},
     {NULL, TYPE_NONE, 0}
 };
-
 
 TStructMember FileAlignmentInformationMembers[] =
 {
@@ -210,28 +199,25 @@ TStructMember FileAlignmentInformationMembers[] =
     {NULL, TYPE_NONE, 0}
 };
 
-
 TStructMember FileAllInformationMembers[] =
 {
-    {_T("FILE_BASIC_INFORMATION"),    TYPE_STRUCT, sizeof(FILE_BASIC_INFORMATION), NULL, FileBasicInformationMembers},
-    {_T("FILE_STANDARD_INFORMATION"), TYPE_STRUCT, sizeof(FILE_STANDARD_INFORMATION), NULL, FileStandardInformationMembers},
-    {_T("FILE_INTERNAL_INFORMATION"), TYPE_STRUCT, sizeof(FILE_INTERNAL_INFORMATION), NULL, FileInternalInformationMembers},
-    {_T("FILE_EA_INFORMATION"),       TYPE_STRUCT, sizeof(FILE_EA_INFORMATION), NULL, FileEaInformationMembers},
-    {_T("FILE_ACCESS_INFORMATION"),   TYPE_STRUCT, sizeof(FILE_ACCESS_INFORMATION), NULL, FileAccessInformationMembers},
-    {_T("FILE_POSITION_INFORMATION"), TYPE_STRUCT, sizeof(FILE_POSITION_INFORMATION), NULL, FilePositionInformationMembers},
-    {_T("FILE_MODE_INFORMATION"),     TYPE_STRUCT, sizeof(FILE_MODE_INFORMATION), NULL, FileModeInformationMembers},
-    {_T("FILE_ALIGNMENT_INFORMATION"),TYPE_STRUCT, sizeof(FILE_ALIGNMENT_INFORMATION), NULL, FileAlignmentInformationMembers},
-    {_T("FILE_NAME_INFORMATION"),     TYPE_STRUCT, sizeof(FILE_NAME_INFORMATION), NULL, FileNameInformationMembers},
+    {_T("FILE_BASIC_INFORMATION"),    TYPE_STRUCT, sizeof(FILE_BASIC_INFORMATION), NULL, {FileBasicInformationMembers}},
+    {_T("FILE_STANDARD_INFORMATION"), TYPE_STRUCT, sizeof(FILE_STANDARD_INFORMATION), NULL, {FileStandardInformationMembers}},
+    {_T("FILE_INTERNAL_INFORMATION"), TYPE_STRUCT, sizeof(FILE_INTERNAL_INFORMATION), NULL, {FileInternalInformationMembers}},
+    {_T("FILE_EA_INFORMATION"),       TYPE_STRUCT, sizeof(FILE_EA_INFORMATION), NULL, {FileEaInformationMembers}},
+    {_T("FILE_ACCESS_INFORMATION"),   TYPE_STRUCT, sizeof(FILE_ACCESS_INFORMATION), NULL, {FileAccessInformationMembers}},
+    {_T("FILE_POSITION_INFORMATION"), TYPE_STRUCT, sizeof(FILE_POSITION_INFORMATION), NULL, {FilePositionInformationMembers}},
+    {_T("FILE_MODE_INFORMATION"),     TYPE_STRUCT, sizeof(FILE_MODE_INFORMATION), NULL, {FileModeInformationMembers}},
+    {_T("FILE_ALIGNMENT_INFORMATION"),TYPE_STRUCT, sizeof(FILE_ALIGNMENT_INFORMATION), NULL, {FileAlignmentInformationMembers}},
+    {_T("FILE_NAME_INFORMATION"),     TYPE_STRUCT, sizeof(FILE_NAME_INFORMATION), NULL, {FileNameInformationMembers}},
     {NULL, TYPE_NONE, 0}
 };
-
 
 TStructMember FileAllocationInformationMembers[] =
 {
     {_T("AllocationSize"),  TYPE_UINT64, sizeof(LARGE_INTEGER)},
     {NULL, TYPE_NONE, 0}
 };
-
 
 TStructMember FileEndOfFileInformationMembers[] =
 {
@@ -258,7 +244,6 @@ TStructMember FilePipeInformationMembers[] =
     {NULL, TYPE_NONE, 0}
 };
 
-
 TStructMember FilePipeLocalInformationMembers[] =
 {
     {_T("NamedPipeType"),          TYPE_UINT32, sizeof(ULONG)},
@@ -281,7 +266,6 @@ TStructMember FilePipeRemoteInformationMembers[] =
     {NULL, TYPE_NONE, 0}
 };
 
-
 TStructMember FileMailslotQueryInformationMembers[] =
 {
     {_T("MaximumMessageSize"), TYPE_UINT32, sizeof(ULONG)},
@@ -292,13 +276,11 @@ TStructMember FileMailslotQueryInformationMembers[] =
     {NULL, TYPE_NONE, 0}
 };
 
-
 TStructMember FileMailslotSetInformationMembers[] =
 {
     {_T("ReadTimeout"),     TYPE_UINT64, sizeof(LARGE_INTEGER)},
     {NULL, TYPE_NONE, 0}
 };
-
 
 TStructMember FileCompressionInformationMembers[] =
 {
@@ -313,7 +295,6 @@ TStructMember FileCompressionInformationMembers[] =
     {NULL, TYPE_NONE, 0}
 };
 
-
 TStructMember FileObjectIdInformationMembers[] =
 {
     {_T("FileReference"),   TYPE_UINT64,       sizeof(LONGLONG)},
@@ -323,7 +304,6 @@ TStructMember FileObjectIdInformationMembers[] =
     {_T("DomainId"),        TYPE_ARRAY8_FIXED, sizeof(UCHAR[16])},
     {NULL, TYPE_NONE, 0}
 };
-
 
 TStructMember FileCompletionInformationMembers[] =
 {
@@ -354,14 +334,12 @@ TStructMember FileQuotaInformationMembers[] =
     {NULL, TYPE_NONE, 0}
 };
 
-
 TStructMember FileReparsePointInformationMembers[] =
 {
     {_T("FileReference"),   TYPE_UINT64,   sizeof(LONGLONG)},
     {_T("Tag"),             TYPE_UINT32,   sizeof(ULONG)},
     {NULL, TYPE_NONE, 0}
 };
-
 
 TStructMember FileNetworkOpenInformationMembers[] =
 {
@@ -371,17 +349,16 @@ TStructMember FileNetworkOpenInformationMembers[] =
     {_T("ChangeTime"),      TYPE_FILETIME, sizeof(LARGE_INTEGER)},
     {_T("AllocationSize"),  TYPE_UINT64,   sizeof(LARGE_INTEGER)},
     {_T("EndOfFile"),       TYPE_UINT64,   sizeof(LARGE_INTEGER)},
-    {_T("FileAttributes"),  TYPE_UINT32,   sizeof(ULONG)},
+    {_T("FileAttributes"),  TYPE_FLAG32,   sizeof(ULONG), NULL, {(TStructMember *)FileAttributesValues}},
     {NULL, TYPE_NONE, 0}
 };
 
 TStructMember FileAttributeTagInformationMembers[] =
 {
-    {_T("FileAttributes"),  TYPE_UINT32, sizeof(ULONG)},
+    {_T("FileAttributes"),  TYPE_FLAG32,   sizeof(ULONG), NULL, {(TStructMember *)FileAttributesValues}},
     {_T("ReparseTag"),      TYPE_UINT32, sizeof(ULONG)},
     {NULL, TYPE_NONE, 0}
 };
-
 
 TStructMember FileTrackingInformationMembers[] =
 {
@@ -390,7 +367,6 @@ TStructMember FileTrackingInformationMembers[] =
     {_T("ObjectInformation"),       TYPE_UINT8,  sizeof(CHAR)},   // TODO: TYPE_FTI_NAME
     {NULL, TYPE_NONE, 0}
 };
-
 
 TStructMember FileIdBothDirectoryInformationMembers[] =
 {
@@ -402,7 +378,7 @@ TStructMember FileIdBothDirectoryInformationMembers[] =
     {_T("ChangeTime"),      TYPE_FILETIME,   sizeof(LARGE_INTEGER)},
     {_T("EndOfFile"),       TYPE_UINT64,     sizeof(LARGE_INTEGER)},
     {_T("AllocationSize"),  TYPE_UINT64,     sizeof(LARGE_INTEGER)},
-    {_T("FileAttributes"),  TYPE_UINT32,     sizeof(ULONG)},
+    {_T("FileAttributes"),  TYPE_FLAG32,     sizeof(ULONG), NULL, {(TStructMember *)FileAttributesValues}},
     {_T("FileNameLength"),  TYPE_UINT32,     sizeof(ULONG)},
     {_T("EaSize"),          TYPE_UINT32,     sizeof(ULONG)},
     {_T("ShortNameLength"), TYPE_UINT8,      sizeof(BYTE)},        // Although CCHAR, it has 2 bytes because of alignment
@@ -412,7 +388,6 @@ TStructMember FileIdBothDirectoryInformationMembers[] =
     {_T("FileName"),        TYPE_WNAME_L32B, FIELD_OFFSET(FILE_ID_BOTH_DIR_INFORMATION, FileNameLength)},
     {NULL}
 };
-
 
 TStructMember FileIdFullDirectoryInformationMembers[] =
 {
@@ -424,7 +399,7 @@ TStructMember FileIdFullDirectoryInformationMembers[] =
     {_T("ChangeTime"),      TYPE_FILETIME,   sizeof(LARGE_INTEGER)},
     {_T("EndOfFile"),       TYPE_UINT64,     sizeof(LARGE_INTEGER)},
     {_T("AllocationSize"),  TYPE_UINT64,     sizeof(LARGE_INTEGER)},
-    {_T("FileAttributes"),  TYPE_UINT32,     sizeof(ULONG)},
+    {_T("FileAttributes"),  TYPE_FLAG32,     sizeof(ULONG), NULL, {(TStructMember *)FileAttributesValues}},
     {_T("FileNameLength"),  TYPE_UINT32,     sizeof(ULONG)},
     {_T("EaSize"),          TYPE_UINT32,     sizeof(LARGE_INTEGER)},    // Size is larger due to alignment
     {_T("FileId"),          TYPE_FILEID64,   sizeof(LARGE_INTEGER)},
@@ -440,13 +415,11 @@ TStructMember FileValidDataLengthInformationMembers[] =
 
 #define FileShortNameInformationMembers FileNameInformationMembers
 
-
 TStructMember FileIoCompletionNotificationInformationMembers[] =
 {
     {_T("Flags"),           TYPE_UINT32,     sizeof(ULONG)},
     {NULL, TYPE_NONE, 0}
 };
-
 
 TStructMember FileIoStatusBlockRangeInformationMembers[] =
 {
@@ -461,7 +434,6 @@ TStructMember FileIoPriorityHintInformationMembers[] =
     {NULL, TYPE_NONE, 0}
 };
 
-
 TStructMember FileSfioReserveInformationMembers[] =
 {
     {_T("RequestsPerPeriod"),  TYPE_UINT32,     sizeof(ULONG)},
@@ -474,7 +446,6 @@ TStructMember FileSfioReserveInformationMembers[] =
     {NULL, TYPE_NONE, 0}
 };
 
-
 TStructMember FileSfioVolumeInformationMembers[] =
 {
     {_T("MaximumRequestsPerPeriod"), TYPE_UINT32, sizeof(ULONG)},
@@ -482,7 +453,6 @@ TStructMember FileSfioVolumeInformationMembers[] =
     {_T("MinimumTransferSize"),TYPE_UINT32,  sizeof(ULONG)},
     {NULL, TYPE_NONE, 0}
 };
-
 
 TStructMember FileHardLinkInformationMembers[] =
 {   
@@ -492,7 +462,6 @@ TStructMember FileHardLinkInformationMembers[] =
     {NULL, TYPE_NONE, 0}
 };
 
-
 TStructMember FileProcessIdsUsingFileInformationMembers[] =
 {   
     {_T("NumberOfProcessIdsInList"), TYPE_UINT32, sizeof(ULONG)},
@@ -500,7 +469,6 @@ TStructMember FileProcessIdsUsingFileInformationMembers[] =
     {_T("ProcessIdList"),            TYPE_ARRAY_HANDLE, FIELD_OFFSET(FILE_PROCESS_IDS_USING_FILE_INFORMATION, NumberOfProcessIdsInList)},
     {NULL, TYPE_NONE, 0}
 };
-
 
 TStructMember FileNetworkPhysicalNameInformationMembers[] =
 {
@@ -526,7 +494,7 @@ TStructMember FileIdGlobalTxDirectoryInformationMembers[] =
     {_T("ChangeTime"),      TYPE_FILETIME, sizeof(LARGE_INTEGER)},
     {_T("EndOfFile"),       TYPE_UINT64,   sizeof(LARGE_INTEGER)},
     {_T("AllocationSize"),  TYPE_UINT64,   sizeof(LARGE_INTEGER)},
-    {_T("FileAttributes"),  TYPE_UINT32,   sizeof(ULONG)},
+    {_T("FileAttributes"),  TYPE_FLAG32,   sizeof(ULONG), NULL, {(TStructMember *)FileAttributesValues}},
     {_T("FileNameLength"),  TYPE_UINT32,   sizeof(ULONG)},
     {_T("FileId"),          TYPE_FILEID64, sizeof(LARGE_INTEGER)},
     {_T("LockingTransactionId"), TYPE_ARRAY8_FIXED, sizeof(GUID)},
@@ -583,15 +551,102 @@ TStructMember FileRemoteProtocolInformationMembers[] =
     {NULL, TYPE_NONE, 0}
 };
 
+TStructMember FileVolumeNameInformationMembers[] =
+{
+    {_T("DeviceNameLength"),  TYPE_UINT32,     sizeof(ULONG)},
+    {_T("DeviceName"),        TYPE_WNAME_L32B, FIELD_OFFSET(FILE_VOLUME_NAME_INFORMATION, DeviceNameLength)},
+    {NULL, TYPE_NONE, 0}
+};
+
+TStructMember FileIdInformationMembers[] =
+{
+    {_T("VolumeSerialNumber"), TYPE_UINT64,     sizeof(ULONG)},
+    {_T("FileId"),             TYPE_FILEID128,  sizeof(FILE_ID_128)},
+    {NULL, TYPE_NONE, 0}
+};
+
+TStructMember FileIdExtdDirectoryInformationMembers[] =
+{
+    {_T("NextEntryOffset"), TYPE_UINT32,   sizeof(ULONG)},
+    {_T("FileIndex"),       TYPE_UINT32,   sizeof(ULONG)},
+    {_T("CreationTime"),    TYPE_FILETIME, sizeof(LARGE_INTEGER)},
+    {_T("LastAccessTime"),  TYPE_FILETIME, sizeof(LARGE_INTEGER)},
+    {_T("LastWriteTime"),   TYPE_FILETIME, sizeof(LARGE_INTEGER)},
+    {_T("ChangeTime"),      TYPE_FILETIME, sizeof(LARGE_INTEGER)},
+    {_T("EndOfFile"),       TYPE_UINT64,   sizeof(LARGE_INTEGER)},
+    {_T("AllocationSize"),  TYPE_UINT64,   sizeof(LARGE_INTEGER)},
+    {_T("FileAttributes"),  TYPE_FLAG32,   sizeof(ULONG), NULL, {(TStructMember *)FileAttributesValues}},
+    {_T("FileNameLength"),  TYPE_UINT32,   sizeof(ULONG)},
+    {_T("EaSize"),          TYPE_UINT32,   sizeof(ULONG)},
+    {_T("ReparsePointTag"), TYPE_UINT32,   sizeof(ULONG)},
+    {_T("FileId"),          TYPE_FILEID128, sizeof(FILE_ID_128)},
+    {_T("FileName"),        TYPE_WNAME_L32B, FIELD_OFFSET(FILE_ID_EXTD_DIR_INFORMATION, FileNameLength)},
+    {NULL}
+};
+
+TStructMember FileIdExtdBothDirectoryInformationMembers[] =
+{
+    {_T("NextEntryOffset"), TYPE_UINT32,   sizeof(ULONG)},
+    {_T("FileIndex"),       TYPE_UINT32,   sizeof(ULONG)},
+    {_T("CreationTime"),    TYPE_FILETIME, sizeof(LARGE_INTEGER)},
+    {_T("LastAccessTime"),  TYPE_FILETIME, sizeof(LARGE_INTEGER)},
+    {_T("LastWriteTime"),   TYPE_FILETIME, sizeof(LARGE_INTEGER)},
+    {_T("ChangeTime"),      TYPE_FILETIME, sizeof(LARGE_INTEGER)},
+    {_T("EndOfFile"),       TYPE_UINT64,   sizeof(LARGE_INTEGER)},
+    {_T("AllocationSize"),  TYPE_UINT64,   sizeof(LARGE_INTEGER)},
+    {_T("FileAttributes"),  TYPE_FLAG32,   sizeof(ULONG), NULL, {(TStructMember *)FileAttributesValues}},
+    {_T("FileNameLength"),  TYPE_UINT32,   sizeof(ULONG)},
+    {_T("EaSize"),          TYPE_UINT32,   sizeof(ULONG)},
+    {_T("ReparsePointTag"), TYPE_UINT32,   sizeof(ULONG)},
+    {_T("FileId"),          TYPE_FILEID128, sizeof(FILE_ID_128)},
+    {_T("ShortNameLength"), TYPE_UINT8,      sizeof(BYTE)},       // Although CCHAR, it has 2 bytes because of alignment
+    {_T("<padding>"),       TYPE_PADDING,    sizeof(WCHAR)},
+    {_T("ShortName"),       TYPE_VNAME_FIEBD, sizeof(WCHAR[12])},
+    {_T("FileName"),        TYPE_WNAME_L32B, FIELD_OFFSET(FILE_BOTH_DIR_INFORMATION, FileNameLength)},
+    {NULL}
+};
+
+TFlagInfo FileDispositionInformationExValues[] = 
+{
+//  FLAG_INFO_ENTRY(FILE_DISPOSITION_DO_NOT_DELETE),               // Zero; not an actual flag
+    FLAG_INFO_ENTRY(FILE_DISPOSITION_DELETE),
+    FLAG_INFO_ENTRY(FILE_DISPOSITION_POSIX_SEMANTICS),
+    FLAG_INFO_ENTRY(FILE_DISPOSITION_FORCE_IMAGE_SECTION_CHECK),
+    FLAG_INFO_ENTRY(FILE_DISPOSITION_ON_CLOSE),
+    FLAG_INFO_END
+};
+
+TStructMember FileDispositionInformationExMembers[] =
+{
+    { _T("DispositionFlags"),              TYPE_FLAG32, sizeof(ULONG), NULL, {(TStructMember *)FileDispositionInformationExValues}},
+    { NULL, TYPE_NONE, 0 }
+};
+
+TStructMember FileStatInformationMembers[] =
+{
+    {_T("FileId"),          TYPE_FILEID64, sizeof(LARGE_INTEGER)},
+    {_T("CreationTime"),    TYPE_FILETIME, sizeof(LARGE_INTEGER)},
+    {_T("LastAccessTime"),  TYPE_FILETIME, sizeof(LARGE_INTEGER)},
+    {_T("LastWriteTime"),   TYPE_FILETIME, sizeof(LARGE_INTEGER)},
+    {_T("ChangeTime"),      TYPE_FILETIME, sizeof(LARGE_INTEGER)},
+    {_T("AllocationSize"),  TYPE_UINT64,   sizeof(LARGE_INTEGER)},
+    {_T("EndOfFile"),       TYPE_UINT64,   sizeof(LARGE_INTEGER)},
+    {_T("FileAttributes"),  TYPE_FLAG32,   sizeof(ULONG), NULL, {(TStructMember *)FileAttributesValues}},
+    {_T("ReparseTag"),      TYPE_UINT32,   sizeof(ULONG)},
+    {_T("NumberOfLinks"),   TYPE_UINT32,   sizeof(ULONG)},
+    {_T("EffectiveAccess"), TYPE_UINT32,   sizeof(ULONG)},
+    { NULL, TYPE_NONE, 0 }
+};
+
 #define FileAttributeCacheInformationMembers            FileUnknownInformationMembers
 #define FileStandardLinkInformationMembers              FileUnknownInformationMembers
-#define FileRenameInformationBypassAccessCheckMembers   FileUnknownInformationMembers
-#define FileLinkInformationBypassAccessCheckMembers     FileUnknownInformationMembers
-#define FileVolumeNameInformationMembers                FileUnknownInformationMembers
-#define FileIdInformationMembers                        FileUnknownInformationMembers
-#define FileIdExtdDirectoryInformationMembers           FileUnknownInformationMembers
+#define FileRenameInformationBypassAccessCheckMembers   FileRenameInformationMembers
+#define FileLinkInformationBypassAccessCheckMembers     FileLinkInformationMembers
 #define FileReplaceCompletionInformationMembers         FileUnknownInformationMembers
 #define FileHardLinkFullIdInformationMembers            FileUnknownInformationMembers
+#define FileRenameInformationExMembers                  FileUnknownInformationMembers
+#define FileRenameInformationExBypassAccessCheckMembers FileUnknownInformationMembers
+#define FileDesiredStorageClassInformationMembers       FileUnknownInformationMembers
 
 TInfoData FileInfoData[] =                                                  
 {
@@ -650,13 +705,19 @@ TInfoData FileInfoData[] =
     FILE_INFO_READONLY(FileNumaNodeInformation,                 FILE_NUMA_NODE_INFORMATION,                  FALSE),
     FILE_INFO_READONLY(FileStandardLinkInformation,             FILE_STANDARD_LINK_INFORMATION,              FALSE),
     FILE_INFO_READONLY(FileRemoteProtocolInformation,           FILE_REMOTE_PROTOCOL_INFORMATION,            FALSE),
-    FILE_INFO_READONLY(FileRenameInformationBypassAccessCheck,  FILE_UNKNOWN_INFORMATION,                    FALSE),
-    FILE_INFO_READONLY(FileLinkInformationBypassAccessCheck,    FILE_UNKNOWN_INFORMATION,                    FALSE),
-    FILE_INFO_READONLY(FileVolumeNameInformation,               FILE_UNKNOWN_INFORMATION,                    FALSE),
-    FILE_INFO_READONLY(FileIdInformation,                       FILE_UNKNOWN_INFORMATION,                    FALSE),
-    FILE_INFO_READONLY(FileIdExtdDirectoryInformation,          FILE_UNKNOWN_INFORMATION,                    FALSE),
+    FILE_INFO_READONLY(FileRenameInformationBypassAccessCheck,  FILE_RENAME_INFORMATION,                     TRUE),
+    FILE_INFO_READONLY(FileLinkInformationBypassAccessCheck,    FILE_LINK_INFORMATION,                       FALSE),
+    FILE_INFO_READONLY(FileVolumeNameInformation,               FILE_VOLUME_NAME_INFORMATION,                FALSE),
+    FILE_INFO_READONLY(FileIdInformation,                       FILE_ID_INFORMATION,                         FALSE),
+    FILE_INFO_READONLY(FileIdExtdDirectoryInformation,          FILE_ID_EXTD_DIR_INFORMATION,                TRUE),
     FILE_INFO_READONLY(FileReplaceCompletionInformation,        FILE_UNKNOWN_INFORMATION,                    FALSE),
     FILE_INFO_READONLY(FileHardLinkFullIdInformation,           FILE_UNKNOWN_INFORMATION,                    FALSE),
+    FILE_INFO_READONLY(FileIdExtdBothDirectoryInformation,      FILE_ID_EXTD_BOTH_DIR_INFORMATION,           TRUE),
+    FILE_INFO_EDITABLE(FileDispositionInformationEx,            FILE_DISPOSITION_INFORMATION_EX,             FALSE),
+    FILE_INFO_READONLY(FileRenameInformationEx,                 FILE_UNKNOWN_INFORMATION,                    FALSE),
+    FILE_INFO_READONLY(FileRenameInformationExBypassAccessCheck,FILE_UNKNOWN_INFORMATION,                    FALSE),
+    FILE_INFO_READONLY(FileDesiredStorageClassInformation,      FILE_UNKNOWN_INFORMATION,                    FALSE),
+    FILE_INFO_READONLY(FileStatInformation,                     FILE_STAT_INFORMATION,                       FALSE),
 
     {FileMaximumInformation}                                                                                 
 };
@@ -1048,9 +1109,14 @@ static LPTSTR FileIDToFileName(
     // Open the volume
     if(NT_SUCCESS(Status))
     {
+        // Make the OBJECT_ATTRIBUTES structure
         InitializeObjectAttributes(&ObjAttr, &DeviceName, OBJ_CASE_INSENSITIVE, NULL, NULL);
+
+        // Now try to open the volume/directory/file
+        // Use FILE_READ_ATTRIBUTES as the desired access;
+        // this allows us to bypass sharing violations
         Status = NtCreateFile(&VolumeHandle,
-                               FILE_READ_DATA,
+                               FILE_READ_ATTRIBUTES,    //FILE_READ_DATA,
                               &ObjAttr,
                               &IoStatus,
                                NULL,
@@ -1123,7 +1189,6 @@ static LPTSTR FileIDToFileName(
 
 static int DataToItemText(TStructMember * pMember, LPTSTR szBuffer, size_t nMaxChars, BOOL bTextForEdit)
 {
-    LPCTSTR szMemberName = pMember->szMemberName;
     LPTSTR szEndChar = szBuffer + nMaxChars - 1;
 
     // If there is not even space for ending zero, do nothing
@@ -1133,14 +1198,7 @@ static int DataToItemText(TStructMember * pMember, LPTSTR szBuffer, size_t nMaxC
     // Insert "MemberName: " prefix
     if(bTextForEdit == FALSE)
     {
-        while(szBuffer < szEndChar && *szMemberName != 0)
-            *szBuffer++ = *szMemberName++;
-
-        if((szEndChar - szBuffer) > 1)
-        {
-            *szBuffer++ = _T(':');
-            *szBuffer++ = _T(' ');
-        }
+        StringCchPrintfEx(szBuffer, (szEndChar - szBuffer), &szBuffer, NULL, 0, _T("%s: "), pMember->szMemberName);
     }
 
     // Now insert the member value
@@ -1148,11 +1206,9 @@ static int DataToItemText(TStructMember * pMember, LPTSTR szBuffer, size_t nMaxC
     {
         case TYPE_BOOLEAN:
         {
-            PBOOLEAN pbValue = (PBOOLEAN)pMember->pbDataPtr;
-            LPTSTR szResult = (*pbValue) ? _T("TRUE") : _T("FALSE");
+            LPCTSTR szBoolean = (*(PBOOLEAN)(pMember->pbDataPtr)) ? _T("TRUE") : _T("FALSE");
 
-            while(szBuffer < szEndChar && *szResult != 0)
-                *szBuffer++ = *szResult++;
+            StringCchCopyEx(szBuffer, (szEndChar - szBuffer), szBoolean, &szBuffer, NULL, 0);
             break;
         }
 
@@ -1189,6 +1245,7 @@ static int DataToItemText(TStructMember * pMember, LPTSTR szBuffer, size_t nMaxC
         }
 
         case TYPE_ARRAY8_FIXED:
+        case TYPE_FILEID128:
         {
             LPBYTE pbData = (LPBYTE)pMember->pbDataPtr;
 
@@ -1226,6 +1283,14 @@ static int DataToItemText(TStructMember * pMember, LPTSTR szBuffer, size_t nMaxC
 
             // Display a prompt text
             szBuffer += LoadString(g_hInst, IDS_ENTER_DIRECTORY_NAME, szBuffer, (int)(szEndChar - szBuffer));
+            break;
+        }
+
+        case TYPE_FLAG32:
+        {
+            PULONG pulValue = (PULONG)pMember->pbStructPtr;
+
+            StringCchPrintfEx(szBuffer, (szEndChar - szBuffer), &szBuffer, NULL, 0, _T("0x%08lX"), *pulValue);
             break;
         }
 
@@ -1329,11 +1394,30 @@ static int DataToItemText(TStructMember * pMember, LPTSTR szBuffer, size_t nMaxC
             break;
         }
 
+        case TYPE_VNAME_FIEBD:      // ShortName in FILE_ID_EXTD_BOTH_DIR_INFORMATION
+        {
+            PFILE_ID_EXTD_BOTH_DIR_INFORMATION FileInfo;
+
+            // We have to take the whole structure and get the length
+            // (the name must not be zero terminated)
+            FileInfo = (PFILE_ID_EXTD_BOTH_DIR_INFORMATION)
+                       (pMember->pbDataPtr - FIELD_OFFSET(FILE_ID_EXTD_BOTH_DIR_INFORMATION, ShortName));
+
+            // Process the stream name as non-null-terminated string
+            // with variable length
+            szBuffer = WStringToItemText(szBuffer,
+                                         szEndChar,
+                                         FileInfo->ShortName,
+                                         FileInfo->ShortNameLength,
+                                         bTextForEdit);
+            break;
+        }
+
         case TYPE_FILEID64:         // File ID (unresolved)
         {
-            PLARGE_INTEGER pliValue = (PLARGE_INTEGER)pMember->pbDataPtr;
+            PLARGE_INTEGER pFileId = (PLARGE_INTEGER)pMember->pbDataPtr;
 
-            StringCchPrintfEx(szBuffer, (szEndChar - szBuffer), &szBuffer, NULL, 0, _T("%08lX-%08lX"), pliValue->HighPart, pliValue->LowPart);
+            StringCchPrintfEx(szBuffer, (szEndChar - szBuffer), &szBuffer, NULL, 0, _T("%08lX-%08lX"), pFileId->HighPart, pFileId->LowPart);
             break;
         }
 
@@ -1461,6 +1545,22 @@ static NTSTATUS ItemTextToData(TStructMember * pMember, LPTSTR szItemText)
             return TextToDirHandle(szItemText, (PHANDLE)pMember->pbDataPtr);
         }
 
+        case TYPE_FLAG32:
+        {
+            PULONG pulValue = (PULONG)pMember->pbStructPtr;
+            int nRoot = 10;
+
+            // We allow either text or binary value
+            if(szItemText[0] == _T('0') && toupper(szItemText[1]) == _T('X'))
+            {
+                szItemText += 2;
+                nRoot = 16;
+            }
+
+            *pulValue = (ULONG)StrToInt(szItemText, &szItemText, nRoot);
+            return (*szItemText == 0) ? STATUS_SUCCESS : STATUS_INVALID_DATA_FORMAT;
+        }
+
         case TYPE_WNAME_L32B:
         {
             // Use this if it's name as WCHAR array, of variable length.
@@ -1480,6 +1580,39 @@ static NTSTATUS ItemTextToData(TStructMember * pMember, LPTSTR szItemText)
     return STATUS_NOT_SUPPORTED;
 }
 
+static int InsertTreeItemFlags32(
+    HWND hTreeView,
+    HTREEITEM hParentItem,
+    TStructMember * pMember,
+    LPBYTE pbData,
+    LPBYTE pbDataEnd)
+{
+    TStructMember * pMemberInfo;
+    TCHAR szItemText[128] = _T("");
+
+    // Sanity check
+    assert((UINT)(pbDataEnd - pbData) >= pMember->nMemberSize);
+    UNREFERENCED_PARAMETER(pbDataEnd);
+    assert(pMember->pFlags != NULL);
+
+    // Allocate the data structure
+    pMemberInfo = new TStructMember;
+    if(pMemberInfo != NULL)
+    {
+        // Fill in the item data structure
+        pMemberInfo->szMemberName = pMember->szMemberName;
+        pMemberInfo->nDataType    = pMember->nDataType;
+        pMemberInfo->nMemberSize  = pMember->nMemberSize;
+        pMemberInfo->pbStructPtr  = pbData;
+        pMemberInfo->pFlags       = pMember->pFlags;
+
+        // Insert the tree item to the tree
+        if(DataToItemText(pMemberInfo, szItemText, _maxchars(szItemText), FALSE) == ERROR_SUCCESS)
+            InsertTreeItem(hTreeView, hParentItem, szItemText, pMemberInfo);
+    }
+
+    return pMember->nMemberSize;
+}
 
 static int InsertTreeItemByDataType(
     HWND hTreeView,
@@ -1724,6 +1857,10 @@ static int FillStructureMembers(
                 }
                 break;
 
+            case TYPE_FLAG32:   // Insert the flag array
+                nDataLength = InsertTreeItemFlags32(hTreeView, hParentItem, pMembers, pbData, pbDataEnd);
+                break;
+
             default:
 
                 // Insert the data member
@@ -1756,7 +1893,6 @@ static int FillStructureMembers(
 // This function fills a variable length structure
 // The data structure must contain "ULONG NextEntryOffset"
 // as its very first member
-
 static int FillChainedStructMembers(
     HWND hTreeView,
     HTREEITEM hParentItem,
@@ -1793,7 +1929,6 @@ static int FillChainedStructMembers(
     TreeView_Expand(hTreeView, hParentItem, TVE_EXPAND);
     return nDataLength;
 }
-
 
 static int FillDialogWithFileInfo(HWND hDlg, TInfoData * pInfoData, int nInfoClass)
 {
@@ -1960,9 +2095,10 @@ static bool FileIdHasFileName(HWND hTreeView, HTREEITEM hItem)
     return bResult;
 }
 
-static TInfoData * GetSelectedInfoClass(HWND hWndCombo, TInfoData * pInfoData)
+static TInfoData * GetSelectedInfoClass(HWND hDlg, UINT nIDCombo, TInfoData * pInfoData)
 {
     TCHAR szSelection[MAX_PATH];
+    HWND hWndCombo = GetDlgItem(hDlg, nIDCombo);
     int nSelection = ComboBox_GetCurSel(hWndCombo);
 
     // If there's an active selection,
@@ -2192,7 +2328,6 @@ static int OnBeginLabelEdit(HWND hDlg, NMTVDISPINFO * pTVDispInfo)
     NTSTATUS CantEditStatus = STATUS_CANNOT_EDIT_THIS;
     TCHAR szItemText[1024] = _T("");
     HWND hTreeView = pTVDispInfo->hdr.hwndFrom;
-    HWND hCombo;
     HWND hEdit;
     BOOL bStartEditing = FALSE;
     bool bCopyToClipboard = false;
@@ -2202,29 +2337,21 @@ static int OnBeginLabelEdit(HWND hDlg, NMTVDISPINFO * pTVDispInfo)
     TimerTooltipProc(hDlg, 0, 0, 0);
 
     // Verify if the selected file info class is editable
-    hCombo = GetDlgItem(hDlg, IDC_FILE_INFO_CLASS);                                         
-    if(hCombo != NULL)
+    pInfoData = GetSelectedInfoClass(hDlg, IDC_FILE_INFO_CLASS, FileInfoData);
+    if(pInfoData != NULL)
     {
-        pInfoData = GetSelectedInfoClass(hCombo, FileInfoData);
-        if(pInfoData != NULL)
-        {
-            if(pInfoData->bIsChain == TRUE || pInfoData->bIsEditable == FALSE)
-                bEditable = false;
-            if(pMemberInfo != NULL && pMemberInfo->nDataType == TYPE_WNAME_L32B)
-                bCopyToClipboard = true;
-        }
+        if(pInfoData->bIsChain == TRUE || pInfoData->bIsEditable == FALSE)
+            bEditable = false;
+        if(pMemberInfo != NULL && pMemberInfo->nDataType == TYPE_WNAME_L32B)
+            bCopyToClipboard = true;
     }
 
     // Verify if the selected FS info class is editable
-    hCombo = GetDlgItem(hDlg, IDC_VOL_INFO_CLASS);
-    if(hCombo != NULL)
+    pInfoData = GetSelectedInfoClass(hDlg, IDC_VOL_INFO_CLASS, FsInfoData);
+    if(pInfoData != NULL)
     {
-        pInfoData = GetSelectedInfoClass(hCombo, FileInfoData);
-        if(pInfoData != NULL)
-        {
-            if(pInfoData->bIsChain == TRUE || pInfoData->bIsEditable == FALSE)
-                bEditable = false;
-        }
+        if(pInfoData->bIsChain == TRUE || pInfoData->bIsEditable == FALSE)
+            bEditable = false;
     }
 
     // If not editable, show message
@@ -2313,6 +2440,8 @@ static int OnDoubleClick(HWND hDlg, LPNMHDR pNMHDR)
     TStructMember * pMemberInfo;
     TFileTestData * pData = GetDialogData(hDlg);
     PLARGE_INTEGER pliValue;
+    TInfoData * pInfoData;
+    HTREEITEM hParentItem;
     HTREEITEM hItem;
     LPCTSTR szFormat = _T("%s: %08X-%08X (%s)");
     LPTSTR szFileName = NULL;
@@ -2336,7 +2465,7 @@ static int OnDoubleClick(HWND hDlg, LPNMHDR pNMHDR)
     if(pMemberInfo == NULL)
         return TRUE;
 
-    // If the member info a file ID?
+    // Doubleclick on a file ID appends a file name after it
     if(pMemberInfo->nDataType == TYPE_FILEID64)
     {
         // If the file name is not there yet, query the file name
@@ -2396,6 +2525,24 @@ static int OnDoubleClick(HWND hDlg, LPNMHDR pNMHDR)
             delete [] szFileName;
         }
     }
+
+    // Doubleclick on TYPE_FLAG32 opens a dialog with flags
+    if(pMemberInfo->nDataType == TYPE_FLAG32)
+    {
+        PDWORD PtrFlags = (PDWORD)pMemberInfo->pbStructPtr;
+
+        if(FlagsDialog(hDlg, PtrFlags, IDS_ENTER_FLAGS, pMemberInfo->pFlags))
+        {
+            // Only change the item if editable
+            pInfoData = GetSelectedInfoClass(hDlg, IDC_FILE_INFO_CLASS, FileInfoData);
+            if(pInfoData != NULL && pInfoData->bIsEditable)
+            {
+                hParentItem = TreeView_GetNextItem(hTreeView, hItem, TVGN_PARENT);
+                PostMessage(hDlg, WM_RELOADITEMS, (WPARAM)hTreeView, (LPARAM)hParentItem);
+            }
+        }
+    }
+
     return TRUE;
 }
 
@@ -2448,10 +2595,9 @@ static int OnComboBoxEditUpdate(HWND hDlg, UINT nID, TInfoData * pInfoData)
 static int OnComboBoxItemSelected(HWND hDlg, UINT nID, TInfoData * pInfoData)
 {
     TFileTestData * pData = GetDialogData(hDlg);
-    HWND hWndCombo = GetDlgItem(hDlg, nID);
 
     // If there's an active selection, fill the dialog
-    pInfoData = GetSelectedInfoClass(hWndCombo, pInfoData);
+    pInfoData = GetSelectedInfoClass(hDlg, nID, pInfoData);
     if(pInfoData != NULL)
     {
         ZeroMemory(pData->pbNtInfoBuff, pData->cbNtInfoBuff);
@@ -2465,26 +2611,17 @@ static int OnComboBoxItemSelected(HWND hDlg, UINT nID, TInfoData * pInfoData)
 static int OnDefaultLengthClick(HWND hDlg)
 {
     TInfoData * pInfoData;
-    HWND hCombo;
     UINT nDataLength = 0;
 
     // Default length for file info class
-    hCombo = GetDlgItem(hDlg, IDC_FILE_INFO_CLASS);
-    if(hCombo != NULL)
-    {
-        pInfoData = GetSelectedInfoClass(hCombo, FileInfoData);
-        if(pInfoData != NULL)
-            nDataLength = GetStructLength(pInfoData->pStructMembers);
-    }
+    pInfoData = GetSelectedInfoClass(hDlg, IDC_FILE_INFO_CLASS, FileInfoData);
+    if(pInfoData != NULL)
+        nDataLength = GetStructLength(pInfoData->pStructMembers);
 
     // Default length for FS info class
-    hCombo = GetDlgItem(hDlg, IDC_VOL_INFO_CLASS);
-    if(hCombo != NULL)
-    {
-        pInfoData = GetSelectedInfoClass(hCombo, FsInfoData);
-        if(pInfoData != NULL)
-            nDataLength = GetStructLength(pInfoData->pStructMembers);
-    }
+    pInfoData = GetSelectedInfoClass(hDlg, IDC_VOL_INFO_CLASS, FsInfoData);
+    if(pInfoData != NULL)
+        nDataLength = GetStructLength(pInfoData->pStructMembers);
 
     Hex2DlgText32(hDlg, IDC_INPUT_LENGTH, nDataLength);
     return TRUE;
@@ -2506,19 +2643,18 @@ static int OnQueryInfoClick(HWND hDlg)
     TInfoData * pInfoData;
     NTSTATUS Status = STATUS_SUCCESS;
     ULONG Length = 0;
-    HWND hCombo = GetDlgItem(hDlg, IDC_FILE_INFO_CLASS);
 
     // Test if the handle is an NT file handle and get the file info class
     if(IsHandleValid(pData->hFile) == FALSE)
         return FALSE;
 
     // Get the selected info data
-    pInfoData = GetSelectedInfoClass(hCombo, FileInfoData);
+    pInfoData = GetSelectedInfoClass(hDlg, IDC_FILE_INFO_CLASS, FileInfoData);
     if(pInfoData == NULL)
         return FALSE;
 
     // Get the file information class
-    FileInfoClass = (FILE_INFORMATION_CLASS)((pInfoData - FileInfoData) + 1);
+    FileInfoClass = (FILE_INFORMATION_CLASS)(pInfoData->InfoClass);
 
     // Get the input length
     DlgText2Hex32(hDlg, IDC_INPUT_LENGTH, &Length);
@@ -2562,19 +2698,18 @@ static int OnQueryDirClick(HWND hDlg)
     NTSTATUS Status = STATUS_SUCCESS;
     HANDLE hEvent = NULL;
     ULONG Length = 0;
-    HWND hCombo = GetDlgItem(hDlg, IDC_FILE_INFO_CLASS);
 
     // Test if the handle is an NT file handle and get the file info class
     if(IsHandleValid(pData->hFile) == FALSE)
         return FALSE;
 
     // Get the selected info data
-    pInfoData = GetSelectedInfoClass(hCombo, FileInfoData);
+    pInfoData = GetSelectedInfoClass(hDlg, IDC_FILE_INFO_CLASS, FileInfoData);
     if(pInfoData == NULL)
         return FALSE;
 
     // Get the file information class
-    FileInfoClass = (FILE_INFORMATION_CLASS)((pInfoData - FileInfoData) + 1);
+    FileInfoClass = (FILE_INFORMATION_CLASS)(pInfoData->InfoClass);
 
     // Get the input mask
     FileMask = GetQueryDirectoryMask(hDlg, IDC_SEARCH_MASK);
@@ -2644,19 +2779,18 @@ static int OnSetInfoClick(HWND hDlg)
     LPBYTE pbNtInfoBuff = pData->pbNtInfoBuff;
     ULONG cbNtInfoBuff = pData->cbNtInfoBuff;
     ULONG Length = 0;
-    HWND hCombo = GetDlgItem(hDlg, IDC_FILE_INFO_CLASS);
 
     // Test if the handle is an NT file handle and get the file info class
     if(IsHandleValid(pData->hFile) == FALSE)
         return FALSE;
 
     // Get the selected info data
-    pInfoData = GetSelectedInfoClass(hCombo, FileInfoData);
+    pInfoData = GetSelectedInfoClass(hDlg, IDC_FILE_INFO_CLASS, FileInfoData);
     if(pInfoData == NULL)
         return FALSE;
 
     // Get the file information class
-    FileInfoClass = (FILE_INFORMATION_CLASS)((pInfoData - FileInfoData) + 1);
+    FileInfoClass = (FILE_INFORMATION_CLASS)(pInfoData->InfoClass);
 
     // Get the length of the input data
     DlgText2Hex32(hDlg, IDC_INPUT_LENGTH, &Length);
@@ -2698,19 +2832,18 @@ static int OnQueryFsInfoClick(HWND hDlg)
     IO_STATUS_BLOCK IoStatus = {0};
     NTSTATUS Status = STATUS_SUCCESS;
     ULONG Length = 0;
-    HWND hCombo = GetDlgItem(hDlg, IDC_VOL_INFO_CLASS);
 
     // Test if the handle is an NT file handle and get the file info class
     if(IsHandleValid(pData->hFile) == FALSE)
         return FALSE;
     
     // Get the selected info data
-    pInfoData = GetSelectedInfoClass(hCombo, FsInfoData);
+    pInfoData = GetSelectedInfoClass(hDlg, IDC_VOL_INFO_CLASS, FsInfoData);
     if(pInfoData == NULL)
         return FALSE;
 
     // Get the file system info class
-    FsInfoClass = (FS_INFORMATION_CLASS)((pInfoData - FsInfoData) + 1);
+    FsInfoClass = (FS_INFORMATION_CLASS)(pInfoData->InfoClass);
 
     // Get the input length
     DlgText2Hex32(hDlg, IDC_INPUT_LENGTH, &Length);
@@ -2751,19 +2884,18 @@ static int OnSetFsInfoClick(HWND hDlg)
     TInfoData * pInfoData;
     NTSTATUS Status = STATUS_SUCCESS;
     ULONG Length = 0;
-    HWND hCombo = GetDlgItem(hDlg, IDC_VOL_INFO_CLASS);
 
     // Test if the handle is an NT file handle and get the file info class
     if(IsHandleValid(pData->hFile) == FALSE)
         return FALSE;
 
     // Get the selected info data
-    pInfoData = GetSelectedInfoClass(hCombo, FsInfoData);
+    pInfoData = GetSelectedInfoClass(hDlg, IDC_VOL_INFO_CLASS, FsInfoData);
     if(pInfoData == NULL)
         return FALSE;
 
     // Get the file system info class
-    FsInfoClass = (FS_INFORMATION_CLASS)((pInfoData - FsInfoData) + 1);
+    FsInfoClass = (FS_INFORMATION_CLASS)(pInfoData->InfoClass);
 
     // Get the length of the input data
     DlgText2Hex32(hDlg, IDC_INPUT_LENGTH, &Length);

@@ -370,6 +370,7 @@
 #define IDS_OPLOCK_BROKE                4002
 #define IDS_FILE_INFO_CLASS             4003
 #define IDS_VOLUME_INFO_CLASS           4004
+#define IDS_ENTER_FLAGS                 4005
 #define IDS_NOFILESELECTED              4010
 #define IDS_INVALIDACCESS               4011
 #define IDS_OPERATIONCOMPLETE           4012
