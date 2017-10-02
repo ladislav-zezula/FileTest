@@ -583,13 +583,6 @@ TStructMember FileRemoteProtocolInformationMembers[] =
     {NULL, TYPE_NONE, 0}
 };
 
-TStructMember FileDispositionInformationExMembers[] =
-{
-	{ _T("DispositionFlags"),          TYPE_UINT32, sizeof(ULONG) },
-	{ NULL, TYPE_NONE, 0 }
-};
-
-
 #define FileAttributeCacheInformationMembers            FileUnknownInformationMembers
 #define FileStandardLinkInformationMembers              FileUnknownInformationMembers
 #define FileRenameInformationBypassAccessCheckMembers   FileUnknownInformationMembers
@@ -664,7 +657,6 @@ TInfoData FileInfoData[] =
     FILE_INFO_READONLY(FileIdExtdDirectoryInformation,          FILE_UNKNOWN_INFORMATION,                    FALSE),
     FILE_INFO_READONLY(FileReplaceCompletionInformation,        FILE_UNKNOWN_INFORMATION,                    FALSE),
     FILE_INFO_READONLY(FileHardLinkFullIdInformation,           FILE_UNKNOWN_INFORMATION,                    FALSE),
-	FILE_INFO_EDITABLE(FileDispositionInformationEx,            FILE_DISPOSITION_INFORMATION_EX,             FALSE),
 
     {FileMaximumInformation}                                                                                 
 };
@@ -2526,7 +2518,7 @@ static int OnQueryInfoClick(HWND hDlg)
         return FALSE;
 
     // Get the file information class
-	FileInfoClass = (FILE_INFORMATION_CLASS)pInfoData->InfoClass;
+    FileInfoClass = (FILE_INFORMATION_CLASS)((pInfoData - FileInfoData) + 1);
 
     // Get the input length
     DlgText2Hex32(hDlg, IDC_INPUT_LENGTH, &Length);
@@ -2582,7 +2574,7 @@ static int OnQueryDirClick(HWND hDlg)
         return FALSE;
 
     // Get the file information class
-    FileInfoClass = (FILE_INFORMATION_CLASS) pInfoData->InfoClass;
+    FileInfoClass = (FILE_INFORMATION_CLASS)((pInfoData - FileInfoData) + 1);
 
     // Get the input mask
     FileMask = GetQueryDirectoryMask(hDlg, IDC_SEARCH_MASK);
@@ -2664,7 +2656,7 @@ static int OnSetInfoClick(HWND hDlg)
         return FALSE;
 
     // Get the file information class
-	FileInfoClass = (FILE_INFORMATION_CLASS) pInfoData->InfoClass;
+    FileInfoClass = (FILE_INFORMATION_CLASS)((pInfoData - FileInfoData) + 1);
 
     // Get the length of the input data
     DlgText2Hex32(hDlg, IDC_INPUT_LENGTH, &Length);
