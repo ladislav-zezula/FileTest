@@ -92,6 +92,10 @@
 #define SECTOR_SIZE                 0x200           // Sector size for disk drives
 #endif
 
+#ifndef FILE_SHARE_ALL
+#define FILE_SHARE_ALL (FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE)
+#endif
+
 //-----------------------------------------------------------------------------
 // Structures
 
@@ -264,8 +268,11 @@ struct TFileTestData : public TWindowData
 #define TYPE_WNAME_L32W      15             // Array of WCHARs, var length, length is 32-bit value in WCHARs
 #define TYPE_VNAME_FBDI      16             // ShortName in FILE_BOTH_DIRECTORY_INFORMATION
 #define TYPE_VNAME_FIBD      17             // ShortName in FILE_ID_BOTH_DIRECTORY_INFORMATION
-#define TYPE_FILEID64        18             // 8-byte file ID
-#define TYPE_DIR_HANDLE      19             // Directory handle for certain file operations
+#define TYPE_VNAME_FIEBD     18             // ShortName in FILE_ID_EXTD_BOTH_DIRECTORY_INFORMATION
+#define TYPE_FILEID64        19             // 8-byte file ID
+#define TYPE_FILEID128       20             // 16-byte file ID
+#define TYPE_DIR_HANDLE      21             // Directory handle for certain file operations
+#define TYPE_FLAG32          22             // A 32-bit flag value
 #define TYPE_STRUCT         100             // Sub-structure, nMemberSize must be sizeof(structure) !!!
 #define TYPE_CHAINED_STRUCT 101             // Chain of structures first 32-bit number is "NextEntryOffset"
 #define TYPE_ARRAY_HANDLE   102             // Array of handles, variable length, length is 32-bit number
@@ -282,6 +289,7 @@ struct TStructMember
     union
     {
         TStructMember * pSubItems;          // Subitems, if this is structure too
+        TFlagInfo * pFlags;                 // Flags, if this is a flag array
         PBYTE pbDataPtr;                    // If this describes data item, pointer to binary data
     };
 };
@@ -401,6 +409,11 @@ extern ROLLBACKTRANSACTION      pfnRollbackTransaction;
 extern CREATEDIRTRANSACTED      pfnCreateDirectoryTransacted;
 extern CREATEFILETRANSACTED     pfnCreateFileTransacted;
 extern ADDMANDATORYACE          pfnAddMandatoryAce;
+
+//-----------------------------------------------------------------------------
+// Flag values, global to the entire project
+
+extern TFlagInfo FileAttributesValues[];
 
 //-----------------------------------------------------------------------------
 // NTSTATUS conversion

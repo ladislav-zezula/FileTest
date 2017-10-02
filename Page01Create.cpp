@@ -40,7 +40,7 @@ static TFlagInfo DesiredAccessValues[] =
     FLAG_INFO_END
 };
 
-static TFlagInfo FileAttributesValues[] =
+static TFlagInfo FileAttributesValues_CreateFile[] =
 {
     FLAG_INFO_CTRLID(FILE_ATTRIBUTE_READONLY),                  // 0x00000001
     FLAG_INFO_CTRLID(FILE_ATTRIBUTE_HIDDEN),                    // 0x00000002
@@ -288,7 +288,7 @@ static int OnDesiredAccessClick(HWND hDlg)
 
 static int OnFileAttributesClick(HWND hDlg)
 {
-    FlagsDialog_PreArranged(hDlg, IDD_FLAGS_AND_ATTRS, IDC_FILE_ATTRIBUTES, FileAttributesValues);
+    FlagsDialog_PreArranged(hDlg, IDD_FLAGS_AND_ATTRS, IDC_FILE_ATTRIBUTES, FileAttributesValues_CreateFile);
     return TRUE;
 }
 

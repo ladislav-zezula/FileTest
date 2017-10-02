@@ -50,8 +50,6 @@ static TFlagInfo Win7OplockFlags[] =
 //-----------------------------------------------------------------------------
 // Helper functions
 
-extern TFlagInfo FileAttributesValues[];
-
 static LPTSTR FormatOplockTypeWindows7(LPTSTR szBuffer, size_t cchBuffer, DWORD dwOplockFlags)
 {
     size_t nIndex;

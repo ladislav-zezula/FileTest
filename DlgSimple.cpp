@@ -16,7 +16,7 @@
 
 static void SetWindowModuleVersion(HWND hWndChild, LPCTSTR szModuleName)
 {
-    LARGE_INTEGER Version;
+    ULARGE_INTEGER Version;
     TCHAR szFormat[255];
     TCHAR szText[255];
 
