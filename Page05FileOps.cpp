@@ -180,17 +180,19 @@ static NTSTATUS NtSetFileAccessToEveryone(POBJECT_ATTRIBUTES ObjAttr, ACCESS_MAS
     NTSTATUS Status;
     HANDLE FileHandle;
     ULONG OpenOptions = FILE_OPEN_REPARSE_POINT;
+    ULONG TryCount = 0;
 
     // Attempt to set the file's security. If this fails, it either means that
     // the current user doesn't have WRITE_DAC access or the current user
     // is not the owner of the file
+    __TryOpenFsObject:
     Status = NtOpenFile(&FileHandle,
                          WRITE_DAC,
                          ObjAttr,
                         &IoStatus,
                          FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                          OpenOptions);
-    if(Status == STATUS_ACCESS_DENIED)
+    if(Status == STATUS_ACCESS_DENIED && TryCount++ == 0)
     {
         // Write the owner to the file.
         Status = NtOpenFile(&FileHandle,
@@ -205,13 +207,8 @@ static NTSTATUS NtSetFileAccessToEveryone(POBJECT_ATTRIBUTES ObjAttr, ACCESS_MAS
             NtClose(FileHandle);
         }
 
-        // After writing ownership, attempt to set the file access again
-        Status = NtOpenFile(&FileHandle,
-                             WRITE_DAC,
-                             ObjAttr,
-                            &IoStatus,
-                             FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-                             OpenOptions);
+        // Retry to open for WRITE_DAC
+        goto __TryOpenFsObject;
     }
 
     // If succeeded, write the file security
@@ -290,7 +287,7 @@ static NTSTATUS NtDeleteFsObject(
     // Open the directory for enumeration+delete
     // Use FILE_OPEN_REPARSE_POINT, because the directory can be
     // a reparse point (even an invalid one) and still contain files/subdirs
-    __TryOpenDirectory:
+    __TryOpenFsObject:
     Status = NtOpenFile(&DirHandle,
                          FILE_LIST_DIRECTORY | FILE_READ_ATTRIBUTES | FILE_WRITE_ATTRIBUTES | DELETE | SYNCHRONIZE,
                          PtrObjectAttributes,
@@ -313,7 +310,7 @@ static NTSTATUS NtDeleteFsObject(
             // Reset the complete security descriptor to Everyone:Full Control.
             // Also reset the file/directory attributes
             Status = NtSetFileAccessToEveryone(PtrObjectAttributes, GENERIC_ALL | DELETE);
-            goto __TryOpenDirectory;
+            goto __TryOpenFsObject;
         }
     }
 
@@ -338,7 +335,7 @@ static NTSTATUS NtDeleteFsObject(
                 NtClose(DirHandle);
                 DirHandle = NULL;
                 TryCount = 0;
-                goto __TryOpenDirectory;
+                goto __TryOpenFsObject;
             }
         }
 

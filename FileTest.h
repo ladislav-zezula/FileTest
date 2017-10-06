@@ -92,10 +92,6 @@
 #define SECTOR_SIZE                 0x200           // Sector size for disk drives
 #endif
 
-#ifndef FILE_SHARE_ALL
-#define FILE_SHARE_ALL (FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE)
-#endif
-
 //-----------------------------------------------------------------------------
 // Structures
 

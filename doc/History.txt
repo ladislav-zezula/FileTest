@@ -3,6 +3,11 @@
   FileTest history
   ================
 
+ Version 2.6.1.555
+ 
+ - Added new FILE_INFORMATION_CLASSes for newer Win10
+ - The user can now enter some structure flags by flag (i.e. FILE_ATTRIBUTE_READONLY)
+  
  Version 2.6.1.553
 
  - The user can now specify a search mask for NtQueryDirectoryFile
