@@ -622,6 +622,23 @@ TStructMember FileDispositionInformationExMembers[] =
     { NULL, TYPE_NONE, 0 }
 };
 
+TFlagInfo FileRenameInformationExValues[] =
+{
+	FLAG_INFO_ENTRY(FILE_RENAME_REPLACE_IF_EXISTS),
+	FLAG_INFO_ENTRY(FILE_RENAME_POSIX_SEMANTICS),
+	FLAG_INFO_END
+};
+
+TStructMember FileRenameInformationExMembers[] =
+{
+	{ _T("Flags"), 			 TYPE_FLAG32,	  sizeof(ULONG), NULL, {(TStructMember *)FileRenameInformationExValues}},
+	{ _T("<padding>"),       TYPE_PADDING,    sizeof(HANDLE) },
+	{ _T("RootDirectory"),   TYPE_DIR_HANDLE, sizeof(HANDLE) },
+	{ _T("FileNameLength"),  TYPE_UINT32,     sizeof(ULONG) },
+	{ _T("FileName"),        TYPE_WNAME_L32B, FIELD_OFFSET(FILE_RENAME_INFORMATION_EX, FileNameLength) },
+	{ NULL, TYPE_NONE, 0 }
+};
+
 TStructMember FileStatInformationMembers[] =
 {
     {_T("FileId"),          TYPE_FILEID64, sizeof(LARGE_INTEGER)},
@@ -644,7 +661,7 @@ TStructMember FileStatInformationMembers[] =
 #define FileLinkInformationBypassAccessCheckMembers     FileLinkInformationMembers
 #define FileReplaceCompletionInformationMembers         FileUnknownInformationMembers
 #define FileHardLinkFullIdInformationMembers            FileUnknownInformationMembers
-#define FileRenameInformationExMembers                  FileUnknownInformationMembers
+#define FileRenameInformationExMembers                  FileRenameInformationExMembers
 #define FileRenameInformationExBypassAccessCheckMembers FileUnknownInformationMembers
 #define FileDesiredStorageClassInformationMembers       FileUnknownInformationMembers
 
@@ -714,7 +731,7 @@ TInfoData FileInfoData[] =
     FILE_INFO_READONLY(FileHardLinkFullIdInformation,           FILE_UNKNOWN_INFORMATION,                    FALSE),
     FILE_INFO_READONLY(FileIdExtdBothDirectoryInformation,      FILE_ID_EXTD_BOTH_DIR_INFORMATION,           TRUE),
     FILE_INFO_EDITABLE(FileDispositionInformationEx,            FILE_DISPOSITION_INFORMATION_EX,             FALSE),
-    FILE_INFO_READONLY(FileRenameInformationEx,                 FILE_UNKNOWN_INFORMATION,                    FALSE),
+    FILE_INFO_EDITABLE(FileRenameInformationEx,                 FILE_RENAME_INFORMATION_EX,                  FALSE),
     FILE_INFO_READONLY(FileRenameInformationExBypassAccessCheck,FILE_UNKNOWN_INFORMATION,                    FALSE),
     FILE_INFO_READONLY(FileDesiredStorageClassInformation,      FILE_UNKNOWN_INFORMATION,                    FALSE),
     FILE_INFO_READONLY(FileStatInformation,                     FILE_STAT_INFORMATION,                       FALSE),
@@ -1859,6 +1876,13 @@ static int FillStructureMembers(
 
             case TYPE_FLAG32:   // Insert the flag array
                 nDataLength = InsertTreeItemFlags32(hTreeView, hParentItem, pMembers, pbData, pbDataEnd);
+
+				// If there is an alignment following the data member, do a proper alignment
+				if (pMembers[1].nDataType == TYPE_PADDING)
+				{
+					nDataLength = GetAlignedDataLength(pbStructPtr, pbData, pMembers[0].nMemberSize, pMembers[1].nMemberSize);
+					pMembers++;
+				}
                 break;
 
             default:
