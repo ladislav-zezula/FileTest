@@ -3,6 +3,11 @@
   FileTest history
   ================
 
+ Version 2.6.1.556
+ 
+ - Added support for CreateHardLink
+ - Deleting directory tree improved: Now uses Win10's FILE_DISPOSITION_INFORMATION_EX if necessary.
+  
  Version 2.6.1.555
  
  - Added new FILE_INFORMATION_CLASSes for newer Win10

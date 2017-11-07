@@ -387,6 +387,11 @@ typedef HANDLE (WINAPI * CREATEFILETRANSACTED)(
     PUSHORT pusMiniVersion, 
     PVOID  lpExtendedParameter);
 
+typedef BOOL (WINAPI * CREATEHARDLINK)(
+    LPCTSTR lpFileName,
+    LPCTSTR lpExistingFileName,
+    LPSECURITY_ATTRIBUTES lpSecurityAttributes);
+
 //-----------------------------------------------------------------------------
 // Global variables
 
@@ -404,6 +409,7 @@ extern COMMITTRANSACTION        pfnCommitTransaction;
 extern ROLLBACKTRANSACTION      pfnRollbackTransaction;
 extern CREATEDIRTRANSACTED      pfnCreateDirectoryTransacted;
 extern CREATEFILETRANSACTED     pfnCreateFileTransacted;
+extern CREATEHARDLINK           pfnCreateHardLink;
 extern ADDMANDATORYACE          pfnAddMandatoryAce;
 
 //-----------------------------------------------------------------------------

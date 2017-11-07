@@ -280,25 +280,36 @@ static NTSTATUS NtDeleteFsObject(
     IO_STATUS_BLOCK IoStatus;
     UNICODE_STRING ChildPath;
     NTSTATUS Status;
-    HANDLE DirHandle = NULL;
+    HANDLE ObjectHandle = NULL;
     ULONG TryCount = 0;
+    BOOLEAN NeedDeleteManually;
     BOOLEAN IsSubdirectory;
 
     // Open the directory for enumeration+delete
     // Use FILE_OPEN_REPARSE_POINT, because the directory can be
     // a reparse point (even an invalid one) and still contain files/subdirs
     __TryOpenFsObject:
-    Status = NtOpenFile(&DirHandle,
+    Status = NtOpenFile(&ObjectHandle,
                          FILE_LIST_DIRECTORY | FILE_READ_ATTRIBUTES | FILE_WRITE_ATTRIBUTES | DELETE | SYNCHRONIZE,
                          PtrObjectAttributes,
                         &IoStatus,
                          FILE_SHARE_READ,
                          FILE_SYNCHRONOUS_IO_ALERT | FILE_DELETE_ON_CLOSE | FILE_OPEN_REPARSE_POINT);
+    NeedDeleteManually = FALSE;
 
-    // If the file was not found, we consider this a success
-    if(Status == STATUS_OBJECT_NAME_NOT_FOUND)
-        return STATUS_SUCCESS;
-    
+    // In some cases, the previous one could fail with STATUS_CANNOT_DELETE
+    // Example: Opening a second hardlink to a file that is currently mapped
+    if(Status == STATUS_CANNOT_DELETE)
+    {
+        Status = NtOpenFile(&ObjectHandle,
+                             FILE_LIST_DIRECTORY | FILE_READ_ATTRIBUTES | FILE_WRITE_ATTRIBUTES | DELETE | SYNCHRONIZE,
+                             PtrObjectAttributes,
+                            &IoStatus,
+                             FILE_SHARE_READ,
+                             FILE_SYNCHRONOUS_IO_ALERT | FILE_OPEN_REPARSE_POINT);
+        NeedDeleteManually = TRUE;
+    }
+
     // When the access is denied, we can try to reset the permissions
     // Note that if the file/directory has FILE_ATTRIBUTE_READONLY,
     // then NtOpenFile return STATUS_CANNOT_DELETE
@@ -317,7 +328,7 @@ static NTSTATUS NtDeleteFsObject(
     if(NT_SUCCESS(Status) && RecursiveDelete)
     {
         // Check if the FS object is a directory
-        Status = NtQueryInformationFile(DirHandle,
+        Status = NtQueryInformationFile(ObjectHandle,
                                        &IoStatus,
                                         pFileInfo,
                                         WorkBufferSize,
@@ -327,13 +338,13 @@ static NTSTATUS NtDeleteFsObject(
         // we need to delete the reparse point first 
         if(NT_SUCCESS(Status) && (pFileInfo->FileAttributes & FILE_ATTRIBUTE_REPARSE_POINT))
         {
-            Status = NtDeleteReparsePoint(DirHandle);
+            Status = NtDeleteReparsePoint(ObjectHandle);
             if(NT_SUCCESS(Status))
             {
                 // Note that the NtClose might cause the directory be deleted
                 // if it is empty.
-                NtClose(DirHandle);
-                DirHandle = NULL;
+                NtClose(ObjectHandle);
+                ObjectHandle = NULL;
                 TryCount = 0;
                 goto __TryOpenFsObject;
             }
@@ -343,13 +354,13 @@ static NTSTATUS NtDeleteFsObject(
         if(NT_SUCCESS(Status) && (pFileInfo->FileAttributes & FILE_ATTRIBUTE_DIRECTORY))
         {
             // Prepare the child object attributes and the pointer to directory entry
-            InitializeObjectAttributes(&ChildAttr, &ChildPath, OBJ_CASE_INSENSITIVE, DirHandle, NULL);
+            InitializeObjectAttributes(&ChildAttr, &ChildPath, OBJ_CASE_INSENSITIVE, ObjectHandle, NULL);
 
             // Work as long as we have something
             for(;;)
             {
                 // Query a single directory item
-                Status = NtQueryDirectoryFile(DirHandle,
+                Status = NtQueryDirectoryFile(ObjectHandle,
                                               NULL,
                                               NULL,
                                               NULL,
@@ -395,13 +406,35 @@ static NTSTATUS NtDeleteFsObject(
     }
 
     // Close the file/directory handle. This causes it to be deleted.
-    // Note that we need to preserve a previous failed status.
-    if(DirHandle != NULL)
+    if(ObjectHandle != NULL)
     {
-        NTSTATUS DelStatus = NtClose(DirHandle);
-        Status = (NT_SUCCESS(Status)) ? DelStatus : Status;
+        if(NeedDeleteManually)
+        {
+            FILE_DISPOSITION_INFORMATION_EX DispInfoEx = {FILE_DISPOSITION_DELETE};
+            FILE_DISPOSITION_INFORMATION DispInfo = {TRUE};
+
+            // Try the classic FILE_DISPOSITION_INFORMATION
+            Status = NtSetInformationFile(ObjectHandle, &IoStatus, &DispInfo, sizeof(FILE_DISPOSITION_INFORMATION), FileDispositionInformation);
+
+            // If the file is a hardlink to a running file (mapped image), the previous call will fail.
+            // Try the new FILE_DISPOSITION_INFORMATION_EX. Thanks Scott Noone from Open System Resources (OSR)
+            // for this valuable hint: http://www.osronline.com/showthread.cfm?link=286551
+            if(Status == STATUS_CANNOT_DELETE)
+                Status = NtSetInformationFile(ObjectHandle, &IoStatus, &DispInfoEx, sizeof(FILE_DISPOSITION_INFORMATION_EX), FileDispositionInformationEx);
+
+            // When closed, the file goes away
+            NtClose(ObjectHandle);
+        }
+        else
+        {
+            NTSTATUS DelStatus = NtClose(ObjectHandle);
+            Status = NT_SUCCESS(Status) ? DelStatus : Status;
+        }
     }
 
+    // If the file was not found, we consider this a success
+    if(Status == STATUS_OBJECT_NAME_NOT_FOUND || Status == STATUS_OBJECT_PATH_NOT_FOUND)
+        Status = STATUS_SUCCESS;
     return Status;
 }
 
@@ -471,8 +504,10 @@ static int SaveDialog(HWND hDlg)
 static int UpdateDialogButtons(HWND hDlg)
 {
     TFileTestData * pData = GetDialogData(hDlg);
-    BOOL bEnable = IsHandleValid(pData->hFile) ? TRUE : FALSE;
+    BOOL bEnable;
 
+    // Enable/Disable handle-based buttons
+    bEnable = IsHandleValid(pData->hFile) ? TRUE : FALSE;
     EnableDlgItems(hDlg, bEnable, 
                          IDC_FLUSH_FILE_BUFFERS,
                          IDC_SET_SPARSE,
@@ -481,6 +516,11 @@ static int UpdateDialogButtons(HWND hDlg)
                          IDC_REQUEST_OPLOCK_WIN7,
                          IDC_BREAK_ACKNOWLEDGE_2,
                          0);
+
+    // Enable/Disable CreateHardLink button
+    bEnable = (pfnCreateHardLink != NULL) ? TRUE : FALSE;
+    EnableDlgItems(hDlg, bEnable, IDC_CREATE_HARDLINK, 0);
+
     return TRUE;
 }
 
@@ -1015,12 +1055,34 @@ static int OnFlushFile(HWND hDlg)
     TFileTestData * pData = GetDialogData(hDlg);
     int nError = ERROR_SUCCESS;
 
-	if(!FlushFileBuffers(pData->hFile))
+    // Create the hardlink
+    if(!FlushFileBuffers(pData->hFile))
         nError = GetLastError();
 
     SetResultInfo(hDlg, nError);
     return TRUE;
 }
+
+static int OnCreateHardLink(HWND hDlg)
+{
+    TFileTestData * pData = GetDialogData(hDlg);
+    int nError = ERROR_SUCCESS;
+
+    // Check presence of the function
+    if(pfnCreateHardLink == NULL)
+        return ERROR_CALL_NOT_IMPLEMENTED;
+
+    // Save the current state of the dialog
+    SaveDialog(hDlg);
+
+	// Create the hard link
+    if(!pfnCreateHardLink(pData->szFileName1, pData->szFileName2, NULL))
+        nError = GetLastError();
+
+    SetResultInfo(hDlg, nError);
+    return TRUE;
+}
+
 
 static int OnSendAsynchronousFsctl(
     HWND hDlg,
@@ -1291,6 +1353,9 @@ static int OnCommand(HWND hDlg, UINT nNotify, UINT nIDCtrl)
 
             case IDC_SET_SPARSE:
                 return OnSendAsynchronousFsctl(hDlg, FSCTL_SET_SPARSE);
+
+            case IDC_CREATE_HARDLINK:
+                return OnCreateHardLink(hDlg);
 
             case IDC_REQUEST_OPLOCK_MENU:
                 return ExecuteContextMenuForDlgItem(hDlg, FindContextMenu(IDR_REQUEST_OPLOCK_MENU), IDC_REQUEST_OPLOCK_MENU);

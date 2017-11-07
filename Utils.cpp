@@ -840,6 +840,7 @@ COMMITTRANSACTION        pfnCommitTransaction     = NULL;
 ROLLBACKTRANSACTION      pfnRollbackTransaction   = NULL;
 CREATEDIRTRANSACTED      pfnCreateDirectoryTransacted = NULL;
 CREATEFILETRANSACTED     pfnCreateFileTransacted  = NULL;
+CREATEHARDLINK           pfnCreateHardLink = NULL;
 ADDMANDATORYACE          pfnAddMandatoryAce = NULL;
 
 static HINSTANCE hNtdll = NULL;
@@ -871,9 +872,11 @@ void ResolveDynamicLoadedAPIs()
 #ifdef _UNICODE
             pfnCreateDirectoryTransacted = (CREATEDIRTRANSACTED)GetProcAddress(hKernel32, "CreateDirectoryTransactedW");
             pfnCreateFileTransacted = (CREATEFILETRANSACTED)GetProcAddress(hKernel32, "CreateFileTransactedW");
+            pfnCreateHardLink = (CREATEHARDLINK)GetProcAddress(hKernel32, "CreateHardLinkW");
 #else
             pfnCreateDirectoryTransacted = (CREATEDIRTRANSACTED)GetProcAddress(hKernel32, "CreateDirectoryTransactedA");
             pfnCreateFileTransacted = (CREATEFILETRANSACTED)GetProcAddress(hKernel32, "CreateFileTransactedA");
+            pfnCreateHardLink = (CREATEHARDLINK)GetProcAddress(hKernel32, "CreateHardLinkA");
 #endif
         }
     }

@@ -203,6 +203,8 @@
 #define IDC_DEFAULT_LENGTH              1089
 #define IDC_DELETE_DIRECTORY_MENU       1090
 #define IDC_NT_QUERY_ATTRIBUTES_FILE    1091
+#define IDC_NT_QUERY_ATTRIBUTES_FILE2   1092
+#define IDC_CREATE_HARDLINK             1092
 #define IDC_FILE_INFO_CLASS             1093
 #define IDC_IOSTATUS_INFO               1096
 #define IDC_FILE_INFO                   1097
