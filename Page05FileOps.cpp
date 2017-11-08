@@ -281,9 +281,9 @@ static NTSTATUS NtDeleteFsObject(
     UNICODE_STRING ChildPath;
     NTSTATUS Status;
     HANDLE ObjectHandle = NULL;
-    ULONG TryCount = 0;
     BOOLEAN NeedDeleteManually;
     BOOLEAN IsSubdirectory;
+    ULONG TryCount = 0;
 
     // Open the directory for enumeration+delete
     // Use FILE_OPEN_REPARSE_POINT, because the directory can be
@@ -297,25 +297,13 @@ static NTSTATUS NtDeleteFsObject(
                          FILE_SYNCHRONOUS_IO_ALERT | FILE_DELETE_ON_CLOSE | FILE_OPEN_REPARSE_POINT);
     NeedDeleteManually = FALSE;
 
-    // In some cases, the previous one could fail with STATUS_CANNOT_DELETE
-    // Example: Opening a second hardlink to a file that is currently mapped
-    if(Status == STATUS_CANNOT_DELETE)
-    {
-        Status = NtOpenFile(&ObjectHandle,
-                             FILE_LIST_DIRECTORY | FILE_READ_ATTRIBUTES | FILE_WRITE_ATTRIBUTES | DELETE | SYNCHRONIZE,
-                             PtrObjectAttributes,
-                            &IoStatus,
-                             FILE_SHARE_READ,
-                             FILE_SYNCHRONOUS_IO_ALERT | FILE_OPEN_REPARSE_POINT);
-        NeedDeleteManually = TRUE;
-    }
-
     // When the access is denied, we can try to reset the permissions
     // Note that if the file/directory has FILE_ATTRIBUTE_READONLY,
     // then NtOpenFile return STATUS_CANNOT_DELETE
     if(Status == STATUS_ACCESS_DENIED || Status == STATUS_CANNOT_DELETE)
     {
-        // Don't try more than once
+        // Reason number one could be a reset security descriptor/read-only attribute.
+        // Reset DACL and attributes and retry
         if(TryCount++ == 0)
         {
             // Reset the complete security descriptor to Everyone:Full Control.
@@ -323,6 +311,16 @@ static NTSTATUS NtDeleteFsObject(
             Status = NtSetFileAccessToEveryone(PtrObjectAttributes, GENERIC_ALL | DELETE);
             goto __TryOpenFsObject;
         }
+
+        // In some cases, the previous one could fail with STATUS_CANNOT_DELETE
+        // Example: Opening a second hardlink to a file that is currently mapped
+        Status = NtOpenFile(&ObjectHandle,
+                             FILE_LIST_DIRECTORY | FILE_READ_ATTRIBUTES | FILE_WRITE_ATTRIBUTES | DELETE | SYNCHRONIZE,
+                             PtrObjectAttributes,
+                            &IoStatus,
+                             FILE_SHARE_READ,
+                             FILE_SYNCHRONOUS_IO_ALERT | FILE_OPEN_REPARSE_POINT);
+        NeedDeleteManually = TRUE;
     }
 
     if(NT_SUCCESS(Status) && RecursiveDelete)
