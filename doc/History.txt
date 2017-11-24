@@ -3,6 +3,10 @@
   FileTest history
   ================
 
+ Version 2.6.1.559
+
+ - Added support for IO_REPARSE_TAG_APPEXECLINK
+
  Version 2.6.1.556
  
  - Added support for CreateHardLink

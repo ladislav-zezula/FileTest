@@ -25,9 +25,53 @@
 static TFlagInfo ReparseTags[] =
 {
     FLAG_INFO_ENTRY(IO_REPARSE_TAG_MOUNT_POINT),
-    FLAG_INFO_ENTRY(IO_REPARSE_TAG_SYMLINK),
+    FLAG_INFO_ENTRY(IO_REPARSE_TAG_HSM),
+    FLAG_INFO_ENTRY(IO_REPARSE_TAG_HSM2),
+    FLAG_INFO_ENTRY(IO_REPARSE_TAG_SIS),
     FLAG_INFO_ENTRY(IO_REPARSE_TAG_WIM),
+    FLAG_INFO_ENTRY(IO_REPARSE_TAG_CSV),
+    FLAG_INFO_ENTRY(IO_REPARSE_TAG_DFS),
+    FLAG_INFO_ENTRY(IO_REPARSE_TAG_SYMLINK),
+    FLAG_INFO_ENTRY(IO_REPARSE_TAG_DFSR),
+    FLAG_INFO_ENTRY(IO_REPARSE_TAG_DEDUP),
+    FLAG_INFO_ENTRY(IO_REPARSE_TAG_NFS),
+    FLAG_INFO_ENTRY(IO_REPARSE_TAG_FILE_PLACEHOLDER),
+    FLAG_INFO_ENTRY(IO_REPARSE_TAG_WOF),
+    FLAG_INFO_ENTRY(IO_REPARSE_TAG_WCI),
+    FLAG_INFO_ENTRY(IO_REPARSE_TAG_WCI_1),
+    FLAG_INFO_ENTRY(IO_REPARSE_TAG_GLOBAL_REPARSE),
+    FLAG_INFO_ENTRY(IO_REPARSE_TAG_CLOUD),
+    FLAG_INFO_ENTRY(IO_REPARSE_TAG_CLOUD_1),
+    FLAG_INFO_ENTRY(IO_REPARSE_TAG_CLOUD_2),
+    FLAG_INFO_ENTRY(IO_REPARSE_TAG_CLOUD_3),
+    FLAG_INFO_ENTRY(IO_REPARSE_TAG_CLOUD_4),
+    FLAG_INFO_ENTRY(IO_REPARSE_TAG_CLOUD_5),
+    FLAG_INFO_ENTRY(IO_REPARSE_TAG_CLOUD_6),
+    FLAG_INFO_ENTRY(IO_REPARSE_TAG_CLOUD_7),
+    FLAG_INFO_ENTRY(IO_REPARSE_TAG_CLOUD_8),
+    FLAG_INFO_ENTRY(IO_REPARSE_TAG_CLOUD_9),
+    FLAG_INFO_ENTRY(IO_REPARSE_TAG_CLOUD_A),
+    FLAG_INFO_ENTRY(IO_REPARSE_TAG_CLOUD_B),
+    FLAG_INFO_ENTRY(IO_REPARSE_TAG_CLOUD_C),
+    FLAG_INFO_ENTRY(IO_REPARSE_TAG_CLOUD_D),
+    FLAG_INFO_ENTRY(IO_REPARSE_TAG_CLOUD_E),
+    FLAG_INFO_ENTRY(IO_REPARSE_TAG_CLOUD_F),
+    FLAG_INFO_ENTRY(IO_REPARSE_TAG_CLOUD_MASK),
+    FLAG_INFO_ENTRY(IO_REPARSE_TAG_APPEXECLINK),
+    FLAG_INFO_ENTRY(IO_REPARSE_TAG_GVFS),
+    FLAG_INFO_ENTRY(IO_REPARSE_TAG_STORAGE_SYNC),
+    FLAG_INFO_ENTRY(IO_REPARSE_TAG_WCI_TOMBSTONE),
+    FLAG_INFO_ENTRY(IO_REPARSE_TAG_UNHANDLED),
+    FLAG_INFO_ENTRY(IO_REPARSE_TAG_ONEDRIVE),
+    FLAG_INFO_ENTRY(IO_REPARSE_TAG_GVFS_TOMBSTONE),
     FLAG_INFO_END
+};
+
+static LPCWSTR AppExecLinkParts[] =
+{
+    L"AppPackageID",
+    L"AppUserModelID",
+    L"TargetPath",
 };
 
 //-----------------------------------------------------------------------------
@@ -206,26 +250,20 @@ static void BinaryToString(LPBYTE pbData, ULONG cbData, LPTSTR szBuffer, size_t 
 
 static LPTSTR FormatReparseTag(ULONG ReparseTag, LPTSTR szBuffer, size_t cchBuffer)
 {
-    LPCTSTR szHelperString = _T("");
+    LPCTSTR szReparseTag = _T("unknown");
 
-    // For some of the 
-    switch(ReparseTag)
+    // Try to find the reparse tag
+    for(size_t i = 0; ReparseTags[i].szFlagText != NULL; i++)
     {
-        case IO_REPARSE_TAG_MOUNT_POINT:
-            szHelperString = _T(" (IO_REPARSE_TAG_MOUNT_POINT)");
+        if(ReparseTags[i].dwValue == ReparseTag)
+        {
+            szReparseTag = ReparseTags[i].szFlagText;
             break;
-
-        case IO_REPARSE_TAG_SYMLINK:
-            szHelperString = _T(" (IO_REPARSE_TAG_SYMLINK)");
-            break;
-
-        case IO_REPARSE_TAG_WIM:
-            szHelperString = _T(" (IO_REPARSE_TAG_WIM)");
-            break;
+        }
     }
 
     // Format the string
-    StringCchPrintf(szBuffer, cchBuffer, _T("%08X%s"), ReparseTag, szHelperString);
+    StringCchPrintf(szBuffer, cchBuffer, _T("%08X (%s)"), ReparseTag, szReparseTag);
     return szBuffer;
 }
 
@@ -718,7 +756,7 @@ static int OnDoubleClick(HWND hDlg, LPNMHDR pNMHDR)
             ReparseData = pData->ReparseData;
             ReparseTag = ReparseData->ReparseTag;
 
-            // Let the user choose a new reparse tak
+            // Let the user choose a new reparse tag
             if(ValuesDialog(hDlg, &ReparseTag, IDS_CHOOSE_REPARSE_TAG, ReparseTags) == IDOK)
             {
                 SetReparseDataTag(ReparseData, ReparseTag, pData->cbReparseData);
@@ -882,6 +920,29 @@ static void OnUpdateView(HWND hDlg)
                                                          ReparseData->WimImageReparseBuffer.ImagePathHash,
                                                          sizeof(ReparseData->WimImageReparseBuffer.ImagePathHash), 
                                                          0);
+            }
+            break;
+
+        case IO_REPARSE_TAG_APPEXECLINK:
+            hItem = TreeView_InsertString(hWndChild, hItem, _T("AppExecLinkReparseBuffer"), 0);
+            if(hItem != NULL)
+            {
+                // Insert the string count
+                TreeView_InsertInteger(hWndChild, hItem, _T("StringCount"), _T("0x%04X"), ReparseData->AppExecLinkReparseBuffer.StringCount, 0);
+
+                // Insert the strings
+                if(ReparseData->AppExecLinkReparseBuffer.StringCount != 0)
+                {
+                    LPWSTR szString = (LPWSTR)ReparseData->AppExecLinkReparseBuffer.StringList;
+                    WCHAR szValue[0x300];
+
+                    for(ULONG i = 0; i < ReparseData->AppExecLinkReparseBuffer.StringCount; i++)
+                    {
+                        StringCchPrintf(szValue, _countof(szValue), _T("%s: %s"), AppExecLinkParts[i], szString);
+                        TreeView_InsertString(hWndChild, hItem, szValue, 0);
+                        szString += wcslen(szString) + 1;
+                    }
+                }
             }
             break;
 

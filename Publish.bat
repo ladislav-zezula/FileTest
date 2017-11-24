@@ -8,7 +8,8 @@ cd .\bin
 if not exist .\Win32\Release\FileTest.exe goto FILETEST_64BIT
 echo Publishing FileTest (32-bit) ...
 copy .\Win32\Release\FileTest.exe .\Win32\FileTest.exe 
-PostBuild.exe .\Win32\FileTest.exe /subsystem4 /tools
+rem PostBuild.exe .\Win32\FileTest.exe /subsystem4 /tools
+if exist \\files-eu.srv.int.avast.com\pub_users\zezula\Tools32 copy .\Win32\FileTest.exe \\files-eu.srv.int.avast.com\pub_users\zezula\Tools32\FileTest.exe
 zip.exe -u9 ..\..\..\WWW\web\download\filetest.zip .\Win32\FileTest.exe
 echo.
 
@@ -16,7 +17,8 @@ echo.
 if not exist .\x64\Release\FileTest.exe goto ADD_HISTORY
 echo Publishing FileTest (64-bit) ...
 copy .\x64\Release\FileTest.exe .\x64\FileTest.exe 
-PostBuild.exe .\x64\FileTest.exe /subsystem4 /tools
+rem PostBuild.exe .\x64\FileTest.exe /subsystem4 /tools
+if exist \\files-eu.srv.int.avast.com\pub_users\zezula\Tools64 copy .\x64\FileTest.exe \\files-eu.srv.int.avast.com\pub_users\zezula\Tools64\FileTest.exe
 zip.exe -u9 ..\..\..\WWW\web\download\filetest.zip .\x64\FileTest.exe
 echo.
 
