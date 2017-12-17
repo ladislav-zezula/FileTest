@@ -706,23 +706,26 @@ static void OnDestroy(HWND hDlg)
 {
     TWindowData * pData = GetDialogData(hDlg);
 
-    if(pData->hApcThread != NULL)
+    if(pData != NULL)
     {
-        // Stop the watcher thread, if any
-        AlertApcThread(pData, ALERT_REASON_STOP_WORKER);
+        if(pData->hApcThread != NULL)
+        {
+            // Stop the watcher thread, if any
+            AlertApcThread(pData, ALERT_REASON_STOP_WORKER);
 
-        // Wait for the thread to exit. Not more than 5 second
-        WaitForSingleObject(pData->hApcThread, 5000);
-        CloseHandle(pData->hApcThread);
+            // Wait for the thread to exit. Not more than 5 second
+            WaitForSingleObject(pData->hApcThread, 5000);
+            CloseHandle(pData->hApcThread);
+        }
+
+        // Close the alert event handle
+        if(pData->hAlertEvent != NULL)
+            CloseHandle(pData->hAlertEvent);
+        pData->hAlertEvent = NULL;
+
+        // Delete the APC critical section
+        DeleteCriticalSection(&pData->ApcLock);
     }
-
-    // Close the alert event handle
-    if(pData->hAlertEvent != NULL)
-        CloseHandle(pData->hAlertEvent);
-    pData->hAlertEvent = NULL;
-
-    // Delete the APC critical section
-    DeleteCriticalSection(&pData->ApcLock);
 }
 
 static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)

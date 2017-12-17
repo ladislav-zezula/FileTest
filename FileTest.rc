@@ -127,13 +127,13 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Ladislav Zezula"
             VALUE "FileDescription", "Interactive File System API Test"
-            VALUE "FileVersion", "2, 6, 1, 560\0"
+            VALUE "FileVersion", "2, 6, 1, 560"
             VALUE "InternalName", "FileTest"
             VALUE "LegalCopyright", "Copyright © 2004 - 2017 Ladislav Zezula"
             VALUE "LegalTrademarks", "http://www.zezula.net"
             VALUE "OriginalFilename", "FileTest.exe"
             VALUE "ProductName", "FileTest"
-            VALUE "ProductVersion", "2, 6, 1, 560\0"
+            VALUE "ProductVersion", "2, 6, 1, 560"
         END
     END
     BLOCK "VarFileInfo"
@@ -276,9 +276,9 @@ BEGIN
     LTEXT           "Template file:",IDC_STATIC,12,148,60,14,SS_CENTERIMAGE
     EDITTEXT        IDC_TEMPLATE_FILE,73,148,200,14,ES_AUTOHSCROLL
     PUSHBUTTON      "...",IDC_TEMPLATE_FILE_BROWSE,278,148,15,14
-    CONTROL         "Transacted (requires Windows Vista and active transaction)",IDC_TRANSACTED,
+    CONTROL         "Transacted (requires Windows Vista+ and an active transaction)",IDC_TRANSACTED,
                     "Button",BS_AUTOCHECKBOX | WS_DISABLED | WS_TABSTOP,73,199,219,8
-    CONTROL         "Enable file virtualization (requires Windows Vista)",IDC_VIRTUALIZATION,
+    CONTROL         "Enable file virtualization (requires Windows Vista+)",IDC_VIRTUALIZATION,
                     "Button",BS_AUTOCHECKBOX | WS_DISABLED | WS_TABSTOP,73,210,219,8
     CONTROL         "Breakpoint right before call to CreateFile",IDC_BREAKPOINT,
                     "Button",BS_AUTOCHECKBOX | WS_TABSTOP,73,221,219,8
@@ -328,9 +328,9 @@ BEGIN
     LTEXT           "Extended attr:",IDC_STATIC,12,180,60,14,SS_CENTERIMAGE
     EDITTEXT        IDC_EXTENDED_ATTRIBUTES,73,179,200,14,ES_AUTOHSCROLL
     PUSHBUTTON      "...",IDC_EXTENDED_ATTRIBUTES_EDIT,278,179,15,14
-    CONTROL         "Transacted (requires Windows Vista and active transaction)",IDC_TRANSACTED,
+    CONTROL         "Transacted (requires Windows Vista+ and an active transaction)",IDC_TRANSACTED,
                     "Button",BS_AUTOCHECKBOX | WS_DISABLED | WS_TABSTOP,73,199,219,8
-    CONTROL         "Enable file virtualization (requires Windows Vista)",IDC_VIRTUALIZATION,
+    CONTROL         "Enable file virtualization (requires Windows Vista+)",IDC_VIRTUALIZATION,
                     "Button",BS_AUTOCHECKBOX | WS_DISABLED | WS_TABSTOP,73,210,219,8
     CONTROL         "Breakpoint right before call to NtCreate",IDC_BREAKPOINT,
                     "Button",BS_AUTOCHECKBOX | WS_TABSTOP,73,221,219,8
