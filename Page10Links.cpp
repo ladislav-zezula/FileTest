@@ -923,6 +923,17 @@ static void OnUpdateView(HWND hDlg)
             }
             break;
 
+        case IO_REPARSE_TAG_WOF:
+            hItem = TreeView_InsertString(hWndChild, hItem, _T("WofReparsePointBuffer"), 0);
+            if(hItem != NULL)
+            {
+                TreeView_InsertInteger(hWndChild, hItem, _T("Wof.Version"),  _T("0x%04X"), ReparseData->WofReparseBuffer.Wof_Version, 0);
+                TreeView_InsertInteger(hWndChild, hItem, _T("Wof.Provider"), _T("0x%04X"), ReparseData->WofReparseBuffer.Wof_Provider, 0);
+                TreeView_InsertInteger(hWndChild, hItem, _T("Version"),      _T("0x%04X"), ReparseData->WofReparseBuffer.FileInfo_Version, 0);
+                TreeView_InsertInteger(hWndChild, hItem, _T("Algorithm"),    _T("0x%04X"), ReparseData->WofReparseBuffer.FileInfo_Algorithm, 0);
+            }
+            break;
+
         case IO_REPARSE_TAG_APPEXECLINK:
             hItem = TreeView_InsertString(hWndChild, hItem, _T("AppExecLinkReparseBuffer"), 0);
             if(hItem != NULL)
