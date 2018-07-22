@@ -2212,6 +2212,13 @@ static void OnTVKeyDown(HWND hDlg, NMTVKEYDOWN * pNMTVKeyDown)
     if(pNMTVKeyDown->wVKey == VK_SPACE)
     {
         OnTVDoubleClick(hDlg);
+        return;
+    }
+
+    if(pNMTVKeyDown->wVKey == 'C' && GetAsyncKeyState(VK_CONTROL) < 0)
+    {
+        TreeView_CopyToClipboard(pNMTVKeyDown->hdr.hwndFrom);
+        return;
     }
 }
 

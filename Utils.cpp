@@ -339,6 +339,69 @@ void Hex2DlgText64(HWND hDlg, UINT nIDCtrl, LONGLONG Value)
 }
 
 //-----------------------------------------------------------------------------
+// Clipboard manipulation
+
+HGLOBAL Clipboard_AddText(HGLOBAL hMemory, LPCTSTR szText)
+{
+    LPBYTE pbClipboard;
+    size_t cbTotalSize;
+    size_t cbPrevSize = 0;
+    size_t cbAddSize = _tcslen(szText) * sizeof(TCHAR);
+
+    // If we don't have any previousle allocated memory, then allocate new block
+    if(hMemory == NULL)
+    {
+        // Allocate text plus EOS
+        cbTotalSize = cbAddSize + sizeof(WCHAR);
+        hMemory = GlobalAlloc(GMEM_MOVEABLE | GMEM_ZEROINIT, cbTotalSize);
+    }
+    else
+    {
+        // Find out the previous size of the memory
+        cbPrevSize = GlobalSize(hMemory);
+        cbTotalSize = cbPrevSize + cbAddSize;
+        hMemory = GlobalReAlloc(hMemory, cbTotalSize, GMEM_MOVEABLE | GMEM_ZEROINIT);
+
+        // Subtract the end-of-string
+        cbPrevSize -= sizeof(TCHAR);
+    }
+
+    // Now if we have a memory allocated, append the text there
+    if(hMemory != NULL)
+    {
+        pbClipboard = (LPBYTE)GlobalLock(hMemory);
+        if(pbClipboard != NULL)
+        {
+            memcpy(pbClipboard + cbPrevSize, szText, cbAddSize);
+            GlobalUnlock(hMemory);
+        }
+    }
+
+    // Return the allocated memory
+    return hMemory;
+}
+
+bool Clipboard_Finish(HWND hWnd, HGLOBAL hMemory)
+{
+    if(hMemory != NULL)
+    {
+        // Insert text to the clipboard
+        if(OpenClipboard(hWnd))
+        {
+            EmptyClipboard();
+            SetClipboardData(CF_UNICODETEXT, hMemory);
+            CloseClipboard();
+            return true;
+        }
+
+        // If the opening clipboard failed, free the memory
+        GlobalFree(hMemory);
+    }
+
+    return false;
+}
+
+//-----------------------------------------------------------------------------
 // Path manipulation
 
 LPTSTR FindDirectoryPathPart(LPTSTR szFullPath)
@@ -493,6 +556,72 @@ void TreeView_DeleteChildren(HWND hTreeView, HTREEITEM hParent)
     // Remove all children, if any
     while((hItem = TreeView_GetChild(hTreeView, hParent)) != NULL)
         TreeView_DeleteItem(hTreeView, hItem);
+}
+
+HGLOBAL TreeView_CopyToClipboard(HWND hTreeView, HTREEITEM hItem, HGLOBAL hGlobal, size_t nLevel)
+{
+    HTREEITEM hChild;
+    TVITEMEX tvi;
+    TCHAR szBuffer[0x400] = _T("");
+    TCHAR szIndent[0x400];
+    size_t i;
+
+    // Prepare the item
+    ZeroMemory(&tvi, sizeof(TVITEM));
+    tvi.mask = TVIF_TEXT;
+
+    // Get all siblings
+    while(hItem != NULL)
+    {
+        // Get the item text
+        memset(szBuffer, 0, sizeof(szBuffer));
+        tvi.hItem = hItem;
+        tvi.pszText = szBuffer;
+        tvi.cchTextMax = _countof(szBuffer);
+        tvi.cchTextMax = _countof(szBuffer);
+        TreeView_GetItem(hTreeView, &tvi);
+        StringCchCat(szBuffer, _countof(szBuffer), _T("\r\n"));
+
+        // Put the text to clipboard
+        for(i = 0; i < nLevel * 4; i++)
+            szIndent[i] = ' ';
+        szIndent[i] = 0;
+
+        // Insert the indent
+        hGlobal = Clipboard_AddText(hGlobal, szIndent);
+        hGlobal = Clipboard_AddText(hGlobal, szBuffer);
+
+        // Are there any children?
+        if((hChild = TreeView_GetChild(hTreeView, hItem)) != NULL)
+        {
+            hGlobal = TreeView_CopyToClipboard(hTreeView, hChild, hGlobal, nLevel + 1);
+        }
+
+        // Get the next sibling
+        hItem = TreeView_GetNextSibling(hTreeView, hItem);
+    }
+
+    return hGlobal;
+}
+
+void TreeView_CopyToClipboard(HWND hTreeView)
+{
+    HGLOBAL hGlobal = NULL;
+
+    hGlobal = TreeView_CopyToClipboard(hTreeView, TreeView_GetRoot(hTreeView), hGlobal, 0);
+    Clipboard_Finish(hTreeView, hGlobal);
+}
+
+int OnTVKeyDown_CopyToClipboard(HWND /* hDlg */, LPNMTVKEYDOWN pNMTVKeyDown)
+{
+    // On Ctrl+C, copy the text to clipboard 
+    if(pNMTVKeyDown->wVKey == 'C' && GetAsyncKeyState(VK_CONTROL) < 0)
+    {
+        TreeView_CopyToClipboard(pNMTVKeyDown->hdr.hwndFrom);
+        return TRUE;
+    }
+
+    return FALSE;
 }
 
 //-----------------------------------------------------------------------------

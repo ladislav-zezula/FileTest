@@ -151,6 +151,7 @@ static HANDLE OpenSourceFile(LPCTSTR lpFileName, ULONG dwCopyFlags)
 static HANDLE CreateOrOpenTargetFile(LPCTSTR lpFileName)
 {
     HANDLE hFile;
+    ULONG dwShareMode;
 
     // Try to open an existing file for read/write
     hFile = CreateFile(lpFileName, FILE_WRITE_DATA | FILE_WRITE_ATTRIBUTES, 0, NULL, CREATE_ALWAYS, 0, NULL);
@@ -158,9 +159,15 @@ static HANDLE CreateOrOpenTargetFile(LPCTSTR lpFileName)
         return hFile;
 
     // If the target is a volume, we need to open it with OPEN_EXISTING
-    hFile = CreateFile(lpFileName, FILE_WRITE_DATA | FILE_WRITE_ATTRIBUTES, 0, NULL, OPEN_EXISTING, 0, NULL);
-    if(hFile != INVALID_HANDLE_VALUE)
-        return hFile;
+    // Make sure we try all possible sharing modes
+    for(dwShareMode = 0; dwShareMode <= (FILE_SHARE_READ|FILE_SHARE_WRITE); dwShareMode++)
+    {
+        hFile = CreateFile(lpFileName, FILE_WRITE_DATA | FILE_WRITE_ATTRIBUTES, dwShareMode, NULL, OPEN_EXISTING, 0, NULL);
+        if(hFile != INVALID_HANDLE_VALUE)
+            return hFile;
+        if(GetLastError() != ERROR_SHARING_VIOLATION)
+            break;
+    }
 
     return INVALID_HANDLE_VALUE;
 }

@@ -3021,6 +3021,9 @@ static int OnNotify(HWND hDlg, NMHDR * pNMHDR)
         case TVN_ENDLABELEDIT:
             return OnEndLabelEdit(hDlg, (NMTVDISPINFO *)pNMHDR);
 
+        case TVN_KEYDOWN:
+            return OnTVKeyDown_CopyToClipboard(hDlg, (LPNMTVKEYDOWN)pNMHDR);
+
         case NM_DBLCLK:
             return OnDoubleClick(hDlg, pNMHDR);
     }
