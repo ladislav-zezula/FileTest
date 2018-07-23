@@ -402,7 +402,9 @@ static int OnCreateFileClick(HWND hDlg)
         {
             // Invoke breakpoint if the user wants to
             if(IsDlgButtonChecked(hDlg, IDC_BREAKPOINT) == BST_CHECKED)
-                DebugBreak();
+            {
+                __debugbreak();
+            }
 
             pData->hFile = CreateFile(pData->szFileName1,
                                       pData->dwDesiredAccess,
@@ -416,7 +418,9 @@ static int OnCreateFileClick(HWND hDlg)
         {
             // Invoke breakpoint if the user wants to
             if(IsDlgButtonChecked(hDlg, IDC_BREAKPOINT) == BST_CHECKED)
-                DebugBreak();
+            {
+                __debugbreak();
+            }
 
             pData->hFile = pfnCreateFileTransacted(pData->szFileName1,
                                                    pData->dwDesiredAccess,
@@ -453,7 +457,9 @@ static int OnCloseHandleClick(HWND hDlg)
 
         // Invoke breakpoint if the user wants to
         if(IsDlgButtonChecked(hDlg, IDC_BREAKPOINT) == BST_CHECKED)
-            DebugBreak();
+        {
+            __debugbreak();
+        }
 
         if(!CloseHandle(pData->hFile))
             nError = GetLastError();

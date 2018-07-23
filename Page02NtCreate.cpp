@@ -637,7 +637,9 @@ static int OnCreateFileClick(HWND hDlg)
            
         // Invoke breakpoint if the user wants to
         if(IsDlgButtonChecked(hDlg, IDC_BREAKPOINT) == BST_CHECKED)
-            DebugBreak();
+        {
+            __debugbreak();
+        }
 
         Status = NtCreateFile(&pData->hFile,
                                pData->dwDesiredAccess,
@@ -676,7 +678,9 @@ static int OnNtCloseClick(HWND hDlg)
 
     // Invoke breakpoint if the user wants to
     if(IsDlgButtonChecked(hDlg, IDC_BREAKPOINT) == BST_CHECKED)
-        DebugBreak();
+    {
+        __debugbreak();
+    }
 
     // Close file handle first
     if(IsHandleValid(pData->hFile))
