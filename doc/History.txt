@@ -2,6 +2,10 @@
   FileTest history
   ================
 
+ Version 2.6.1.563  
+ 
+ - DebugBreak() replaced by the inline version
+  
  Version 2.6.1.561
  
  - Added support of Ctrl+C into all tree views.

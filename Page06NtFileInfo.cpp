@@ -101,6 +101,18 @@ TStructMember FileStandardInformationMembers[] =
     {NULL, TYPE_NONE, 0}
 };
 
+TStructMember FileStandardInformationMembersEx[] =
+{
+    { _T("AllocationSize"),  TYPE_UINT64, sizeof(LARGE_INTEGER) },
+    { _T("EndOfFile"),       TYPE_UINT64, sizeof(LARGE_INTEGER) },
+    { _T("NumberOfLinks"),   TYPE_UINT32, sizeof(ULONG) },
+    { _T("DeletePending"),   TYPE_BOOLEAN, sizeof(BOOLEAN) },
+    { _T("Directory"),       TYPE_BOOLEAN, sizeof(BOOLEAN) },
+    { _T("AlternateStream"), TYPE_BOOLEAN, sizeof(BOOLEAN) },
+    { _T("MetadataAttribute"), TYPE_BOOLEAN, sizeof(BOOLEAN) },
+    { NULL, TYPE_NONE, 0 }
+};
+
 TStructMember FileInternalInformationMembers[] =
 {
     {_T("IndexNumber"),     TYPE_FILEID64, sizeof(LARGE_INTEGER)},
@@ -664,6 +676,17 @@ TStructMember FileStatInformationMembers[] =
 #define FileRenameInformationExMembers                  FileRenameInformationExMembers
 #define FileRenameInformationExBypassAccessCheckMembers FileUnknownInformationMembers
 #define FileDesiredStorageClassInformationMembers       FileUnknownInformationMembers
+/*
+TInfoData FileStdInfo_Win10[] =
+{
+    (int)FileStandardInformation,
+    _T("FileStandardInformation"),
+    _T("FILE_STANDARD_INFORMATION"),
+    FileStandardInformationMembersEx,
+    FALSE,
+    TRUE
+};
+*/
 
 TInfoData FileInfoData[] =                                                  
 {
@@ -1823,6 +1846,11 @@ static int FillStructureMembers(
     TCHAR szBuffer[256];
     int nTotalLength = 0;               // Length, in bytes, of the structure member
 
+    // Hack: In Windows 10, the FILE_STANDARD_INFORMATION becomes FILE_STANDARD_INFORMATION_EX
+    if (pMembers == FileStandardInformationMembers && g_dwWinVer >= 0x0A00)
+        pMembers = FileStandardInformationMembersEx;
+
+    // Parse the members and fill them
     for(; pMembers->szMemberName != NULL; pMembers++)
     {
         int nDataLength = 0;
@@ -1969,14 +1997,13 @@ static int FillDialogWithFileInfo(HWND hDlg, TInfoData * pInfoData, int nInfoCla
     TreeView_DeleteAllItems(hTreeView);
 
     // File infos and FS infos start from 1
-    nInfoClass--;
+    assert(nInfoClass >= 1);
+    pInfoData = pInfoData + nInfoClass - 1;
 
     // Fill the tree view.
     // For some structures (like FILE_STREAM_INFORMATION),
     // we have to do it manually, because our data struct description
     // don't allow us to process the variable structs following each other
-
-    pInfoData += nInfoClass;
     if(pInfoData->szStructName != NULL)
     {
         hRootItem = InsertTreeItem(hTreeView, TVI_ROOT, pInfoData->szStructName);

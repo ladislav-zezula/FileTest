@@ -599,6 +599,16 @@ typedef struct _REPARSE_DATA_BUFFER
             WCHAR StringList[1];                // Multistring (strings separated by '\0', terminated by '\0\0')
         } AppExecLinkReparseBuffer;
 
+        // Structure for IO_REPARSE_TAG_WCI (0x80000018)
+        struct
+        {
+            ULONG Version;                      // Expected to be 1 by wcifs.sys
+            ULONG Reserved;
+            GUID  LookupGuid;                   // GUID used for lookup in wcifs!WcLookupLayer
+            USHORT WciNameLength;               // Length of the WCI subname, in bytes
+            WCHAR WciName[1];                   // the WCI subname (not zero terminated)
+        } WcifsReparseBuffer;
+
         // Dummy structure
         struct
         {

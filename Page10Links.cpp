@@ -957,6 +957,18 @@ static void OnUpdateView(HWND hDlg)
             }
             break;
 
+        case IO_REPARSE_TAG_WCI:
+            hItem = TreeView_InsertString(hWndChild, hItem, _T("WcifsReparseBuffer"), 0);
+            if (hItem != NULL)
+            {
+                TreeView_InsertInteger(hWndChild, hItem, _T("Version"), _T("0x%08X"), ReparseData->WcifsReparseBuffer.Version, 0);
+                TreeView_InsertInteger(hWndChild, hItem, _T("Reserved"), _T("0x%08X"), ReparseData->WcifsReparseBuffer.Reserved, 0);
+                TreeView_InsertGuid(hWndChild, hItem, _T("LookupGuid"), ReparseData->WcifsReparseBuffer.LookupGuid, 0);
+                TreeView_InsertInteger(hWndChild, hItem, _T("WciNameLength"), _T("0x%04X"), ReparseData->WcifsReparseBuffer.WciNameLength, 0);
+                TreeView_InsertStrOffs(hWndChild, hItem, _T("WciName"), ReparseData, FIELD_OFFSET(REPARSE_DATA_BUFFER, WcifsReparseBuffer.WciName), ReparseData->WcifsReparseBuffer.WciNameLength, NULL);
+            }
+            break;
+
         default:
             hItem = TreeView_InsertString(hWndChild, hItem, _T("GenericReparseBuffer"), 0);
             if(hItem != NULL)
