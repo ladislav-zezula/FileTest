@@ -676,17 +676,6 @@ TStructMember FileStatInformationMembers[] =
 #define FileRenameInformationExMembers                  FileRenameInformationExMembers
 #define FileRenameInformationExBypassAccessCheckMembers FileUnknownInformationMembers
 #define FileDesiredStorageClassInformationMembers       FileUnknownInformationMembers
-/*
-TInfoData FileStdInfo_Win10[] =
-{
-    (int)FileStandardInformation,
-    _T("FileStandardInformation"),
-    _T("FILE_STANDARD_INFORMATION"),
-    FileStandardInformationMembersEx,
-    FALSE,
-    TRUE
-};
-*/
 
 TInfoData FileInfoData[] =                                                  
 {
