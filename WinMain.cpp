@@ -318,8 +318,6 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
         VirtualFree(pData->pbFileData, pData->cbFileDataMax, MEM_RELEASE);
     if(pData->pbNtInfoBuff != NULL)
         HeapFree(g_hHeap, 0, pData->pbNtInfoBuff);
-    if(pData->ReparseData != NULL)
-        HeapFree(g_hHeap, 0, pData->ReparseData);
     HeapFree(g_hHeap, 0, pData);
 
     UnloadDynamicLoadedAPIs();

@@ -15,6 +15,7 @@
 // Local defines
 
 #define MAX_TREE_ITEM_LENGTH        0x400
+#define REPARSE_HEADER_LENGTH       0x08        // sizeof(REPARSE_DATA_BUFFER::ReparseTag, ReparseDataLength, Reserved)
 
 #define ITEM_TYPE_REPARSE_TAG       0x0001
 #define ITEM_TYPE_SUBSTNAME_MP      0x0002
@@ -56,7 +57,6 @@ static TFlagInfo ReparseTags[] =
     FLAG_INFO_ENTRY(IO_REPARSE_TAG_CLOUD_D),
     FLAG_INFO_ENTRY(IO_REPARSE_TAG_CLOUD_E),
     FLAG_INFO_ENTRY(IO_REPARSE_TAG_CLOUD_F),
-    FLAG_INFO_ENTRY(IO_REPARSE_TAG_CLOUD_MASK),
     FLAG_INFO_ENTRY(IO_REPARSE_TAG_APPEXECLINK),
     FLAG_INFO_ENTRY(IO_REPARSE_TAG_GVFS),
     FLAG_INFO_ENTRY(IO_REPARSE_TAG_STORAGE_SYNC),
@@ -181,7 +181,7 @@ static void InitializeReparseData(TFileTestData * pData)
 
             // Set the reparse data to the dialog data
             pData->ReparseData = ReparseData;
-            pData->cbReparseData = MAXIMUM_REPARSE_DATA_BUFFER_SIZE;
+            pData->ReparseDataLength = MAXIMUM_REPARSE_DATA_BUFFER_SIZE;
         }
     }
 }
@@ -701,7 +701,7 @@ static int OnEndLabelEdit(HWND hDlg, NMTVDISPINFO * pNMDispInfo)
         case ITEM_TYPE_REPARSE_TAG:
             nError = Text2Hex32(pNMDispInfo->item.pszText, &IntValue32);
             if(nError == ERROR_SUCCESS && IntValue32 != ReparseData->ReparseTag)
-                nError = SetReparseDataTag(ReparseData, IntValue32, pData->cbReparseData);
+                nError = SetReparseDataTag(ReparseData, IntValue32, pData->ReparseDataLength);
             break;
 
         case ITEM_TYPE_SUBSTNAME_MP:
@@ -759,7 +759,7 @@ static int OnDoubleClick(HWND hDlg, LPNMHDR pNMHDR)
             // Let the user choose a new reparse tag
             if(ValuesDialog(hDlg, &ReparseTag, IDS_CHOOSE_REPARSE_TAG, ReparseTags) == IDOK)
             {
-                SetReparseDataTag(ReparseData, ReparseTag, pData->cbReparseData);
+                SetReparseDataTag(ReparseData, ReparseTag, pData->ReparseDataLength);
                 PostMessage(hDlg, WM_UPDATE_VIEW, 0, 0);
             }
         }
@@ -973,10 +973,14 @@ static void OnUpdateView(HWND hDlg)
             hItem = TreeView_InsertString(hWndChild, hItem, _T("GenericReparseBuffer"), 0);
             if(hItem != NULL)
             {
-                TreeView_InsertBinary(hWndChild, hItem, _T("DataBuffer"),
-                                                         ReparseData->GenericReparseBuffer.DataBuffer, 
-                                                         ReparseData->ReparseDataLength,
-                                                         0);
+                if (ReparseData->ReparseDataLength != 0)
+                {
+                    TreeView_InsertBinary(hWndChild, hItem, _T("DataBuffer"), ReparseData->GenericReparseBuffer.DataBuffer, ReparseData->ReparseDataLength, 0);
+                }
+                else
+                {
+                    TreeView_InsertString(hWndChild, hItem, _T("DataBuffer: (no data)"), 0);
+                }
             }
             break;
     }
@@ -1344,7 +1348,11 @@ static int OnReparseQuery(HWND hDlg)
                              FILE_OPEN_REPARSE_POINT);
         if(NT_SUCCESS(Status))
         {
-            // Query the reparse point 
+            // Reset the data of the reparse point, so we don't have any artifacts from the past
+            memset(pData->ReparseData, 0, pData->ReparseDataLength);
+            pData->ReparseDataValid = 0;
+
+            // Query the reparse point
             Status = NtFsControlFile(hFile, 
                                      NULL,
                                      NULL,
@@ -1354,9 +1362,14 @@ static int OnReparseQuery(HWND hDlg)
                                      NULL,
                                      0,
                                      pData->ReparseData,
-                                     pData->cbReparseData);
-            // Update the view
-            PostMessage(hDlg, WM_UPDATE_VIEW, 0, 0);
+                                     pData->ReparseDataLength);
+            if (NT_SUCCESS(Status))
+            {
+                // Update the view
+                pData->ReparseDataValid = (ULONG)IoStatus.Information;
+                PostMessage(hDlg, WM_UPDATE_VIEW, Status, 0);
+            }
+
             NtClose(hFile);
         }
 
@@ -1454,6 +1467,22 @@ static int OnNotify(HWND hDlg, LPNMHDR pNMHDR)
     return FALSE;
 }
 
+static void OnDestroy(HWND hDlg)
+{
+    TFileTestData * pData = GetDialogData(hDlg);
+
+    if (pData != NULL)
+    {
+        if (pAnchors != NULL)
+            delete pAnchors;
+        pAnchors = NULL;
+
+        if (pData->ReparseData != NULL)
+            HeapFree(g_hHeap, 0, pData->ReparseData);
+        pData->ReparseData = NULL;
+    }
+}
+
 //-----------------------------------------------------------------------------
 // Public functions
 
@@ -1484,9 +1513,7 @@ INT_PTR CALLBACK PageProc10(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
             return OnNotify(hDlg, (NMHDR *)lParam);
 
         case WM_DESTROY:
-            if(pAnchors != NULL)
-                delete pAnchors;
-            pAnchors = NULL;
+            OnDestroy(hDlg);
             return FALSE;
     }
     return FALSE;

@@ -237,7 +237,8 @@ struct TFileTestData : public TWindowData
     ULONG         cbNtInfoBuff;             // Size of pbNtInfoBuff in bytes
 
     PREPARSE_DATA_BUFFER ReparseData;       // Buffer for reparse points
-    ULONG         cbReparseData;            // Size of pbReparseBuffer in bytes
+    ULONG         ReparseDataLength;        // Total length of reparse data buffer
+    ULONG         ReparseDataValid;         // Available length of reparse data buffer
 };
 
 #define GetDialogData(hDlg) ((TFileTestData *)GetWindowLongPtr(hDlg, DWLP_USER))

@@ -606,7 +606,7 @@ typedef struct _REPARSE_DATA_BUFFER
             ULONG Reserved;
             GUID  LookupGuid;                   // GUID used for lookup in wcifs!WcLookupLayer
             USHORT WciNameLength;               // Length of the WCI subname, in bytes
-            WCHAR WciName[1];                   // the WCI subname (not zero terminated)
+            WCHAR WciName[1];                   // The WCI subname (not zero terminated)
         } WcifsReparseBuffer;
 
         // Dummy structure
