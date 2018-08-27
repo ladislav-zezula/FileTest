@@ -38,27 +38,33 @@
 // Kernel32 definitions (not included in VS 2005 SDK)
 
 #ifndef FILE_FLAG_SESSION_AWARE
-#define FILE_FLAG_SESSION_AWARE              0x00800000
+#define FILE_FLAG_SESSION_AWARE             0x00800000
 #endif
 
 #ifndef FILE_SESSION_AWARE
-#define FILE_SESSION_AWARE                   0x00040000
+#define FILE_SESSION_AWARE                  0x00040000
 #endif
 
 #ifndef FILE_ATTRIBUTE_INTEGRITY_STREAM
-#define FILE_ATTRIBUTE_INTEGRITY_STREAM      0x00008000
+#define FILE_ATTRIBUTE_INTEGRITY_STREAM     0x00008000
 #endif
 
 #ifndef FILE_ATTRIBUTE_VIRTUAL
-#define FILE_ATTRIBUTE_VIRTUAL               0x00010000  
+#define FILE_ATTRIBUTE_VIRTUAL              0x00010000      // FILE_ATTRIBUTE_VIRTUAL is synthesized by LuaFV and not persisted on disk by NTFS
+
 #endif
 
 #ifndef FILE_ATTRIBUTE_NO_SCRUB_DATA
-#define FILE_ATTRIBUTE_NO_SCRUB_DATA         0x00020000
+#define FILE_ATTRIBUTE_NO_SCRUB_DATA        0x00020000
 #endif
 
 #ifndef FILE_ATTRIBUTE_RECALL_ON_OPEN
-#define FILE_ATTRIBUTE_RECALL_ON_OPEN        0x00040000
+#define FILE_ATTRIBUTE_RECALL_ON_OPEN       0x00040000  
+#endif
+
+#ifndef FILE_ATTRIBUTE_PINNED
+#define FILE_ATTRIBUTE_PINNED               0x00080000  
+#define FILE_ATTRIBUTE_UNPINNED             0x00100000  
 #endif
 
 #ifndef FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS

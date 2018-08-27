@@ -25,6 +25,13 @@ static BOOL bTimeConverted = FALSE;
 //-----------------------------------------------------------------------------
 // Local functions
 
+static bool IsSpecialFileTime(FILETIME & ft)
+{
+    return (ft.dwHighDateTime == 0xFFFFFFFF && ft.dwLowDateTime == 0xFFFFFFFF) ||
+           (ft.dwHighDateTime == 0xFFFFFFFF && ft.dwLowDateTime == 0xFFFFFFFE) ||
+           (ft.dwHighDateTime == 0x00000000 && ft.dwLowDateTime == 0x00000000);
+}
+
 static DWORD GetDateFormatToken(LPCTSTR szDateFormat, LPDWORD pdwTokenLength)
 {
     TCHAR chFirstChar = *szDateFormat;
@@ -574,10 +581,8 @@ static int FileTimeToHumanReadableText(
     LPTSTR szSaveBuffer = szBuffer;
     int nLength;
 
-    // Verify blank or invalid date(s)
-    if(pFt->dwHighDateTime == 0xFFFFFFFF && pFt->dwLowDateTime == 0xFFFFFFFF)
-        return 0;
-    if(pFt->dwHighDateTime == 0 && pFt->dwLowDateTime == 0)
+    // Verify special FILETIME values
+    if(IsSpecialFileTime(*pFt))
         return 0;
 
     // Convert the filetime to local file time
@@ -703,16 +708,8 @@ NTSTATUS TextToFileTime(LPCTSTR szText, PFILETIME pFt)
             return STATUS_INVALID_DATA_FORMAT;
     }
 
-    // We accept "FFFFFFFF-FFFFFFFF" as input
-    if(ft.dwHighDateTime == 0xFFFFFFFF && ft.dwLowDateTime == 0xFFFFFFFF)
-    {
-        pFt->dwHighDateTime = ft.dwHighDateTime;
-        pFt->dwLowDateTime = ft.dwLowDateTime;
-        return STATUS_SUCCESS;
-    }
-
-    // We accept "00000000-00000000" as input
-    if(ft.dwHighDateTime == 0 && ft.dwLowDateTime == 0)
+    // Some values are accepted as-is ("00000000-00000000", "FFFFFFFF-FFFFFFFE", "FFFFFFFF-FFFFFFFF")
+    if(IsSpecialFileTime(ft))
     {
         pFt->dwHighDateTime = ft.dwHighDateTime;
         pFt->dwLowDateTime = ft.dwLowDateTime;
