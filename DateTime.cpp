@@ -27,9 +27,8 @@ static BOOL bTimeConverted = FALSE;
 
 static bool IsSpecialFileTime(FILETIME & ft)
 {
-    return (ft.dwHighDateTime == 0xFFFFFFFF && ft.dwLowDateTime == 0xFFFFFFFF) ||
-           (ft.dwHighDateTime == 0xFFFFFFFF && ft.dwLowDateTime == 0xFFFFFFFE) ||
-           (ft.dwHighDateTime == 0x00000000 && ft.dwLowDateTime == 0x00000000);
+    // File time with high bit set or file time with high part set to zero
+    return ((ft.dwHighDateTime & 0x80000000) || (ft.dwHighDateTime == 0x00000000));
 }
 
 static DWORD GetDateFormatToken(LPCTSTR szDateFormat, LPDWORD pdwTokenLength)
@@ -677,7 +676,28 @@ NTSTATUS TextToFileTime(LPCTSTR szText, PFILETIME pFt)
     szTempDateTime = szText;
     pTempSt = &st;
 
-    // First of all, try to convert the filetime from human-readable form
+    // Check for "current"
+    if(!_tcsicmp(szText, _T("current")))
+    {
+        GetSystemTimeAsFileTime(pFt);
+        return STATUS_SUCCESS;
+    }
+
+    // Check for "-1" and "-2"
+    if(szText[0] == _T('-'))
+    {
+        LARGE_INTEGER IntValue64;
+
+        IntValue64.QuadPart = _tcstol(szText, &szEndChar, 10);
+        if(szEndChar[0] == 0)
+        {
+            pFt->dwHighDateTime = IntValue64.HighPart;
+            pFt->dwLowDateTime = IntValue64.LowPart;
+            return STATUS_SUCCESS;
+        }
+    }
+
+    // Try to convert the filetime from human-readable form
     if(bDateConverted == FALSE)
         EnumDateFormats(EnumDateFormatsProc, LOCALE_USER_DEFAULT, DATE_SHORTDATE);
     if(bDateConverted == FALSE)
