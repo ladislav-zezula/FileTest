@@ -320,6 +320,8 @@ static NTSTATUS NtDeleteFsObject(
                             &IoStatus,
                              FILE_SHARE_READ,
                              FILE_SYNCHRONOUS_IO_ALERT | FILE_OPEN_REPARSE_POINT);
+
+        // We need the manual delete here
         NeedDeleteManually = TRUE;
     }
 
@@ -454,7 +456,7 @@ static int ForceRemoveFile(LPCTSTR szFileName)
     return RtlNtStatusToDosError(Status);
 }
 
-static int RemoveDirectoryTree(LPCTSTR szDirName)
+static int RemoveFsObjectTree(LPCTSTR szDirName, BOOLEAN RecursiveDelete)
 {
     OBJECT_ATTRIBUTES ObjAttr;
     UNICODE_STRING PathName;
@@ -472,7 +474,7 @@ static int RemoveDirectoryTree(LPCTSTR szDirName)
         {
             // Call the recursive function
             InitializeObjectAttributes(&ObjAttr, &PathName, OBJ_CASE_INSENSITIVE, NULL, NULL);
-            Status = NtDeleteFsObject(&ObjAttr, WorkBuffer, WorkBufferSize, TRUE);
+            Status = NtDeleteFsObject(&ObjAttr, WorkBuffer, WorkBufferSize, RecursiveDelete);
             FreeFileNameString(&PathName);
 
             // Free the work buffer
@@ -546,7 +548,7 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
         pAnchors->AddAnchor(hDlg, IDC_MOVE_FILE, akLeftCenter | akTop);
         pAnchors->AddAnchor(hDlg, IDC_MOVE_OPTIONS, akLeftCenter | akTop);
         pAnchors->AddAnchor(hDlg, IDC_DELETE_FILE, akTop | akRight);
-        pAnchors->AddAnchor(hDlg, IDC_DELETE_DIRECTORY_MENU, akTop | akRight);
+        pAnchors->AddAnchor(hDlg, IDC_DELETE_OBJECT_MENU, akTop | akRight);
 
         pAnchors->AddAnchor(hDlg, IDC_FILEID_FRAME, akLeft | akTop | akRight);
         pAnchors->AddAnchor(hDlg, IDC_FILE_ID, akLeft | akTop | akRight);
@@ -729,7 +731,7 @@ static int OnDeleteFileClick(HWND hDlg)
     return TRUE;
 }
 
-static int OnDeleteDirectory(HWND hDlg, bool bEntireTree)
+static int OnDeleteFsObject(HWND hDlg, BOOLEAN RecursiveDelete)
 {
     TFileTestData * pData = GetDialogData(hDlg);
     int nError = ERROR_SUCCESS;
@@ -737,17 +739,8 @@ static int OnDeleteDirectory(HWND hDlg, bool bEntireTree)
     // Save the dialog variables
     SaveDialog(hDlg);
 
-    // Choose what exactly to do
-    if(bEntireTree == FALSE)
-    {
-        if(!RemoveDirectory(pData->szFileName1))
-            nError = GetLastError();
-    }
-    else
-    {
-        nError = RemoveDirectoryTree(pData->szFileName1);
-    }
-
+    // Perform the delete
+    nError = RemoveFsObjectTree(pData->szFileName1, RecursiveDelete);
     SetResultInfo(hDlg, nError);
     return TRUE;
 }
@@ -1319,14 +1312,14 @@ static int OnCommand(HWND hDlg, UINT nNotify, UINT nIDCtrl)
             case IDC_DELETE_FILE:
                 return OnDeleteFileClick(hDlg);
 
-            case IDC_DELETE_DIRECTORY_MENU:
-                return ExecuteContextMenuForDlgItem(hDlg, FindContextMenu(IDR_DELETE_DIRECTORY_MENU), IDC_DELETE_DIRECTORY_MENU);
+            case IDC_DELETE_OBJECT_MENU:
+                return ExecuteContextMenuForDlgItem(hDlg, FindContextMenu(IDR_DELETE_OBJECT_MENU), IDC_DELETE_OBJECT_MENU);
 
-            case IDC_DELETE_DIRECTORY_SINGLE:
-                return OnDeleteDirectory(hDlg, FALSE);
+            case IDC_DELETE_OBJECT_SINGLE:
+                return OnDeleteFsObject(hDlg, FALSE);
 
-            case IDC_DELETE_DIRECTORY_TREE:
-                return OnDeleteDirectory(hDlg, TRUE);
+            case IDC_DELETE_OBJECT_TREE:
+                return OnDeleteFsObject(hDlg, TRUE);
 
             case IDC_FILE_ID_GET:
                 return OnFileIdGetClick(hDlg);

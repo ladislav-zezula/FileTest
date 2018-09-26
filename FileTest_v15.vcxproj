@@ -235,6 +235,7 @@
     <ClCompile Include="Page09Security.cpp" />
     <ClCompile Include="Page10Links.cpp" />
     <ClCompile Include="Page11Streams.cpp" />
+    <ClCompile Include="ReparseDataHsm.cpp" />
     <ClCompile Include="TAceHelper.cpp" />
     <ClCompile Include="TDataEditor.cpp" />
     <ClCompile Include="TToolTip.cpp" />
@@ -250,8 +251,8 @@
     <ResourceCompile Include="FileTest.rc" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\Aaa\inc\ntdll.h" />
     <ClInclude Include="FileTest.h" />
+    <ClInclude Include="ReparseDataHsm.h" />
     <ClInclude Include="ntstatus.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="TDataEditor.h" />

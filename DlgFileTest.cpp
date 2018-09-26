@@ -180,6 +180,7 @@ static void InitializeTabControl(HWND hDlg, TWindowData * pData)
     PROPSHEETPAGE psp[13];
     TCHAR szAppTitle[256];
     HWND hTabCtrl = GetDlgItem(hDlg, IDC_TAB);
+    int nStartPage = 0;
     int nPages = 0;
 
     // Get the title of FileTest application
@@ -193,7 +194,6 @@ static void InitializeTabControl(HWND hDlg, TWindowData * pData)
     psh.hInstance  = g_hInst;
     psh.pszIcon    = MAKEINTRESOURCE(IDI_FILE_TEST);
     psh.pszCaption = szAppTitle;
-    psh.nStartPage = 1;
     psh.ppsp       = psp;
 
     // Fill the "Transaction" page (Vista only)
@@ -206,6 +206,7 @@ static void InitializeTabControl(HWND hDlg, TWindowData * pData)
         psp[nPages].pszTemplate = MAKEINTRESOURCE(IDD_PAGE00_TRANSACTION);
         psp[nPages].pfnDlgProc  = PageProc00;
         psp[nPages].lParam      = (LPARAM)pData;
+        nStartPage++;
         nPages++;
     }
 
@@ -311,6 +312,9 @@ static void InitializeTabControl(HWND hDlg, TWindowData * pData)
     psp[nPages].pszTemplate = MAKEINTRESOURCE(IDD_PAGE10_LINKS);
     psp[nPages].pfnDlgProc  = PageProc10;
     psp[nPages].lParam      = (LPARAM)pData;
+#ifdef _DEBUG
+//  nStartPage = nPages;
+#endif
     nPages++;
 
     // Fill the "Streams".
@@ -322,6 +326,9 @@ static void InitializeTabControl(HWND hDlg, TWindowData * pData)
     psp[nPages].pfnDlgProc  = PageProc11;
     psp[nPages].lParam      = (LPARAM)pData;
     nPages++;
+
+    // Set the number of pages and start page
+    psh.nStartPage = nStartPage;
     psh.nPages = nPages;
 
     // Create Tab Control

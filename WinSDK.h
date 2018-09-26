@@ -129,6 +129,25 @@
 #endif
 
 //-----------------------------------------------------------------------------
+// Flags for FILE_FS_ATTRIBUTE_INFORMATION::FileSystemAttributes
+
+#ifndef FILE_RETURNS_CLEANUP_RESULT_INFO
+#define FILE_RETURNS_CLEANUP_RESULT_INFO    0x00000200  // winnt
+#endif
+
+#ifndef FILE_SUPPORTS_POSIX_UNLINK_RENAME
+#define FILE_SUPPORTS_POSIX_UNLINK_RENAME   0x00000400  // winnt
+#endif
+
+#ifndef FILE_SUPPORTS_HARD_LINKS
+#define FILE_SUPPORTS_HARD_LINKS            0x00400000  // winnt
+#endif
+
+#ifndef FILE_SUPPORTS_EXTENDED_ATTRIBUTES
+#define FILE_SUPPORTS_EXTENDED_ATTRIBUTES   0x00800000  // winnt
+#endif
+
+//-----------------------------------------------------------------------------
 // Mandatory label definitions (not included in VS 2005 SDK)
 
 #ifndef LABEL_SECURITY_INFORMATION
@@ -614,6 +633,14 @@ typedef struct _REPARSE_DATA_BUFFER
             USHORT WciNameLength;               // Length of the WCI subname, in bytes
             WCHAR WciName[1];                   // The WCI subname (not zero terminated)
         } WcifsReparseBuffer;
+
+        // Handled by cldflt.sys!HsmpRpReadBuffer
+        struct
+        {
+            USHORT Flags;                       // Flags (0x8000 = not compressed)
+            USHORT Length;                      // Length of the data (uncompressed)
+            BYTE RawData[1];                    // To be RtlDecompressBuffer-ed
+        } HsmReparseBufferRaw;
 
         // Dummy structure
         struct

@@ -52,7 +52,7 @@
 #define IDD_OBJECT_GUID_HELP            143
 #define IDR_ACL_TYPE_MENU               144
 #define IDS_INTEGRITY_LEVEL             145
-#define IDR_DELETE_DIRECTORY_MENU       145
+#define IDR_DELETE_OBJECT_MENU          145
 #define IDC_FILE_ATTRIBUTE_READONLY     800
 #define IDC_FILE_ATTRIBUTE_HIDDEN       801
 #define IDC_FILE_ATTRIBUTE_SYSTEM       802
@@ -201,7 +201,7 @@
 #define IDC_GET_FILE_ATTRIBUTES         1089
 #define IDC_DEFAULT                     1089
 #define IDC_DEFAULT_LENGTH              1089
-#define IDC_DELETE_DIRECTORY_MENU       1090
+#define IDC_DELETE_OBJECT_MENU          1090
 #define IDC_NT_QUERY_ATTRIBUTES_FILE    1091
 #define IDC_NT_QUERY_ATTRIBUTES_FILE2   1092
 #define IDC_CREATE_HARDLINK             1092
@@ -490,15 +490,15 @@
 #define IDC_DO_NOTHING                  40057
 #define IDC_SET_EMPTY_DACL              40058
 #define IDC_SET_EMPTY_ACL               40059
-#define IDC_DELETE_DIRECTORY_SINGLE     40060
-#define IDC_DELETE_DIRECTORY_TREE       40061
+#define IDC_DELETE_OBJECT_SINGLE        40062
+#define IDC_DELETE_OBJECT_TREE          40063
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        146
-#define _APS_NEXT_COMMAND_VALUE         40062
+#define _APS_NEXT_COMMAND_VALUE         40064
 #define _APS_NEXT_CONTROL_VALUE         1231
 #define _APS_NEXT_SYMED_VALUE           101
 #endif

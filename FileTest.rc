@@ -109,8 +109,8 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 2,6,1,567
- PRODUCTVERSION 2,6,1,567
+ FILEVERSION 2,6,1,568
+ PRODUCTVERSION 2,6,1,568
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -127,13 +127,13 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Ladislav Zezula"
             VALUE "FileDescription", "Interactive File System API Test"
-            VALUE "FileVersion", "2, 6, 1, 567\0"
+            VALUE "FileVersion", "2, 6, 1, 568"
             VALUE "InternalName", "FileTest"
             VALUE "LegalCopyright", "Copyright © 2004 - 2018 Ladislav Zezula"
             VALUE "LegalTrademarks", "http://www.zezula.net"
             VALUE "OriginalFilename", "FileTest.exe"
             VALUE "ProductName", "FileTest"
-            VALUE "ProductVersion", "2, 6, 1, 567\0"
+            VALUE "ProductVersion", "2, 6, 1, 568"
         END
     END
     BLOCK "VarFileInfo"
@@ -205,12 +205,12 @@ BEGIN
     END
 END
 
-IDR_DELETE_DIRECTORY_MENU MENU 
+IDR_DELETE_OBJECT_MENU MENU 
 BEGIN
     POPUP "__DELETE_DIRECTORY__"
     BEGIN
-        MENUITEM "The Single &Directory",       IDC_DELETE_DIRECTORY_SINGLE
-        MENUITEM "The Entire &Tree",            IDC_DELETE_DIRECTORY_TREE
+        MENUITEM "The Single &Object",          IDC_DELETE_OBJECT_SINGLE
+        MENUITEM "The Entire &Tree",            IDC_DELETE_OBJECT_TREE
     END
 END
 
@@ -397,7 +397,7 @@ BEGIN
     PUSHBUTTON      "DeleteFile (F1)",IDC_DELETE_FILE,219,53,74,14
     PUSHBUTTON      "Copy Options ...",IDC_COPY_OPTIONS,11,71,74,14
     PUSHBUTTON      "Move Options ...",IDC_MOVE_OPTIONS,115,71,74,14
-    PUSHBUTTON      "Delete Dir (F2)",IDC_DELETE_DIRECTORY_MENU,219,71,74,14
+    PUSHBUTTON      "Delete Object (F1)",IDC_DELETE_OBJECT_MENU,219,71,74,14
     GROUPBOX        " File ID and Object ID (if supported)",IDC_FILEID_FRAME,7,93,293,51,WS_GROUP
     PUSHBUTTON      "Get File ID",IDC_FILE_ID_GET,11,106,74,14
     EDITTEXT        IDC_FILE_ID,89,106,170,14,ES_AUTOHSCROLL | ES_READONLY
@@ -527,9 +527,9 @@ BEGIN
     PUSHBUTTON      "Create SymLink",IDC_SYMLINK_CREATE,115,37,77,14,WS_GROUP
     PUSHBUTTON      "Delete SymLink",IDC_SYMLINK_DELETE,218,37,77,14,WS_DISABLED
     GROUPBOX        " Hardlinks ",IDC_HARDLINK_FRAME,7,59,294,66,WS_GROUP
-    LTEXT           "File Name:",IDC_STATIC,12,70,66,12,SS_CENTERIMAGE
+    LTEXT           "File Name List:",IDC_STATIC,12,70,66,12,SS_CENTERIMAGE
     COMBOBOX        IDC_HARDLINK_LIST,81,70,214,75,CBS_DROPDOWN | CBS_AUTOHSCROLL | WS_VSCROLL | WS_TABSTOP
-    LTEXT           "Create hardlink:",IDC_STATIC,12,87,66,14,SS_CENTERIMAGE
+    LTEXT           "Create Hardlink:",IDC_STATIC,12,87,66,14,SS_CENTERIMAGE
     EDITTEXT        IDC_NEW_HARDLINK,81,87,214,14,ES_AUTOHSCROLL
     PUSHBUTTON      "Create Hardlink",IDC_HARDLINK_CREATE,12,105,77,14,WS_GROUP
     PUSHBUTTON      "Query Hardlinks",IDC_HARDLINK_QUERY,115,105,77,14,WS_GROUP

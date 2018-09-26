@@ -22,6 +22,32 @@ static UNICODE_STRING NullString = RTL_CONSTANT_STRING(L"NULL");
 //-----------------------------------------------------------------------------
 // Description of data structures for file info classes
 
+// Values for FILE_FS_ATTRIBUTE_INFORMATION::FileSystemAttributes
+TFlagInfo FileSystemAttributesValues[] =
+{
+    FLAG_INFO_ENTRY(FILE_CASE_SENSITIVE_SEARCH),
+    FLAG_INFO_ENTRY(FILE_CASE_PRESERVED_NAMES),
+    FLAG_INFO_ENTRY(FILE_UNICODE_ON_DISK),
+    FLAG_INFO_ENTRY(FILE_PERSISTENT_ACLS),
+    FLAG_INFO_ENTRY(FILE_FILE_COMPRESSION),
+    FLAG_INFO_ENTRY(FILE_VOLUME_QUOTAS),
+    FLAG_INFO_ENTRY(FILE_SUPPORTS_SPARSE_FILES),
+    FLAG_INFO_ENTRY(FILE_SUPPORTS_REPARSE_POINTS),
+    FLAG_INFO_ENTRY(FILE_SUPPORTS_REMOTE_STORAGE),
+    FLAG_INFO_ENTRY(FILE_RETURNS_CLEANUP_RESULT_INFO),
+    FLAG_INFO_ENTRY(FILE_SUPPORTS_POSIX_UNLINK_RENAME),
+    FLAG_INFO_ENTRY(FILE_VOLUME_IS_COMPRESSED),
+    FLAG_INFO_ENTRY(FILE_SUPPORTS_OBJECT_IDS),
+    FLAG_INFO_ENTRY(FILE_SUPPORTS_ENCRYPTION),
+    FLAG_INFO_ENTRY(FILE_NAMED_STREAMS),
+    FLAG_INFO_ENTRY(FILE_READ_ONLY_VOLUME),
+    FLAG_INFO_ENTRY(FILE_SEQUENTIAL_WRITE_ONCE),
+    FLAG_INFO_ENTRY(FILE_SUPPORTS_TRANSACTIONS),
+    FLAG_INFO_ENTRY(FILE_SUPPORTS_HARD_LINKS),
+    FLAG_INFO_ENTRY(FILE_SUPPORTS_EXTENDED_ATTRIBUTES),
+    FLAG_INFO_END
+};
+
 TStructMember FileUnknownInformationMembers[] =
 {
     {_T("BinaryData"),      TYPE_ARRAY8_VARIABLE, 0},
@@ -478,7 +504,7 @@ TStructMember FileProcessIdsUsingFileInformationMembers[] =
 {   
     {_T("NumberOfProcessIdsInList"), TYPE_UINT32, sizeof(ULONG)},
     {_T("<padding>"),                TYPE_PADDING, sizeof(HANDLE)},
-    {_T("ProcessIdList"),            TYPE_ARRAY_HANDLE, FIELD_OFFSET(FILE_PROCESS_IDS_USING_FILE_INFORMATION, NumberOfProcessIdsInList)},
+    {_T("ProcessIdList"),            TYPE_ARRAY_PROCESS, FIELD_OFFSET(FILE_PROCESS_IDS_USING_FILE_INFORMATION, NumberOfProcessIdsInList)},
     {NULL, TYPE_NONE, 0}
 };
 
@@ -792,7 +818,7 @@ TStructMember FileFsDeviceInformationMembers[] =
 
 TStructMember FileFsAttributeInformationMembers[] =
 {   
-    {_T("FileSystemAttributes"),       TYPE_UINT32, sizeof(ULONG)},
+    {_T("FileSystemAttributes"),       TYPE_FLAG32, sizeof(ULONG), NULL, {(TStructMember *)FileSystemAttributesValues}},
     {_T("MaximumComponentNameLength"), TYPE_UINT32, sizeof(ULONG)},
     {_T("FileSystemNameLength"),       TYPE_UINT32, sizeof(ULONG)},
     {_T("FileSystemName"),             TYPE_WNAME_L32B, FIELD_OFFSET(FILE_FS_ATTRIBUTE_INFORMATION, FileSystemNameLength)},
@@ -1830,8 +1856,6 @@ static int FillStructureMembers(
 {
     HTREEITEM hSubItem;
     LPBYTE pbStructPtr = pbData;        // Pointer to the begin of the structure
-    PHANDLE pHandle;
-    PULONG pEntryCount;
     TCHAR szBuffer[256];
     int nTotalLength = 0;               // Length, in bytes, of the structure member
 
@@ -1867,29 +1891,31 @@ static int FillStructureMembers(
                                                        pbDataEnd);
                 break;
 
-            case TYPE_ARRAY_HANDLE:
-
+            case TYPE_ARRAY_PROCESS:
+            {
                 // Use this if it's array of handles or INT_PTRs
                 // The 'nMemberSize' must contain offset of 32-bit value, containing length
                 // of the string in bytes.
-                pEntryCount = (PULONG)(pbStructPtr + pMembers->nMemberSize);
-                pHandle = (PHANDLE)pbData;
+                PHANDLE HandleArray = (PHANDLE)pbData;
+                PULONG PtrHandleCount = (PULONG)(pbStructPtr + pMembers->nMemberSize);
 
                 // Insert the subitem
                 hSubItem = InsertTreeItem(hTreeView, hParentItem, pMembers->szMemberName);
 
-                // Process the file name as non-null-terminated
-                // array of WCHARs with variable length
-                if(pEntryCount != NULL)
+                // Parse the array of process ID
+                if(PtrHandleCount && PtrHandleCount[0])
                 {
-                    for(ULONG i = 0; i < *pEntryCount; i++)
+                    for(ULONG i = 0; i < PtrHandleCount[0]; i++)
                     {
-                        StringCchPrintf(szBuffer, _countof(szBuffer), _T("[0x%02X]: %p"), i, *pHandle++);
+                        HANDLE ProcessId = HandleArray[i];
+
+                        StringCchPrintf(szBuffer, _countof(szBuffer), _T("[0x%02X]: %p"), i, ProcessId);
                         InsertTreeItem(hTreeView, hSubItem, szBuffer);
                         nDataLength += sizeof(UINT_PTR);
                     }
                 }
                 break;
+            }
 
             case TYPE_FLAG32:   // Insert the flag array
                 nDataLength = InsertTreeItemFlags32(hTreeView, hParentItem, pMembers, pbData, pbDataEnd);
@@ -2452,7 +2478,6 @@ static int OnEndLabelEdit(HWND hDlg, NMTVDISPINFO * pTVDispInfo)
             // We have to reload all items at the same level, because 
             // the ItemTextToData might have changed more than one item data
             // (Example: variable length strings editation change also the length)
-            SetResultInfo(hDlg, Status);
             hParentItem = TreeView_GetNextItem(hTreeView, pTVDispInfo->item.hItem, TVGN_PARENT);
             PostMessage(hDlg, WM_RELOADITEMS, (WPARAM)hTreeView, (LPARAM)hParentItem);
             bAcceptChanges = TRUE;

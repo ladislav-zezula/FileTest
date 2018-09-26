@@ -9,6 +9,7 @@
 /*****************************************************************************/
 
 #include "FileTest.h"
+#include "ReparseDataHsm.h"
 #include "resource.h"
 
 //-----------------------------------------------------------------------------
@@ -271,7 +272,7 @@ static HTREEITEM TreeView_InsertString(
     HWND hWndTree,
     HTREEITEM hParent,
     LPCTSTR szItemText,
-    LPARAM lParam)
+    LPARAM lParam = 0)
 {
     TVINSERTSTRUCT tvi;
 
@@ -290,7 +291,7 @@ static HTREEITEM TreeView_InsertNameAndValue(
     HTREEITEM hParent,
     LPCTSTR szValueName,
     LPCTSTR szValueText,
-    LPARAM lParam)
+    LPARAM lParam = 0)
 {
     TCHAR szItemText[MAX_TREE_ITEM_LENGTH];
 
@@ -304,14 +305,13 @@ static HTREEITEM TreeView_InsertInteger(
     HTREEITEM hParent,
     LPCTSTR szValueName,
     LPCTSTR szFormat,
-    ULONG IntValue,
-    LPARAM lParam)
+    ULONG IntValue)
 {
     TCHAR szValueText[0x20];
 
     // Format the value
     StringCchPrintf(szValueText, _countof(szValueText), szFormat, IntValue);
-    return TreeView_InsertNameAndValue(hWndTree, hParent, szValueName, szValueText, lParam);
+    return TreeView_InsertNameAndValue(hWndTree, hParent, szValueName, szValueText);
 }
 
 static HTREEITEM TreeView_InsertGuid(
@@ -319,7 +319,7 @@ static HTREEITEM TreeView_InsertGuid(
     HTREEITEM hParent,
     LPCTSTR szValueName,
     GUID & Guid,
-    LPARAM lParam)
+    LPARAM lParam = 0)
 {
     TCHAR szValueText[0x40];
 
@@ -334,7 +334,7 @@ static HTREEITEM TreeView_InsertBinary(
     LPCTSTR szValueName,
     PVOID pvData,
     ULONG cbData,
-    LPARAM lParam)
+    LPARAM lParam = 0)
 {
     HTREEITEM hNewItem = NULL;
     LPTSTR szValueText;
@@ -367,7 +367,7 @@ static HTREEITEM TreeView_InsertStrOffs(
     LPVOID BeginOfStruct,
     USHORT StringOffset,
     USHORT StringLength,
-    LPARAM lParam)
+    LPARAM lParam = 0)
 {
     WCHAR szValueText[MAX_TREE_ITEM_LENGTH];
     size_t cchStringLength = (StringLength / sizeof(WCHAR));
@@ -386,7 +386,7 @@ static void TreeView_InsertSubstName(
     HTREEITEM hParent,
     PREPARSE_DATA_BUFFER ReparseData,
     LPTSTR szBaseBuffer,
-    LPARAM lParam)
+    LPARAM lParam = 0)
 {
     TreeView_InsertStrOffs(hWndTree, hParent, _T("SubstituteNameOffset"),
                                               szBaseBuffer,
@@ -395,8 +395,7 @@ static void TreeView_InsertSubstName(
                                               lParam);
     TreeView_InsertInteger(hWndTree, hParent, _T("SubstituteNameLength"),
                                               _T("0x%02X"),
-                                              ReparseData->MountPointReparseBuffer.SubstituteNameLength,
-                                              0);
+                                              ReparseData->MountPointReparseBuffer.SubstituteNameLength);
 }
 
 static void TreeView_InsertPrintName(
@@ -404,7 +403,7 @@ static void TreeView_InsertPrintName(
     HTREEITEM hParent,
     PREPARSE_DATA_BUFFER ReparseData,
     LPTSTR szBaseBuffer,
-    LPARAM lParam)
+    LPARAM lParam = 0)
 {
     TreeView_InsertStrOffs(hWndTree, hParent, _T("PrintNameOffset"),
                                               szBaseBuffer,
@@ -413,8 +412,7 @@ static void TreeView_InsertPrintName(
                                               lParam);
     TreeView_InsertInteger(hWndTree, hParent, _T("PrintNameLength"),
                                               _T("0x%02X"),
-                                              ReparseData->MountPointReparseBuffer.PrintNameLength,
-                                              0);
+                                              ReparseData->MountPointReparseBuffer.PrintNameLength);
 }
 
 static bool TreeView_EditString(HWND hWndEdit, LPTSTR szBaseBuffer, USHORT NameOffset, USHORT NameLength)
@@ -537,6 +535,106 @@ LPTSTR GetFullHardLinkName(PFILE_LINK_ENTRY_INFORMATION pLinkInfo, LPTSTR szFile
 
     return szHardLinkName;
 }
+
+static void TreeView_InsertHsmData(HWND hWndChild, HTREEITEM hParent, PHSM_DATA HsmData, ULONG BitmapMask)
+{
+    ULONG BitmapBit = 1;
+
+    // Insert the base data
+    TreeView_InsertInteger(hWndChild, hParent, _T("Magic"), _T("0x%08X"), HsmData->Magic);
+    TreeView_InsertInteger(hWndChild, hParent, _T("Crc32"), _T("0x%08X"), HsmData->Crc32);
+    TreeView_InsertInteger(hWndChild, hParent, _T("Length"), _T("0x%08X"), HsmData->Length);
+    TreeView_InsertInteger(hWndChild, hParent, _T("Flags"), _T("0x%04X"), HsmData->Flags);
+    TreeView_InsertInteger(hWndChild, hParent, _T("NumberOfElements"), _T("0x%04X"), HsmData->NumberOfElements);
+
+    // Insert the page for elements
+    hParent = TreeView_InsertString(hWndChild, hParent, _T("Elements"));
+
+    // Insert each element
+    for (USHORT i = 0; i < HsmData->NumberOfElements; i++, BitmapBit <<= 1)
+    {
+        PHSM_ELEMENT_INFO pElementInfo = &HsmData->ElementInfos[i];
+        HTREEITEM hBitmap;
+        HTREEITEM hItem;
+        LPBYTE ElementData;
+        TCHAR szElement[0x10];
+
+        // Insert the "[x]" part
+        StringCchPrintf(szElement, _countof(szElement), _T("[%u]"), i);
+        hItem = TreeView_InsertString(hWndChild, hParent, szElement);
+
+        // Insert the element info
+        TreeView_InsertInteger(hWndChild, hItem, _T("Type"), _T("%04X"), pElementInfo->Type);
+        TreeView_InsertInteger(hWndChild, hItem, _T("Length"), _T("%04X"), pElementInfo->Length);
+        TreeView_InsertInteger(hWndChild, hItem, _T("Offset"), _T("%08X"), pElementInfo->Offset);
+
+        // Insert element data
+        if (pElementInfo->Offset && pElementInfo->Length)
+        {
+            // Retrieve the element data
+            ElementData = HsmGetElementData(HsmData, i);
+
+            // Can the data be a bitmap?
+            if(BitmapMask & BitmapBit)
+            {
+                hBitmap = TreeView_InsertString(hWndChild, hItem, _T("HSM_BITMAP"));
+                TreeView_InsertHsmData(hWndChild, hBitmap, (PHSM_DATA)ElementData, 0);
+            }
+            else
+            {
+                TreeView_InsertBinary(hWndChild, hItem, _T("Data"), ElementData, pElementInfo->Length);
+            }
+        }
+    }
+}
+
+static NTSTATUS TreeView_InsertHsm(HWND hWndChild, HTREEITEM hParent, PREPARSE_DATA_BUFFER ReparseData, ULONG ReparseDataLength)
+{
+    PREPARSE_DATA_BUFFER HsmReparseData = NULL;
+    HTREEITEM hItem;
+    NTSTATUS Status;
+
+    // Decompress the reparse data
+    Status = HsmUncompressData(ReparseData, ReparseDataLength, &HsmReparseData);
+    if(NT_SUCCESS(Status))
+    {
+        hItem = TreeView_InsertString(hWndChild, hParent, _T("HSM_REPARSE_DATA"));
+        if (hItem != NULL)
+        {
+            // Insert the flags and length
+            TreeView_InsertInteger(hWndChild, hItem, _T("Flags"), _T("0x%04X"), HsmReparseData->HsmReparseBufferRaw.Flags);
+            TreeView_InsertInteger(hWndChild, hItem, _T("Length"), _T("0x%04X"), HsmReparseData->HsmReparseBufferRaw.Length);
+            
+            // Insert the FileData substructure
+            hItem = TreeView_InsertString(hWndChild, hItem, _T("HSM_DATA"));
+
+            // Get the pointer to the HSM_DATA. If validated OK, insert the substructure
+            Status = HsmValidateReparseData(HsmReparseData);
+            if (NT_SUCCESS(Status))
+            {
+                PHSM_REPARSE_DATA HsmRpData = (PHSM_REPARSE_DATA)(&HsmReparseData->HsmReparseBufferRaw);
+                PHSM_DATA HsmData = &HsmRpData->FileData;
+
+                TreeView_InsertHsmData(hWndChild, hItem, HsmData, 0);
+                Status = STATUS_SUCCESS;
+            }
+            else
+            {
+                TreeView_InsertBinary(hWndChild, hItem, _T("RawData (invalid)"), ReparseData->HsmReparseBufferRaw.RawData, HsmReparseData->HsmReparseBufferRaw.Length);
+                Status = STATUS_SUCCESS;
+            }
+        }
+
+        // Free the uncompressed reparse data buffer
+        if (HsmReparseData != NULL && HsmReparseData != ReparseData)
+        {
+            HeapFree(g_hHeap, 0, HsmReparseData);
+        }
+    }
+
+    return Status;
+}
+
 
 //-----------------------------------------------------------------------------
 // Message handlers
@@ -882,15 +980,15 @@ static void OnUpdateView(HWND hDlg)
 
     // Insert the three common fields from the REPARSE_DATA
     TreeView_InsertNameAndValue(hWndChild, hItem, _T("Tag"), FormatReparseTag(ReparseData->ReparseTag, szItemText, _countof(szItemText)), ITEM_TYPE_REPARSE_TAG);
-    TreeView_InsertInteger(hWndChild, hItem, _T("ReparseDataLength"), _T("0x%02X"), ReparseData->ReparseDataLength, 0);
-    TreeView_InsertInteger(hWndChild, hItem, _T("Reserved"), _T("0x%02X"), ReparseData->Reserved, 0);
+    TreeView_InsertInteger(hWndChild, hItem, _T("ReparseDataLength"), _T("0x%02X"), ReparseData->ReparseDataLength);
+    TreeView_InsertInteger(hWndChild, hItem, _T("Reserved"), _T("0x%02X"), ReparseData->Reserved);
 
     // Insert the sub-structure
     switch(ReparseData->ReparseTag)
     {
         case IO_REPARSE_TAG_MOUNT_POINT:
 
-            hItem = TreeView_InsertString(hWndChild, hItem, _T("MountPointReparseBuffer"), 0);
+            hItem = TreeView_InsertString(hWndChild, hItem, _T("MountPointReparseBuffer"));
             if(hItem != NULL)
             {
                 TreeView_InsertSubstName(hWndChild, hItem, ReparseData, ReparseData->MountPointReparseBuffer.PathBuffer, ITEM_TYPE_SUBSTNAME_MP);
@@ -900,46 +998,44 @@ static void OnUpdateView(HWND hDlg)
 
         case IO_REPARSE_TAG_SYMLINK:
 
-            hItem = TreeView_InsertString(hWndChild, hItem, _T("SymbolicLinkReparseBuffer"), 0);
+            hItem = TreeView_InsertString(hWndChild, hItem, _T("SymbolicLinkReparseBuffer"));
             if(hItem != NULL)
             {
                 TreeView_InsertSubstName(hWndChild, hItem, ReparseData, ReparseData->SymbolicLinkReparseBuffer.PathBuffer, ITEM_TYPE_SUBSTNAME_LNK);
                 TreeView_InsertPrintName(hWndChild, hItem, ReparseData, ReparseData->SymbolicLinkReparseBuffer.PathBuffer, ITEM_TYPE_PRINTNAME_LNK);
-                TreeView_InsertInteger  (hWndChild, hItem, _T("Flags"), _T("0x%04X"), ReparseData->SymbolicLinkReparseBuffer.Flags, 0);
+                TreeView_InsertInteger  (hWndChild, hItem, _T("Flags"), _T("0x%04X"), ReparseData->SymbolicLinkReparseBuffer.Flags);
             }
             break;
 
         case IO_REPARSE_TAG_WIM:
-            hItem = TreeView_InsertString(hWndChild, hItem, _T("WimImageReparseBuffer"), 0);
+            hItem = TreeView_InsertString(hWndChild, hItem, _T("WimImageReparseBuffer"));
             if(hItem != NULL)
             {
                 TreeView_InsertGuid(hWndChild, hItem, _T("ImageGuid"),
-                                                         ReparseData->WimImageReparseBuffer.ImageGuid,
-                                                         0);
+                                                         ReparseData->WimImageReparseBuffer.ImageGuid);
                 TreeView_InsertBinary(hWndChild, hItem, _T("ImagePathHash"),
                                                          ReparseData->WimImageReparseBuffer.ImagePathHash,
-                                                         sizeof(ReparseData->WimImageReparseBuffer.ImagePathHash), 
-                                                         0);
+                                                         sizeof(ReparseData->WimImageReparseBuffer.ImagePathHash));
             }
             break;
 
         case IO_REPARSE_TAG_WOF:
-            hItem = TreeView_InsertString(hWndChild, hItem, _T("WofReparsePointBuffer"), 0);
+            hItem = TreeView_InsertString(hWndChild, hItem, _T("WofReparsePointBuffer"));
             if(hItem != NULL)
             {
-                TreeView_InsertInteger(hWndChild, hItem, _T("Wof.Version"),  _T("0x%04X"), ReparseData->WofReparseBuffer.Wof_Version, 0);
-                TreeView_InsertInteger(hWndChild, hItem, _T("Wof.Provider"), _T("0x%04X"), ReparseData->WofReparseBuffer.Wof_Provider, 0);
-                TreeView_InsertInteger(hWndChild, hItem, _T("Version"),      _T("0x%04X"), ReparseData->WofReparseBuffer.FileInfo_Version, 0);
-                TreeView_InsertInteger(hWndChild, hItem, _T("Algorithm"),    _T("0x%04X"), ReparseData->WofReparseBuffer.FileInfo_Algorithm, 0);
+                TreeView_InsertInteger(hWndChild, hItem, _T("Wof.Version"),  _T("0x%04X"), ReparseData->WofReparseBuffer.Wof_Version);
+                TreeView_InsertInteger(hWndChild, hItem, _T("Wof.Provider"), _T("0x%04X"), ReparseData->WofReparseBuffer.Wof_Provider);
+                TreeView_InsertInteger(hWndChild, hItem, _T("Version"),      _T("0x%04X"), ReparseData->WofReparseBuffer.FileInfo_Version);
+                TreeView_InsertInteger(hWndChild, hItem, _T("Algorithm"),    _T("0x%04X"), ReparseData->WofReparseBuffer.FileInfo_Algorithm);
             }
             break;
 
         case IO_REPARSE_TAG_APPEXECLINK:
-            hItem = TreeView_InsertString(hWndChild, hItem, _T("AppExecLinkReparseBuffer"), 0);
+            hItem = TreeView_InsertString(hWndChild, hItem, _T("AppExecLinkReparseBuffer"));
             if(hItem != NULL)
             {
                 // Insert the string count
-                TreeView_InsertInteger(hWndChild, hItem, _T("StringCount"), _T("0x%04X"), ReparseData->AppExecLinkReparseBuffer.StringCount, 0);
+                TreeView_InsertInteger(hWndChild, hItem, _T("StringCount"), _T("0x%04X"), ReparseData->AppExecLinkReparseBuffer.StringCount);
 
                 // Insert the strings
                 if(ReparseData->AppExecLinkReparseBuffer.StringCount != 0)
@@ -950,7 +1046,7 @@ static void OnUpdateView(HWND hDlg)
                     for(ULONG i = 0; i < ReparseData->AppExecLinkReparseBuffer.StringCount; i++)
                     {
                         StringCchPrintf(szValue, _countof(szValue), _T("%s: %s"), AppExecLinkParts[i], szString);
-                        TreeView_InsertString(hWndChild, hItem, szValue, 0);
+                        TreeView_InsertString(hWndChild, hItem, szValue);
                         szString += wcslen(szString) + 1;
                     }
                 }
@@ -958,28 +1054,35 @@ static void OnUpdateView(HWND hDlg)
             break;
 
         case IO_REPARSE_TAG_WCI:
-            hItem = TreeView_InsertString(hWndChild, hItem, _T("WcifsReparseBuffer"), 0);
+            hItem = TreeView_InsertString(hWndChild, hItem, _T("WcifsReparseBuffer"));
             if (hItem != NULL)
             {
-                TreeView_InsertInteger(hWndChild, hItem, _T("Version"), _T("0x%08X"), ReparseData->WcifsReparseBuffer.Version, 0);
-                TreeView_InsertInteger(hWndChild, hItem, _T("Reserved"), _T("0x%08X"), ReparseData->WcifsReparseBuffer.Reserved, 0);
-                TreeView_InsertGuid(hWndChild, hItem, _T("LookupGuid"), ReparseData->WcifsReparseBuffer.LookupGuid, 0);
-                TreeView_InsertInteger(hWndChild, hItem, _T("WciNameLength"), _T("0x%04X"), ReparseData->WcifsReparseBuffer.WciNameLength, 0);
+                TreeView_InsertInteger(hWndChild, hItem, _T("Version"), _T("0x%08X"), ReparseData->WcifsReparseBuffer.Version);
+                TreeView_InsertInteger(hWndChild, hItem, _T("Reserved"), _T("0x%08X"), ReparseData->WcifsReparseBuffer.Reserved);
+                TreeView_InsertGuid(hWndChild, hItem, _T("LookupGuid"), ReparseData->WcifsReparseBuffer.LookupGuid);
+                TreeView_InsertInteger(hWndChild, hItem, _T("WciNameLength"), _T("0x%04X"), ReparseData->WcifsReparseBuffer.WciNameLength);
                 TreeView_InsertStrOffs(hWndChild, hItem, _T("WciName"), ReparseData, FIELD_OFFSET(REPARSE_DATA_BUFFER, WcifsReparseBuffer.WciName), ReparseData->WcifsReparseBuffer.WciNameLength, NULL);
             }
             break;
 
         default:
-            hItem = TreeView_InsertString(hWndChild, hItem, _T("GenericReparseBuffer"), 0);
+            if((ReparseData->ReparseTag & ~IO_REPARSE_TAG_CLOUD_MASK) == IO_REPARSE_TAG_CLOUD)
+            {
+                // Attemnpt to unpack and format the HSM data. If fails, fall back to the generic reparse buffer
+                if(NT_SUCCESS(TreeView_InsertHsm(hWndChild, hItem, ReparseData, pData->ReparseDataValid)))
+                    break;
+            }
+
+            hItem = TreeView_InsertString(hWndChild, hItem, _T("GenericReparseBuffer"));
             if(hItem != NULL)
             {
                 if (ReparseData->ReparseDataLength != 0)
                 {
-                    TreeView_InsertBinary(hWndChild, hItem, _T("DataBuffer"), ReparseData->GenericReparseBuffer.DataBuffer, ReparseData->ReparseDataLength, 0);
+                    TreeView_InsertBinary(hWndChild, hItem, _T("DataBuffer"), ReparseData->GenericReparseBuffer.DataBuffer, ReparseData->ReparseDataLength);
                 }
                 else
                 {
-                    TreeView_InsertString(hWndChild, hItem, _T("DataBuffer: (no data)"), 0);
+                    TreeView_InsertString(hWndChild, hItem, _T("DataBuffer: (no data)"));
                 }
             }
             break;
@@ -987,62 +1090,6 @@ static void OnUpdateView(HWND hDlg)
 
     // Expand the tree view
     TreeView_Expand(hWndChild, hItem, TVE_EXPAND);
-
-
-/*
-    TCHAR szSubstName[MAX_PATH];
-    TCHAR szPrintName[MAX_PATH];
-    PBYTE pbNameBuffer;
-    HWND hWndChild = GetDlgItem(hDlg, IDC_JUNCTION_TYPE);
-    int ReparseTagIndex = -1;
-
-    // Prepare both buffers
-    memset(szSubstName, 0, sizeof(szSubstName));
-    memset(szPrintName, 0, sizeof(szPrintName));
-
-    // Fill all by the reparse point tag
-    switch(ReparseData->ReparseTag)
-    {
-        case IO_REPARSE_TAG_MOUNT_POINT:
-            
-            // Get the pointer to name buffer
-            pbNameBuffer = (PBYTE)(ReparseData->MountPointReparseBuffer.PathBuffer);
-            StringCchCopyNW(szSubstName, _countof(szSubstName), (PWSTR)(pbNameBuffer + ReparseData->MountPointReparseBuffer.SubstituteNameOffset),
-                                                                        ReparseData->MountPointReparseBuffer.SubstituteNameLength / sizeof(WCHAR));
-            StringCchCopyNW(szPrintName, _countof(szPrintName), (PWSTR)(pbNameBuffer + ReparseData->MountPointReparseBuffer.PrintNameOffset),
-                                                                        ReparseData->MountPointReparseBuffer.PrintNameLength / sizeof(WCHAR));
-            ReparseTagIndex = 0;
-            break;
-
-        case IO_REPARSE_TAG_SYMLINK:
-
-            // Get the pointer to name buffer
-            pbNameBuffer = (PBYTE)(ReparseData->SymbolicLinkReparseBuffer.PathBuffer);
-            StringCchCopyNW(szSubstName, _countof(szSubstName), (PWSTR)(pbNameBuffer + ReparseData->SymbolicLinkReparseBuffer.SubstituteNameOffset),
-                                                                        ReparseData->SymbolicLinkReparseBuffer.SubstituteNameLength / sizeof(WCHAR));
-            StringCchCopyNW(szPrintName, _countof(szPrintName), (PWSTR)(pbNameBuffer + ReparseData->SymbolicLinkReparseBuffer.PrintNameOffset),
-                                                                        ReparseData->SymbolicLinkReparseBuffer.PrintNameLength / sizeof(WCHAR));
-            ReparseTagIndex = 1;
-            break;
-
-        case IO_REPARSE_TAG_WIM:
-            BinaryToString(ReparseData->GenericReparseBuffer.DataBuffer, ReparseData->ReparseDataLength, szSubstName, _countof(szSubstName));
-            ReparseTagIndex = 2;
-            break;
-
-        default:
-            StringCchPrintf(szSubstName, _countof(szSubstName), _T("Unknown reparse tag: %08lX"), ReparseData->ReparseTag);
-            ReparseTagIndex = 3;
-    }
-
-    // Select the reparse point index
-    if(ReparseTagIndex != -1)
-        ComboBox_SetCurSel(hWndChild, ReparseTagIndex);
-
-    // Set the substitute and printable name
-    SetDlgItemText(hDlg, IDC_SUBST_NAME, szSubstName);
-    SetDlgItemText(hDlg, IDC_PRINT_NAME, szPrintName);
-*/
 }
 
 static int OnHardlinkCreate(HWND hDlg)
@@ -1094,7 +1141,7 @@ static int OnHardlinkCreate(HWND hDlg)
         if(NT_SUCCESS(Status))
         {
             Status = NtOpenFile(&hFile, 
-                                 FILE_WRITE_ATTRIBUTES,
+                                 MAXIMUM_ALLOWED,
                                 &ObjAttr,
                                 &IoStatus,
                                  FILE_SHARE_READ | FILE_SHARE_WRITE,

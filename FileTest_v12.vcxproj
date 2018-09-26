@@ -268,11 +268,11 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="FileTest.h" />
-    <ClInclude Include="..\Aaa\inc\ntdll.h" />
     <ClInclude Include="ntstatus.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="TDataEditor.h" />
     <ClInclude Include="TToolTip.h" />
+    <ClInclude Include="ReparseDataHsm.h" />
     <ClInclude Include="WinSDK.h" />
   </ItemGroup>
   <ItemGroup>

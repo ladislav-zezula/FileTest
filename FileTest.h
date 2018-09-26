@@ -272,7 +272,7 @@ struct TFileTestData : public TWindowData
 #define TYPE_FLAG32          22             // A 32-bit flag value
 #define TYPE_STRUCT         100             // Sub-structure, nMemberSize must be sizeof(structure) !!!
 #define TYPE_CHAINED_STRUCT 101             // Chain of structures first 32-bit number is "NextEntryOffset"
-#define TYPE_ARRAY_HANDLE   102             // Array of handles, variable length, length is 32-bit number
+#define TYPE_ARRAY_PROCESS  102             // Array of process IDs, variable length, length is 32-bit number
 #define TYPE_PADDING       1000             // Padding for the next member. The "nMemberSize" contains alignment
 
 #define MEMBER_SIZE_SPECIAL (UINT)-1        // For variable length data items
@@ -495,6 +495,8 @@ int ExecuteContextMenuForDlgItem(HWND hWndParent, HMENU hMenu, UINT nIDCtrl);
 
 NTSTATUS NtDeleteReparsePoint(HANDLE ObjectHandle);
 NTSTATUS NtDeleteReparsePoint(POBJECT_ATTRIBUTES PtrObjectAttributes);
+
+ULONG RtlComputeCrc32(ULONG InitialCrc, PVOID Buffer, ULONG Length);
 
 BOOL WINAPI MyAddMandatoryAce(PACL pAcl, DWORD dwAceRevision, DWORD dwAceFlags, DWORD MandatoryPolicy, PSID pLabelSid);
 

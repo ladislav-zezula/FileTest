@@ -471,6 +471,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\ReparseDataHsm.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\TAceHelper.cpp"
 				>
 			</File>
@@ -533,11 +537,11 @@
 				>
 			</File>
 			<File
-				RelativePath="..\Aaa\inc\ntdll.h"
+				RelativePath=".\ntstatus.h"
 				>
 			</File>
 			<File
-				RelativePath=".\ntstatus.h"
+				RelativePath=".\ReparseDataHsm.h"
 				>
 			</File>
 			<File

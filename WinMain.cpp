@@ -113,33 +113,8 @@ BOOL CALLBACK EnumMenusProc(HMODULE hModule, LPCTSTR lpszType, LPTSTR lpszName, 
 }
 
 #ifdef _DEBUG
-//static TFlagInfo ReparseTags[] =
-//{
-//    FLAG_INFO_ENTRY(IO_REPARSE_TAG_MOUNT_POINT),
-//    FLAG_INFO_ENTRY(IO_REPARSE_TAG_SYMLINK),
-//    FLAG_INFO_ENTRY(IO_REPARSE_TAG_WIM),
-//    FLAG_INFO_END
-//};
-
 static void DebugCode_TEST()
-{
-    //DWORD dwValue = 0x123;
-    //
-    //ValuesDialog(NULL, &dwValue, IDS_CHOOSE_REPARSE_TAG, ReparseTags);
-    //ExitProcess(dwValue);
-
-    //{
-    //    OBJECT_ATTRIBUTES ObjAttr;
-    //    IO_STATUS_BLOCK IoStatus;
-    //    UNICODE_STRING FileName;
-
-    //    EnablePrivilege(SE_SECURITY_NAME);
-    //    EnablePrivilege(SE_TAKE_OWNERSHIP_NAME);
-    //    InitializeObjectAttributes(&ObjAttr, &FileName, 0, NULL, NULL);
-    //    RtlInitUnicodeString(&FileName, L"\\??\\y:\\WINDOWS\\$NtUninstallKB25256$");
-    //    NtCreateFile(&pData->hFile, READ_CONTROL, &ObjAttr, &IoStatus, NULL, 0, 0x07, FILE_OPEN, FILE_OPEN_REPARSE_POINT | FILE_DIRECTORY_FILE, NULL, 0);
-    //}
-}
+{}
 #endif
 
 //-----------------------------------------------------------------------------
