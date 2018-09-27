@@ -22,6 +22,13 @@ static UNICODE_STRING NullString = RTL_CONSTANT_STRING(L"NULL");
 //-----------------------------------------------------------------------------
 // Description of data structures for file info classes
 
+// Values for FILE_CASE_SENSITIVE_INFORMATION::Flags
+static TFlagInfo CaseSensitiveFlags[] =
+{
+    FLAG_INFO_ENTRY(FILE_CS_FLAG_CASE_SENSITIVE_DIR),
+    FLAG_INFO_END
+};
+
 // Values for FILE_FS_ATTRIBUTE_INFORMATION::FileSystemAttributes
 TFlagInfo FileSystemAttributesValues[] =
 {
@@ -555,6 +562,15 @@ TStructMember FileNumaNodeInformationMembers[] =
     {NULL, TYPE_NONE, 0}
 };
 
+TStructMember FileStandardLinkInformationMembers[] =
+{
+    {_T("NumberOfAccessibleLinks"), TYPE_UINT32,   sizeof(ULONG)},
+    {_T("TotalNumberOfLinks"),      TYPE_UINT32,   sizeof(ULONG)},
+    {_T("DeletePending"),           TYPE_BOOLEAN,  sizeof(BOOLEAN)},
+    {_T("Directory"),               TYPE_BOOLEAN,  sizeof(BOOLEAN)},
+    {NULL, TYPE_NONE, 0}
+};
+
 TStructMember FileRemoteProtocolInformationMembers[] =
 {
     {_T("StructureVersion"), TYPE_UINT16,   sizeof(USHORT)},
@@ -624,6 +640,15 @@ TStructMember FileIdExtdDirectoryInformationMembers[] =
     {NULL}
 };
 
+TStructMember FileHardLinkFullIdInformationMembers[] =
+{
+    {_T("NextEntryOffset"), TYPE_UINT32,   sizeof(ULONG)},
+    {_T("<alignment>"),     TYPE_UINT32,   sizeof(ULONG)},
+    {_T("ParentFileId"),    TYPE_FILEID128, sizeof(FILE_ID_128)},
+    {_T("FileName"),        TYPE_WNAME_L32B, FIELD_OFFSET(FILE_LINK_ENTRY_FULL_ID_INFORMATION, FileNameLength)},
+    {NULL}
+};
+
 TStructMember FileIdExtdBothDirectoryInformationMembers[] =
 {
     {_T("NextEntryOffset"), TYPE_UINT32,   sizeof(ULONG)},
@@ -679,6 +704,13 @@ TStructMember FileRenameInformationExMembers[] =
 	{ NULL, TYPE_NONE, 0 }
 };
 
+TStructMember FileDesiredStorageClassInformationMembers[] =
+{
+    {_T("Class"),           TYPE_UINT32,  sizeof(ULONG)},
+    {_T("Flags"),           TYPE_UINT32,  sizeof(ULONG)},
+	{ NULL }
+};
+
 TStructMember FileStatInformationMembers[] =
 {
     {_T("FileId"),          TYPE_FILEID64, sizeof(LARGE_INTEGER)},
@@ -691,19 +723,52 @@ TStructMember FileStatInformationMembers[] =
     {_T("FileAttributes"),  TYPE_FLAG32,   sizeof(ULONG), NULL, {(TStructMember *)FileAttributesValues}},
     {_T("ReparseTag"),      TYPE_UINT32,   sizeof(ULONG)},
     {_T("NumberOfLinks"),   TYPE_UINT32,   sizeof(ULONG)},
-    {_T("EffectiveAccess"), TYPE_UINT32,   sizeof(ULONG)},
+    {_T("EffectiveAccess"), TYPE_FLAG32,   sizeof(ULONG), NULL, {(TStructMember *)DesiredAccessValues}},
+    { NULL, TYPE_NONE, 0 }                                
+};
+
+TStructMember FileMemoryPartitionInformationMembers[] =
+{
+    {_T("OwnerPartitionHandle"), TYPE_HANDLE, sizeof(TYPE_HANDLE)},
+    {_T("AllFlags"),        TYPE_UINT32,      sizeof(UINT32)},
+    { NULL, TYPE_NONE, 0 }
+};
+
+TStructMember FileStatLxInformationMembers[] =
+{
+    {_T("FileId"),          TYPE_UINT64,   sizeof(LARGE_INTEGER)},
+    {_T("CreationTime"),    TYPE_FILETIME, sizeof(LARGE_INTEGER)},
+    {_T("LastAccessTime"),  TYPE_FILETIME, sizeof(LARGE_INTEGER)},
+    {_T("LastWriteTime"),   TYPE_FILETIME, sizeof(LARGE_INTEGER)},
+    {_T("ChangeTime"),      TYPE_FILETIME, sizeof(LARGE_INTEGER)},
+    {_T("AllocationSize"),  TYPE_UINT64,   sizeof(LARGE_INTEGER)},
+    {_T("EndOfFile"),       TYPE_UINT64,   sizeof(LARGE_INTEGER)},
+    {_T("FileAttributes"),  TYPE_UINT32,   sizeof(ULONG)},
+    {_T("ReparseTag"),      TYPE_UINT32,   sizeof(ULONG)},
+    {_T("NumberOfLinks"),   TYPE_UINT32,   sizeof(ULONG)},
+    {_T("AccessMask"),      TYPE_FLAG32,   sizeof(ULONG), NULL, {(TStructMember *)DesiredAccessValues}},
+    {_T("EffectiveAccess"), TYPE_FLAG32,   sizeof(ULONG), NULL, {(TStructMember *)DesiredAccessValues}},
+    {_T("LxFlags"),         TYPE_UINT32,   sizeof(ULONG)},
+    {_T("LxUid"),           TYPE_UINT32,   sizeof(ULONG)},
+    {_T("LxGid"),           TYPE_UINT32,   sizeof(ULONG)},
+    {_T("LxMode"),          TYPE_UINT32,   sizeof(ULONG)},
+    {_T("LxDeviceIdMajor"), TYPE_UINT32,   sizeof(ULONG)},
+    {_T("LxDeviceIdMinor"), TYPE_UINT32,   sizeof(ULONG)},
+    { NULL, TYPE_NONE, 0 }
+};
+
+TStructMember FileCaseSensitiveInformationMembers[] =
+{
+    {_T("Flags"),           TYPE_FLAG32,   sizeof(ULONG), NULL, {(TStructMember *)CaseSensitiveFlags}},
     { NULL, TYPE_NONE, 0 }
 };
 
 #define FileAttributeCacheInformationMembers            FileUnknownInformationMembers
-#define FileStandardLinkInformationMembers              FileUnknownInformationMembers
 #define FileRenameInformationBypassAccessCheckMembers   FileRenameInformationMembers
 #define FileLinkInformationBypassAccessCheckMembers     FileLinkInformationMembers
-#define FileReplaceCompletionInformationMembers         FileUnknownInformationMembers
-#define FileHardLinkFullIdInformationMembers            FileUnknownInformationMembers
+#define FileReplaceCompletionInformationMembers         FileCompletionInformationMembers
 #define FileRenameInformationExMembers                  FileRenameInformationExMembers
-#define FileRenameInformationExBypassAccessCheckMembers FileUnknownInformationMembers
-#define FileDesiredStorageClassInformationMembers       FileUnknownInformationMembers
+#define FileRenameInformationExBypassAccessCheckMembers FileRenameInformationExMembers
 
 TInfoData FileInfoData[] =                                                  
 {
@@ -767,14 +832,17 @@ TInfoData FileInfoData[] =
     FILE_INFO_READONLY(FileVolumeNameInformation,               FILE_VOLUME_NAME_INFORMATION,                FALSE),
     FILE_INFO_READONLY(FileIdInformation,                       FILE_ID_INFORMATION,                         FALSE),
     FILE_INFO_READONLY(FileIdExtdDirectoryInformation,          FILE_ID_EXTD_DIR_INFORMATION,                TRUE),
-    FILE_INFO_READONLY(FileReplaceCompletionInformation,        FILE_UNKNOWN_INFORMATION,                    FALSE),
-    FILE_INFO_READONLY(FileHardLinkFullIdInformation,           FILE_UNKNOWN_INFORMATION,                    FALSE),
+    FILE_INFO_READONLY(FileReplaceCompletionInformation,        FILE_COMPLETION_INFORMATION,                 FALSE),
+    FILE_INFO_READONLY(FileHardLinkFullIdInformation,           FILE_LINK_ENTRY_FULL_ID_INFORMATION,         TRUE),
     FILE_INFO_READONLY(FileIdExtdBothDirectoryInformation,      FILE_ID_EXTD_BOTH_DIR_INFORMATION,           TRUE),
     FILE_INFO_EDITABLE(FileDispositionInformationEx,            FILE_DISPOSITION_INFORMATION_EX,             FALSE),
     FILE_INFO_EDITABLE(FileRenameInformationEx,                 FILE_RENAME_INFORMATION_EX,                  FALSE),
-    FILE_INFO_READONLY(FileRenameInformationExBypassAccessCheck,FILE_UNKNOWN_INFORMATION,                    FALSE),
-    FILE_INFO_READONLY(FileDesiredStorageClassInformation,      FILE_UNKNOWN_INFORMATION,                    FALSE),
+    FILE_INFO_READONLY(FileRenameInformationExBypassAccessCheck,FILE_RENAME_INFORMATION_EX,                  FALSE),
+    FILE_INFO_READONLY(FileDesiredStorageClassInformation,      FILE_STORAGE_TIER_CLASS,                     FALSE),
     FILE_INFO_READONLY(FileStatInformation,                     FILE_STAT_INFORMATION,                       FALSE),
+    FILE_INFO_READONLY(FileMemoryPartitionInformation,          FILE_MEMORY_PARTITION_INFORMATION,           FALSE),
+    FILE_INFO_READONLY(FileStatLxInformation,                   FILE_STAT_LX_INFORMATION,                    FALSE),
+    FILE_INFO_EDITABLE(FileCaseSensitiveInformation,            FILE_CASE_SENSITIVE_INFORMATION,             FALSE),
 
     {FileMaximumInformation}                                                                                 
 };

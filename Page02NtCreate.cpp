@@ -16,7 +16,7 @@
 //-----------------------------------------------------------------------------
 // Flags
 
-static TFlagInfo DesiredAccessValues[] =
+TFlagInfo DesiredAccessValues[] =
 {
     {{_T("FILE_READ_DATA/FILE_LIST_DIRECTORY")},     FILE_READ_DATA,        FILE_READ_DATA},
     {{_T("FILE_WRITE_DATA/FILE_ADD_FILE")},          FILE_WRITE_DATA,       FILE_WRITE_DATA},

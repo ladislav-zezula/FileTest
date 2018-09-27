@@ -14,32 +14,6 @@
 //-----------------------------------------------------------------------------
 // Flags
 
-static TFlagInfo DesiredAccessValues[] =
-{
-    {{_T("FILE_READ_DATA/FILE_LIST_DIRECTORY")},     FILE_READ_DATA,        FILE_READ_DATA},
-    {{_T("FILE_WRITE_DATA/FILE_ADD_FILE")},          FILE_WRITE_DATA,       FILE_WRITE_DATA},
-    {{_T("FILE_APPEND_DATA/FILE_ADD_SUBDIRECTORY")}, FILE_APPEND_DATA,      FILE_APPEND_DATA},
-    {{_T("FILE_READ_EA")},                           FILE_READ_EA,          FILE_READ_EA},
-    {{_T("FILE_WRITE_EA")},                          FILE_WRITE_EA,         FILE_WRITE_EA},
-    {{_T("FILE_EXECUTE/FILE_TRAVERSE")},             FILE_EXECUTE,          FILE_EXECUTE},
-    {{_T("FILE_DELETE_CHILD")},                      FILE_DELETE_CHILD,     FILE_DELETE_CHILD},
-    {{_T("FILE_READ_ATTRIBUTES")},                   FILE_READ_ATTRIBUTES,  FILE_READ_ATTRIBUTES},
-    {{_T("FILE_WRITE_ATTRIBUTES")},                  FILE_WRITE_ATTRIBUTES, FILE_WRITE_ATTRIBUTES},
-
-    FLAG_INFO_ENTRY(DELETE),
-    FLAG_INFO_ENTRY(READ_CONTROL),
-    FLAG_INFO_ENTRY(WRITE_DAC),
-    FLAG_INFO_ENTRY(WRITE_OWNER),
-    FLAG_INFO_ENTRY(SYNCHRONIZE),
-    FLAG_INFO_ENTRY(ACCESS_SYSTEM_SECURITY),
-    FLAG_INFO_ENTRY(GENERIC_READ),
-    FLAG_INFO_ENTRY(GENERIC_WRITE),
-    FLAG_INFO_ENTRY(GENERIC_EXECUTE),
-    FLAG_INFO_ENTRY(GENERIC_ALL),
-    FLAG_INFO_ENTRY(MAXIMUM_ALLOWED),
-    FLAG_INFO_END
-};
-
 static TFlagInfo FileAttributesValues_CreateFile[] =
 {
     FLAG_INFO_CTRLID(FILE_ATTRIBUTE_READONLY),                  // 0x00000001

@@ -14,7 +14,7 @@
 //-----------------------------------------------------------------------------
 // Flags
 
-static TFlagInfo DesiredAccessValues[] =
+static TFlagInfo SectionAccessValues[] =
 {
     FLAG_INFO_ENTRY(SECTION_QUERY),
     FLAG_INFO_ENTRY(SECTION_MAP_WRITE),
@@ -259,7 +259,7 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
     }
 
     // If we have a tooltip window, init tooltips 
-    g_Tooltip.AddToolTip(hDlg, IDC_DESIRED_ACCESS, DesiredAccessValues);
+    g_Tooltip.AddToolTip(hDlg, IDC_DESIRED_ACCESS, SectionAccessValues);
     g_Tooltip.AddToolTip(hDlg, IDC_ALLOCATION_ATTRIBUTES, AllocationAttributesValues);
     g_Tooltip.AddToolTip(hDlg, IDC_ALLOCATION_TYPE, AllocationTypeValues);
 
@@ -307,7 +307,7 @@ static int OnKillActive(HWND hDlg)
 
 static int OnDesiredAccessBrowse(HWND hDlg)
 {
-    FlagsDialog_OnControl(hDlg, IDC_DESIRED_ACCESS, IDS_DESIRED_ACCESS, DesiredAccessValues);
+    FlagsDialog_OnControl(hDlg, IDC_DESIRED_ACCESS, IDS_DESIRED_ACCESS, SectionAccessValues);
     return TRUE;
 }
 

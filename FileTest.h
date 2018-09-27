@@ -416,6 +416,7 @@ extern ADDMANDATORYACE          pfnAddMandatoryAce;
 //-----------------------------------------------------------------------------
 // Flag values, global to the entire project
 
+extern TFlagInfo DesiredAccessValues[];
 extern TFlagInfo FileAttributesValues[];
 
 //-----------------------------------------------------------------------------
