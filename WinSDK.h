@@ -51,7 +51,6 @@
 
 #ifndef FILE_ATTRIBUTE_VIRTUAL
 #define FILE_ATTRIBUTE_VIRTUAL              0x00010000      // FILE_ATTRIBUTE_VIRTUAL is synthesized by LuaFV and not persisted on disk by NTFS
-
 #endif
 
 #ifndef FILE_ATTRIBUTE_NO_SCRUB_DATA
