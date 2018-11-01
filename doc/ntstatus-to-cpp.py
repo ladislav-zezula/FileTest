@@ -1,3 +1,4 @@
+# Converting ntstatus.h into array used in FileTest
 import os, sys
 
 def main(argc, argv):
@@ -38,3 +39,5 @@ def main(argc, argv):
 
 if __name__ == "__main__" :
 	main(len(sys.argv), sys.argv)
+
+	
