@@ -1739,6 +1739,44 @@ static int InsertTreeItemFlags32(
     return pMember->nMemberSize;
 }
 
+static size_t InsertTreeItemProcess(HWND hTreeView, HTREEITEM hSubItem, HANDLE ProcessId, int nIndex)
+{
+    NTSTATUS Status;
+    LPCWSTR szPlainName = NULL;
+    LPCWSTR szFormat;
+    TCHAR szBuffer[0x200];
+    BYTE InfoBuff[0x200];
+    HANDLE hProcess;
+    ULONG dwProcessId = (DWORD)(DWORD_PTR)ProcessId;
+    ULONG ReturnLength = 0;
+
+    // Try to open the process
+    hProcess = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, dwProcessId);
+    if (hProcess == NULL && GetLastError() == ERROR_ACCESS_DENIED)
+        hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, dwProcessId);
+
+    // Try to retrieve the process image file name
+    if (hProcess != NULL)
+    {
+        // Retrieve the process information
+        Status = NtQueryInformationProcess(hProcess, ProcessImageFileName, InfoBuff, sizeof(InfoBuff)-sizeof(WCHAR), &ReturnLength);
+        if (NT_SUCCESS(Status))
+        {
+            PUNICODE_STRING ImageName = (PUNICODE_STRING)InfoBuff;
+
+            ImageName->Buffer[ImageName->Length / sizeof(WCHAR)] = 0;
+            szPlainName = GetPlainName(ImageName->Buffer);
+        }
+        CloseHandle(hProcess);
+    }
+
+    // Construct the image name
+    szFormat = (szPlainName != NULL) ? _T("[0x%02X]: %u (%s)") : _T("[0x%02X]: %u (unknown)");
+    StringCchPrintf(szBuffer, _countof(szBuffer), szFormat, nIndex, dwProcessId, szPlainName);
+    InsertTreeItem(hTreeView, hSubItem, szBuffer);
+    return sizeof(UINT_PTR);
+}
+
 static int InsertTreeItemByDataType(
     HWND hTreeView,
     HTREEITEM hParentItem,
@@ -1917,7 +1955,7 @@ static int ReloadTreeViewItems(HWND hDlg, HWND hTreeView, HTREEITEM hParentItem)
 }
 
 
-static int FillStructureMembers(
+static size_t FillStructureMembers(
     HWND hTreeView,
     HTREEITEM hParentItem,
     TStructMember * pMembers,
@@ -1926,8 +1964,7 @@ static int FillStructureMembers(
 {
     HTREEITEM hSubItem;
     LPBYTE pbStructPtr = pbData;        // Pointer to the begin of the structure
-    TCHAR szBuffer[256];
-    int nTotalLength = 0;               // Length, in bytes, of the structure member
+    size_t nTotalLength = 0;            // Length, in bytes, of the structure member
 
     // Hack: In Windows 10, the FILE_STANDARD_INFORMATION becomes FILE_STANDARD_INFORMATION_EX
     if (pMembers == FileStandardInformationMembers && g_dwWinVer >= 0x0A00)
@@ -1936,7 +1973,7 @@ static int FillStructureMembers(
     // Parse the members and fill them
     for(; pMembers->szMemberName != NULL; pMembers++)
     {
-        int nDataLength = 0;
+        size_t nDataLength = 0;
 
         switch(pMembers->nDataType)
         {
@@ -1977,11 +2014,7 @@ static int FillStructureMembers(
                 {
                     for(ULONG i = 0; i < PtrHandleCount[0]; i++)
                     {
-                        HANDLE ProcessId = HandleArray[i];
-
-                        StringCchPrintf(szBuffer, _countof(szBuffer), _T("[0x%02X]: %p"), i, ProcessId);
-                        InsertTreeItem(hTreeView, hSubItem, szBuffer);
-                        nDataLength += sizeof(UINT_PTR);
+                        nDataLength += InsertTreeItemProcess(hTreeView, hSubItem, HandleArray[i], i);
                     }
                 }
                 break;
@@ -2067,14 +2100,14 @@ static int FillChainedStructMembers(
     return nDataLength;
 }
 
-static int FillDialogWithFileInfo(HWND hDlg, TInfoData * pInfoData, int nInfoClass)
+static size_t FillDialogWithFileInfo(HWND hDlg, TInfoData * pInfoData, int nInfoClass)
 {
     TFileTestData * pData = GetDialogData(hDlg);
     HTREEITEM hRootItem = NULL;
     LPBYTE pbNtInfoBuffEnd = pData->pbNtInfoBuff + pData->cbNtInfoBuff;
     HWND hTreeView = GetDlgItem(hDlg, IDC_FILE_INFO);
     HWND hComment = GetDlgItem(hDlg, IDC_COMMENT);
-    UINT nInputLength = 0;
+    size_t nInputLength = 0;
     BOOL bEnable = FALSE;
     BOOL bShowTreeView = FALSE;
 
