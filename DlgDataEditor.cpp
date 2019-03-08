@@ -50,7 +50,7 @@ static void OnInitDialog(HWND hDlg, LPARAM lParam)
     hWndChild = GetDlgItem(hDlg, IDC_FILE_DATA);
     if(hWndChild != NULL)
     {
-        DataEditor_SetBytesPerLine(hWndChild, 0x10);
+        DataEditor_SetDataFormat(hWndChild, PtrPlatformSpecific, 0x10);
         DataEditor_SetData(hWndChild, (ULONGLONG)pData->BaseAddress, pData->pbFileData, pData->cbFileData);
     }
 }

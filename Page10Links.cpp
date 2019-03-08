@@ -676,10 +676,10 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
         pAnchors->AddAnchor(hDlg, IDC_REPARSE_QUERY, akLeftCenter | akBottom);
         pAnchors->AddAnchor(hDlg, IDC_REPARSE_DELETE, akRight | akBottom);
         pAnchors->AddAnchor(hDlg, IDC_RESULT_FRAME, akLeft | akRight | akBottom);
-        pAnchors->AddAnchor(hDlg, IDC_RESULT_STATUS_TITLE, akLeft | akBottom);
-        pAnchors->AddAnchor(hDlg, IDC_RESULT_STATUS, akLeft | akRight | akBottom);
-        pAnchors->AddAnchor(hDlg, IDC_IOSTATUS_INFO_TITLE, akLeft | akBottom);
-        pAnchors->AddAnchor(hDlg, IDC_IOSTATUS_INFO, akLeft | akRight | akBottom);
+        pAnchors->AddAnchor(hDlg, IDC_ERROR_CODE_TITLE, akLeft | akBottom);
+        pAnchors->AddAnchor(hDlg, IDC_ERROR_CODE, akLeft | akRight | akBottom);
+        pAnchors->AddAnchor(hDlg, IDC_INFORMATION_TITLE, akLeft | akBottom);
+        pAnchors->AddAnchor(hDlg, IDC_INFORMATION, akLeft | akRight | akBottom);
     }
 
     // We need this in order to create symbolic link
@@ -773,7 +773,7 @@ static int OnBeginLabelEdit(HWND hDlg, LPNMTVDISPINFO pNMDispInfo)
 
     // By default, the item is not editable
     if(bStartEditing == FALSE)
-        SetResultInfo(hDlg, STATUS_CANNOT_EDIT_THIS);
+        SetResultInfo(hDlg, RSI_NTSTATUS, STATUS_CANNOT_EDIT_THIS);
 
     // Setup the close dialog and start editing (or not)
     DisableCloseDialog(hDlg, bStartEditing);
@@ -899,7 +899,7 @@ static int OnSymlinkCreate(HWND hDlg)
         EnableDlgItems(hDlg, TRUE, IDC_SYMLINK_DELETE, 0);
     }
 
-    SetResultInfo(hDlg, Status);
+    SetResultInfo(hDlg, RSI_NTSTATUS | RSI_NOINFO, Status);
     return TRUE;
 }
 
@@ -943,18 +943,19 @@ static int OnSymlinkQuery(HWND hDlg)
         NtClose(Handle);
     }
 
-    SetResultInfo(hDlg, Status);
+    SetResultInfo(hDlg, RSI_NTSTATUS | RSI_INFO_INT32, Status, Length);
     return TRUE;
 }
 
 static int OnSymlinkDelete(HWND hDlg)
 {
     TFileTestData * pData = GetDialogData(hDlg);
+    NTSTATUS Status;
 
-    if(IsHandleValid(pData->hSymLink))
-        NtClose(pData->hSymLink);
+    Status = NtClose(pData->hSymLink);
     pData->hSymLink = NULL;
 
+    SetResultInfo(hDlg, RSI_NTSTATUS | RSI_NOINFO, Status);
     EnableDlgItems(hDlg, FALSE, IDC_SYMLINK_DELETE, 0);
     return TRUE;
 }
@@ -1095,7 +1096,7 @@ static void OnUpdateView(HWND hDlg)
 static int OnHardlinkCreate(HWND hDlg)
 {
     OBJECT_ATTRIBUTES ObjAttr;
-    IO_STATUS_BLOCK IoStatus;
+    IO_STATUS_BLOCK IoStatus = { 0 };
     UNICODE_STRING FileName;
     NTSTATUS Status = STATUS_SUCCESS;
     LPTSTR szPlainName;
@@ -1177,7 +1178,7 @@ static int OnHardlinkCreate(HWND hDlg)
 
     if(hDirectory != NULL)
         NtClose(hDirectory);
-    SetResultInfo(hDlg, Status);
+    SetResultInfo(hDlg, RSI_NTSTATUS | RSI_INFORMATION, Status, &IoStatus);
     return TRUE;
 }
 
@@ -1187,7 +1188,7 @@ static int OnHardlinkQuery(HWND hDlg)
     PFILE_LINK_ENTRY_INFORMATION pLinkInfo = NULL;
     PFILE_LINKS_INFORMATION pLinksInfo = NULL;
     OBJECT_ATTRIBUTES ObjAttr;
-    IO_STATUS_BLOCK IoStatus;
+    IO_STATUS_BLOCK IoStatus = { 0 };
     UNICODE_STRING FileName;
     NTSTATUS Status = STATUS_SUCCESS;
     LPTSTR szHardLinkName;
@@ -1278,7 +1279,7 @@ static int OnHardlinkQuery(HWND hDlg)
     // Open the drop list to show all links
     if(HardLinkCount != 0)
         PostMessage(hDlg, WM_SHOW_HARDLINKS, 0, 0);
-    SetResultInfo(hDlg, Status);
+    SetResultInfo(hDlg, RSI_NTSTATUS | RSI_INFORMATION, Status, &IoStatus);
     return TRUE;
 }
 
@@ -1301,7 +1302,7 @@ static int OnHardlinkDelete(HWND hDlg)
         FreeFileNameString(&FileName);
     }
 
-    SetResultInfo(hDlg, Status);
+    SetResultInfo(hDlg, RSI_NTSTATUS | RSI_NOINFO, Status);
     return TRUE;
 }
 
@@ -1310,7 +1311,7 @@ static int OnReparseCreate(HWND hDlg)
     PREPARSE_DATA_BUFFER ReparseData;
     TFileTestData * pData = GetDialogData(hDlg);
     OBJECT_ATTRIBUTES ObjAttr;
-    IO_STATUS_BLOCK IoStatus;
+    IO_STATUS_BLOCK IoStatus = { 0 };
     UNICODE_STRING FileName;
     NTSTATUS Status;
     HANDLE hReparse = NULL;
@@ -1362,7 +1363,7 @@ static int OnReparseCreate(HWND hDlg)
         FreeFileNameString(&FileName);
     }
 
-    SetResultInfo(hDlg, Status);
+    SetResultInfo(hDlg, RSI_NTSTATUS | RSI_INFORMATION, Status, &IoStatus);
     return TRUE;
 }
 
@@ -1424,7 +1425,7 @@ static int OnReparseQuery(HWND hDlg)
     }
 
     // Show the result to the dialog
-    SetResultInfo(hDlg, Status);
+    SetResultInfo(hDlg, RSI_NTSTATUS | RSI_INFORMATION, Status, &IoStatus);
     return TRUE;
 }
 
@@ -1447,7 +1448,7 @@ static int OnReparseDelete(HWND hDlg)
         FreeFileNameString(&FileName);
     }
 
-    SetResultInfo(hDlg, Status);
+    SetResultInfo(hDlg, RSI_NTSTATUS | RSI_NOINFO, Status);
     return TRUE;
 }
 

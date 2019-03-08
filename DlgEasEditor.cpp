@@ -88,10 +88,8 @@ static int SetListViewEaEntry(
         LPTSTR szEaValueEnd = szEaValue + cchEaValue;
 
         for(i = 0; i < pEaItem->EaValueLength; i++)
-        {
-            StringCchPrintf(szTemp, (szEaValueEnd - szTemp), _T("%02lX "), pbEaValue[i]);
-            szTemp += 3;
-        }
+            StringCchPrintfEx(szTemp, (szEaValueEnd - szTemp), &szTemp, NULL, 0, _T("%02lX "), pbEaValue[i]);
+        szTemp[0] = 0;
 
         // Set the main item
         ZeroMemory(&lvi, sizeof(LVITEM));

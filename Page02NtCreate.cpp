@@ -265,12 +265,12 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
         pAnchors->AddAnchor(hDlg, IDC_CREATE_FILE, akRight | akBottom);
         pAnchors->AddAnchor(hDlg, IDC_CLOSE_HANDLE, akRight | akBottom);
         pAnchors->AddAnchor(hDlg, IDC_RESULT_FRAME, akLeft | akRight | akBottom);
-        pAnchors->AddAnchor(hDlg, IDC_RESULT_STATUS_TITLE, akLeft | akBottom);
-        pAnchors->AddAnchor(hDlg, IDC_RESULT_STATUS, akLeft | akRight | akBottom);
+        pAnchors->AddAnchor(hDlg, IDC_ERROR_CODE_TITLE, akLeft | akBottom);
+        pAnchors->AddAnchor(hDlg, IDC_ERROR_CODE, akLeft | akRight | akBottom);
         pAnchors->AddAnchor(hDlg, IDC_HANDLE_TITLE, akLeft | akBottom);
         pAnchors->AddAnchor(hDlg, IDC_HANDLE, akLeft | akRight | akBottom);
-        pAnchors->AddAnchor(hDlg, IDC_NTCREATE_RESULT_TITLE, akLeft | akBottom);
-        pAnchors->AddAnchor(hDlg, IDC_NTCREATE_RESULT, akLeft | akRight | akBottom);
+        pAnchors->AddAnchor(hDlg, IDC_INFORMATION_TITLE, akLeft | akBottom);
+        pAnchors->AddAnchor(hDlg, IDC_INFORMATION, akLeft | akRight | akBottom);
     }
 
     // Initialize the "Relative File" hyperlink
@@ -543,7 +543,7 @@ static int OnMakeDirectoryClick(HWND hDlg)
         Status = MyCreateDirectory(pData, &ObjAttr, &IoStatus);
     }
 
-    SetResultInfo(hDlg, Status, NULL, IoStatus.Information);
+    SetResultInfo(hDlg, RSI_NTSTATUS | RSI_NTCREATE, Status, &IoStatus);
     return TRUE;
 }
 
@@ -551,7 +551,7 @@ static int OnCreateFileClick(HWND hDlg)
 {
     TFileTestData * pData = GetDialogData(hDlg);
     OBJECT_ATTRIBUTES ObjAttr;
-    IO_STATUS_BLOCK IoStatus;
+    IO_STATUS_BLOCK IoStatus = {0};
     UNICODE_STRING FileName;
     UNICODE_STRING DirName;
     LARGE_INTEGER AllocationSize;
@@ -609,7 +609,7 @@ static int OnCreateFileClick(HWND hDlg)
 
         if(!NT_SUCCESS(Status))
         {
-            SetResultInfo(hDlg, Status, NULL, IoStatus.Information);
+            SetResultInfo(hDlg, RSI_NTSTATUS | RSI_HANDLE, Status, pData->hDirectory);
             return TRUE;
         }
     }
@@ -653,7 +653,7 @@ static int OnCreateFileClick(HWND hDlg)
                                pData->dwCreateOptions,
                                pData->pFileEa,
                                pData->dwEaSize);
-        SetResultInfo(hDlg, Status, pData->hFile, IoStatus.Information);
+        SetResultInfo(hDlg, RSI_NTSTATUS | RSI_HANDLE | RSI_NTCREATE, Status, pData->hFile, &IoStatus);
 
         // If this operation failed, we close the directory as well
         if(!NT_SUCCESS(Status) && pData->hDirectory != NULL)
@@ -693,7 +693,7 @@ static int OnNtCloseClick(HWND hDlg)
         NtClose(pData->hDirectory);
     pData->hDirectory = NULL;
 
-    SetResultInfo(hDlg, Status, NULL, 0xFFFFFFFF);
+    SetResultInfo(hDlg, RSI_NTSTATUS | RSI_HANDLE, Status, pData->hFile);
     return TRUE;
 }
 

@@ -148,7 +148,7 @@ static NTSTATUS NtTakeOwnershipObject(HANDLE ObjectHandle)
         NtClose(TokenHandle);
     return Status;
 }
-
+/*
 // Gives the object a NULL Dacl, granting access to everyone
 // https://technet.microsoft.com/en-us/library/cc781716%28v=ws.10%29.aspx
 static NTSTATUS NtSetObjectNullDacl(IN HANDLE ObjectHandle)
@@ -173,8 +173,74 @@ static NTSTATUS NtSetObjectNullDacl(IN HANDLE ObjectHandle)
 
     return Status;
 }
+*/
+// Sets the access-control list for a handle to "Everyone:AccessMask"
+// The handle must be open for WRITE_DAC access
+static NTSTATUS NtSetObjectAccessForEveryone(
+    IN HANDLE ObjectHandle,
+    IN ACCESS_MASK AccessMask)
+{
+    SID_IDENTIFIER_AUTHORITY SiaEveryone = SECURITY_WORLD_SID_AUTHORITY;
+    SECURITY_DESCRIPTOR sd;
+    NTSTATUS Status;
+    ULONG cbAclLength = 0;
+    PSID pSidEveryone = NULL; 
+    PACL pAcl = NULL;
 
-static NTSTATUS NtSetFileAccessToEveryone(POBJECT_ATTRIBUTES ObjAttr, ACCESS_MASK AccessMask)
+    // Get the SID of Everyone
+    Status = RtlAllocateAndInitializeSid(&SiaEveryone, 1, 0, 0, 0, 0, 0, 0, 0, 0, &pSidEveryone);
+
+    // Allocate space for ACL
+    if(NT_SUCCESS(Status))
+    {
+        ULONG dwSidLength = RtlLengthSid(pSidEveryone);
+
+        // Create ACL for full access to the file
+        cbAclLength = sizeof(ACL) + sizeof(ACCESS_ALLOWED_ACE) + dwSidLength - sizeof(DWORD);
+        pAcl = (PACL)RtlAllocateHeap(RtlProcessHeap(), 0, cbAclLength);
+        if(pAcl == NULL)
+            Status = STATUS_INSUFFICIENT_RESOURCES;
+    }
+
+    // Create the Access control list with one ACE
+    if(NT_SUCCESS(Status))
+    {
+        Status = RtlCreateAcl(pAcl, cbAclLength, ACL_REVISION);
+    }
+
+    // Add the ACE to the ACL
+    if(NT_SUCCESS(Status))
+    {
+        Status = RtlAddAccessAllowedAce(pAcl, ACL_REVISION, AccessMask, pSidEveryone);
+    }
+
+    // Initialize the blank security descriptor
+    if(NT_SUCCESS(Status))
+    {
+        Status = RtlCreateSecurityDescriptor(&sd, SECURITY_DESCRIPTOR_REVISION);
+    }
+
+    // Set the ACL to the security descriptor
+    if(NT_SUCCESS(Status))
+    {
+        Status = RtlSetDaclSecurityDescriptor(&sd, TRUE, pAcl, FALSE);
+    }
+
+    // Apply the security information to the handle
+    if(NT_SUCCESS(Status))
+    {
+        Status = NtSetSecurityObject(ObjectHandle, DACL_SECURITY_INFORMATION, &sd);
+    }
+
+    // Free buffers
+    if(pAcl != NULL)
+        RtlFreeHeap(RtlProcessHeap(), 0, pAcl);
+    if(pSidEveryone != NULL)
+        RtlFreeSid(pSidEveryone);
+    return Status;
+}
+
+static NTSTATUS NtSetFileAccessToEveryone(POBJECT_ATTRIBUTES PtrObjectAttributes, ACCESS_MASK AccessMask)
 {
     IO_STATUS_BLOCK IoStatus;
     NTSTATUS Status;
@@ -188,7 +254,7 @@ static NTSTATUS NtSetFileAccessToEveryone(POBJECT_ATTRIBUTES ObjAttr, ACCESS_MAS
     __TryOpenFsObject:
     Status = NtOpenFile(&FileHandle,
                          WRITE_DAC,
-                         ObjAttr,
+                         PtrObjectAttributes,
                         &IoStatus,
                          FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                          OpenOptions);
@@ -197,7 +263,7 @@ static NTSTATUS NtSetFileAccessToEveryone(POBJECT_ATTRIBUTES ObjAttr, ACCESS_MAS
         // Write the owner to the file.
         Status = NtOpenFile(&FileHandle,
                              WRITE_OWNER,
-                             ObjAttr,
+                             PtrObjectAttributes,
                             &IoStatus,
                              FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                              OpenOptions);
@@ -214,7 +280,12 @@ static NTSTATUS NtSetFileAccessToEveryone(POBJECT_ATTRIBUTES ObjAttr, ACCESS_MAS
     // If succeeded, write the file security
     if(NT_SUCCESS(Status))
     {
-        Status = NtSetObjectNullDacl(FileHandle);
+        // Vers: Windows 10, build 17763.rs5_release.180914-1434
+        // File: C:\Windows.old\$WINDOWS.~BT\Sources\SafeOS\boot.sdi
+        // Looks like NtSetObjectNullDacl succeeds, but does nothing
+        // On the other hand, setting DACL with Everyone:GENERIC_ALL works OK.
+        Status = NtSetObjectAccessForEveryone(FileHandle, GENERIC_ALL);
+//      Status = NtSetObjectNullDacl(FileHandle);
         NtClose(FileHandle);
     }
 
@@ -225,7 +296,7 @@ static NTSTATUS NtSetFileAccessToEveryone(POBJECT_ATTRIBUTES ObjAttr, ACCESS_MAS
 
         Status = NtOpenFile(&FileHandle,
                              FILE_WRITE_ATTRIBUTES,
-                             ObjAttr,
+                             PtrObjectAttributes,
                             &IoStatus,
                              FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                              OpenOptions);
@@ -438,7 +509,7 @@ static NTSTATUS NtDeleteFsObject(
     return Status;
 }
 
-static int ForceRemoveFile(LPCTSTR szFileName)
+static NTSTATUS ForceRemoveFile(LPCTSTR szFileName)
 {
     OBJECT_ATTRIBUTES ObjAttr;
     UNICODE_STRING PathName;
@@ -453,10 +524,10 @@ static int ForceRemoveFile(LPCTSTR szFileName)
         FreeFileNameString(&PathName);
     }
 
-    return RtlNtStatusToDosError(Status);
+    return Status;
 }
 
-static int RemoveFsObjectTree(LPCTSTR szDirName, BOOLEAN RecursiveDelete)
+static NTSTATUS RemoveFsObjectTree(LPCTSTR szDirName, BOOLEAN RecursiveDelete)
 {
     OBJECT_ATTRIBUTES ObjAttr;
     UNICODE_STRING PathName;
@@ -486,7 +557,7 @@ static int RemoveFsObjectTree(LPCTSTR szDirName, BOOLEAN RecursiveDelete)
         }
     }
 
-    return RtlNtStatusToDosError(Status);
+    return Status;
 }
 
 static int SaveDialog(HWND hDlg)
@@ -510,7 +581,6 @@ static int UpdateDialogButtons(HWND hDlg)
     bEnable = IsHandleValid(pData->hFile) ? TRUE : FALSE;
     EnableDlgItems(hDlg, bEnable, 
                          IDC_FLUSH_FILE_BUFFERS,
-                         IDC_SET_SPARSE,
                          IDC_REQUEST_OPLOCK_MENU,
                          IDC_BREAK_ACKNOWLEDGE_1,
                          IDC_REQUEST_OPLOCK_WIN7,
@@ -560,7 +630,6 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
         pAnchors->AddAnchor(hDlg, IDC_NT_QUERY_ATTRIBUTES_FILE, akLeft | akTop);
         pAnchors->AddAnchor(hDlg, IDC_GET_FILE_ATTRIBUTES, akRight | akTop);
         pAnchors->AddAnchor(hDlg, IDC_FLUSH_FILE_BUFFERS, akLeft | akTop);
-        pAnchors->AddAnchor(hDlg, IDC_SET_SPARSE, akRight | akTop);
 
         pAnchors->AddAnchor(hDlg, IDC_OPLOCKS_FRAME, akAll);
         pAnchors->AddAnchor(hDlg, IDC_REQUEST_OPLOCK_MENU, akLeft | akTop);
@@ -570,15 +639,14 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
 
 
         pAnchors->AddAnchor(hDlg, IDC_RESULT_FRAME, akLeft | akRight | akBottom);
-        pAnchors->AddAnchor(hDlg, IDC_LAST_ERROR_TITLE, akLeft | akBottom);
-        pAnchors->AddAnchor(hDlg, IDC_LAST_ERROR, akLeft | akRight | akBottom);
+        pAnchors->AddAnchor(hDlg, IDC_ERROR_CODE_TITLE, akLeft | akBottom);
+        pAnchors->AddAnchor(hDlg, IDC_ERROR_CODE, akLeft | akRight | akBottom);
     }
 
     // Initialize tooltips
     g_Tooltip.AddToolTip(hDlg, IDC_NT_QUERY_ATTRIBUTES_FILE, IDS_NT_QUERY_ATTRIBUTES_FILE_TIP);
     g_Tooltip.AddToolTip(hDlg, IDC_GET_FILE_ATTRIBUTES,      IDS_GET_FILE_ATTRIBUTES_TIP);
     g_Tooltip.AddToolTip(hDlg, IDC_FLUSH_FILE_BUFFERS,       IDS_FLUSH_FILE_BUFFERS_TIP);
-    g_Tooltip.AddToolTip(hDlg, IDC_SET_SPARSE,               IDS_SET_SPARSE_TIP);
 
     Hex2DlgText64(hDlg, IDC_BYTE_OFFSET, 0);
     Hex2DlgText32(hDlg, IDC_LENGTH, 0x10000);
@@ -656,33 +724,33 @@ static int OnDeltaPos(HWND hDlg, NMUPDOWN * pNMHDR)
 static int OnCopyFileClick(HWND hDlg)
 {
     TFileTestData * pData = GetDialogData(hDlg);
-    int nError;
+    DWORD dwErrCode;
 
     // Get the source and target file
     GetDlgItemText(hDlg, IDC_FILE_NAME1, pData->szFileName1, _maxchars(pData->szFileName1));
     GetDlgItemText(hDlg, IDC_FILE_NAME2, pData->szFileName2, _maxchars(pData->szFileName2));
 
     // Run the copy file dialog
-    nError = (int)CopyFileDialog(hDlg, pData);
+    dwErrCode = (DWORD)CopyFileDialog(hDlg, pData);
 
     // Set the result
-    SetResultInfo(hDlg, nError);
+    SetResultInfo(hDlg, RSI_LAST_ERROR, dwErrCode);
     return TRUE;
 }
 
 static int OnMoveFileClick(HWND hDlg)
 {
     TFileTestData * pData = GetDialogData(hDlg);
-    int nError = ERROR_SUCCESS;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
     SaveDialog(hDlg);
 
     // Perform the rename
     if(!MoveFileEx(pData->szFileName1, pData->szFileName2, pData->dwMoveFileFlags))
-        nError = GetLastError();
+        dwErrCode = GetLastError();
 
     // Set the result
-    SetResultInfo(hDlg, nError);
+    SetResultInfo(hDlg, RSI_LAST_ERROR, dwErrCode);
     return TRUE;
 }
 
@@ -702,24 +770,27 @@ static int OnMoveOptions(HWND hDlg)
     return TRUE;
 }
 
-static int OnDeleteFileClick(HWND hDlg)
+static int OnDeleteFileClick(HWND hDlg, UINT nIDCtrl)
 {
     TFileTestData * pData = GetDialogData(hDlg);
-    int nError = ERROR_SUCCESS;
+    NTSTATUS Status;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
     // Save the dialog variables
     SaveDialog(hDlg);
 
     // Choose what exactly to do
-    switch(FileActionDialog(hDlg))
+    switch(nIDCtrl)
     {
         case IDC_SIMPLE_DELETE:
             if(!DeleteFile(pData->szFileName1))
-                nError = GetLastError();
+                dwErrCode = GetLastError();
+            SetResultInfo(hDlg, RSI_LAST_ERROR, dwErrCode);
             break;
 
         case IDC_FORCED_DELETE:
-            nError = ForceRemoveFile(pData->szFileName1);
+            Status = ForceRemoveFile(pData->szFileName1);
+            SetResultInfo(hDlg, RSI_NTSTATUS, Status);
             break;
 
         default:
@@ -727,21 +798,20 @@ static int OnDeleteFileClick(HWND hDlg)
     }
 
     UpdateDialogButtons(hDlg);
-    SetResultInfo(hDlg, nError);
     return TRUE;
 }
 
 static int OnDeleteFsObject(HWND hDlg, BOOLEAN RecursiveDelete)
 {
     TFileTestData * pData = GetDialogData(hDlg);
-    int nError = ERROR_SUCCESS;
+    NTSTATUS Status;
 
     // Save the dialog variables
     SaveDialog(hDlg);
 
     // Perform the delete
-    nError = RemoveFsObjectTree(pData->szFileName1, RecursiveDelete);
-    SetResultInfo(hDlg, nError);
+    Status = RemoveFsObjectTree(pData->szFileName1, RecursiveDelete);
+    SetResultInfo(hDlg, RSI_NTSTATUS, Status);
     return TRUE;
 }
 
@@ -852,7 +922,7 @@ static int OnFileIdGetClick(HWND hDlg)
     }
 
     // On the end, set the file ID
-    SetResultInfo(hDlg, RtlNtStatusToDosError(Status));
+    SetResultInfo(hDlg, RSI_NTSTATUS, Status);
     FreeFileNameString(&FolderName);
     return TRUE;
 }
@@ -888,7 +958,7 @@ static int OnObjectIdMoreClick(HWND hDlg)
     DWORD dwDesiredAccess = FILE_READ_ATTRIBUTES;
     DWORD dwBytesReturned;
     DWORD dwIoctlCode = FSCTL_CREATE_OR_GET_OBJECT_ID;
-    int nError = ERROR_SUCCESS;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
     // Ask the user for the action
     nAction = ObjectIDActionDialog(hDlg);
@@ -907,10 +977,10 @@ static int OnObjectIdMoreClick(HWND hDlg)
     // Convert the file name to the NT file name
     hFile = CreateFile(pData->szFileName1, dwDesiredAccess, 0, NULL, OPEN_EXISTING, dwFlagsAndAttributes, NULL);
     if(hFile == INVALID_HANDLE_VALUE)
-        nError = GetLastError();
+        dwErrCode = GetLastError();
 
     // Perform an action specific to 
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
         switch(nAction)
         {
@@ -934,15 +1004,15 @@ static int OnObjectIdMoreClick(HWND hDlg)
                 }
                 else
                 {
-                    nError = GetLastError();
+                    dwErrCode = GetLastError();
                 }
                 break;
             
             case IDC_SET_OBJECT_ID:
 
                 GetDlgItemText(hDlg, IDC_OBJECT_ID, szObjectID, _maxchars(szObjectID));
-                nError = StringToFileID(szObjectID, NULL, ObjId.ObjectId, NULL);
-                if(nError != ERROR_SUCCESS)
+                dwErrCode = StringToFileID(szObjectID, NULL, ObjId.ObjectId, NULL);
+                if(dwErrCode != ERROR_SUCCESS)
                     break;
 
                 if(!DeviceIoControl(hFile, FSCTL_SET_OBJECT_ID,
@@ -953,7 +1023,7 @@ static int OnObjectIdMoreClick(HWND hDlg)
                                           &dwBytesReturned,
                                            NULL))
                 {
-                    nError = GetLastError();
+                    dwErrCode = GetLastError();
                 }
                 break;
         }
@@ -961,7 +1031,7 @@ static int OnObjectIdMoreClick(HWND hDlg)
 
     if(hFile != INVALID_HANDLE_VALUE)
         CloseHandle(hFile);
-    SetResultInfo(hDlg, nError);
+    SetResultInfo(hDlg, RSI_LAST_ERROR, dwErrCode);
     return TRUE;
 }
 
@@ -971,7 +1041,7 @@ static int OnGetFileAttributes(HWND hDlg)
     TFlagInfo * pFlags = FileAttributesValues;
     TCHAR szFileAttributes[512] = _T("");
     DWORD dwAttr;
-    int nError = ERROR_SUCCESS;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
     SaveDialog(hDlg);
     dwAttr = GetFileAttributes(pData->szFileName1);
@@ -992,9 +1062,9 @@ static int OnGetFileAttributes(HWND hDlg)
         MessageBoxRc(hDlg, IDS_FILE_ATTRIBUTES, (UINT_PTR)szFileAttributes);
     }
     else
-        nError = GetLastError();
+        dwErrCode = GetLastError();
 
-    SetResultInfo(hDlg, nError);
+    SetResultInfo(hDlg, RSI_LAST_ERROR, dwErrCode);
     return TRUE;
 }
 
@@ -1036,7 +1106,7 @@ static int OnNtQueryAttributesFile(HWND hDlg)
     }
 
     // Set the result information
-    SetResultInfo(hDlg, Status);
+    SetResultInfo(hDlg, RSI_NTSTATUS, Status);
     FreeFileNameString(&FileName);
     return TRUE;
 }
@@ -1044,20 +1114,20 @@ static int OnNtQueryAttributesFile(HWND hDlg)
 static int OnFlushFile(HWND hDlg)
 {
     TFileTestData * pData = GetDialogData(hDlg);
-    int nError = ERROR_SUCCESS;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
     // Create the hardlink
     if(!FlushFileBuffers(pData->hFile))
-        nError = GetLastError();
+        dwErrCode = GetLastError();
 
-    SetResultInfo(hDlg, nError);
+    SetResultInfo(hDlg, RSI_LAST_ERROR, dwErrCode);
     return TRUE;
 }
 
 static int OnCreateHardLink(HWND hDlg)
 {
     TFileTestData * pData = GetDialogData(hDlg);
-    int nError = ERROR_SUCCESS;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
     // Check presence of the function
     if(pfnCreateHardLink == NULL)
@@ -1068,12 +1138,11 @@ static int OnCreateHardLink(HWND hDlg)
 
 	// Create the hard link
     if(!pfnCreateHardLink(pData->szFileName1, pData->szFileName2, NULL))
-        nError = GetLastError();
+        dwErrCode = GetLastError();
 
-    SetResultInfo(hDlg, nError);
+    SetResultInfo(hDlg, RSI_LAST_ERROR, dwErrCode);
     return TRUE;
 }
-
 
 static int OnSendAsynchronousFsctl(
     HWND hDlg,
@@ -1088,7 +1157,7 @@ static int OnSendAsynchronousFsctl(
     NTSTATUS Status = STATUS_INSUFFICIENT_RESOURCES;
 
     // Create new APC entry 
-    pApc = (TApcEntry *)CreateApcEntry(pData, APC_TYPE_FSCTL, sizeof(TApcEntry) + OutputBufferSize);
+    pApc = (TApcEntry *)CreateApcEntry(pData, APC_TYPE_FSCTL, OutputBufferSize);
     if(pApc != NULL)
     {
         // If there's an output buffer, move it to the APC structure
@@ -1123,7 +1192,7 @@ static int OnSendAsynchronousFsctl(
         }
     }
 
-    SetResultInfo(hDlg, RtlNtStatusToDosError(Status));
+    SetResultInfo(hDlg, RSI_NTSTATUS, Status);
     return TRUE;
 }
 
@@ -1251,7 +1320,7 @@ static int OnApc(HWND hDlg, LPARAM lParam)
     if(pApc->ApcType == APC_TYPE_FSCTL)
     {
         // Show the result in the result UI
-        SetResultInfo(hDlg, pApc->IoStatus.Status);
+        SetResultInfo(hDlg, RSI_NTSTATUS, pApc->IoStatus.Status);
        
         // If the APC was an oplock APC, also show the result
         switch(pApc->UserParam)
@@ -1269,6 +1338,7 @@ static int OnApc(HWND hDlg, LPARAM lParam)
         }
     }
 
+    FreeApcEntry(pApc);
     return TRUE;
 }
 
@@ -1309,8 +1379,12 @@ static int OnCommand(HWND hDlg, UINT nNotify, UINT nIDCtrl)
             case IDC_MOVE_OPTIONS:
                 return OnMoveOptions(hDlg);
 
-            case IDC_DELETE_FILE:
-                return OnDeleteFileClick(hDlg);
+            case IDC_DELETE_FILE_MENU:
+                return ExecuteContextMenuForDlgItem(hDlg, FindContextMenu(IDR_DELETE_FILE_MENU), IDC_DELETE_FILE_MENU);
+
+            case IDC_SIMPLE_DELETE:
+            case IDC_FORCED_DELETE:
+                return OnDeleteFileClick(hDlg, nIDCtrl);
 
             case IDC_DELETE_OBJECT_MENU:
                 return ExecuteContextMenuForDlgItem(hDlg, FindContextMenu(IDR_DELETE_OBJECT_MENU), IDC_DELETE_OBJECT_MENU);
@@ -1341,9 +1415,6 @@ static int OnCommand(HWND hDlg, UINT nNotify, UINT nIDCtrl)
 
             case IDC_FLUSH_FILE_BUFFERS:
                 return OnFlushFile(hDlg);
-
-            case IDC_SET_SPARSE:
-                return OnSendAsynchronousFsctl(hDlg, FSCTL_SET_SPARSE);
 
             case IDC_CREATE_HARDLINK:
                 return OnCreateHardLink(hDlg);

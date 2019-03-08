@@ -305,9 +305,9 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
 
 static BOOL OnSaveDialog(HWND hDlg)
 {
-    PFILE_FULL_EA_INFORMATION * ppEaItem = (PFILE_FULL_EA_INFORMATION *)GetWindowLongPtr(hDlg, DWLP_USER);
+    PFILE_FULL_EA_INFORMATION * PtrReturnEa = (PFILE_FULL_EA_INFORMATION *)GetWindowLongPtr(hDlg, DWLP_USER);
     PFILE_FULL_EA_INFORMATION NewEaItem = NULL;
-    PFILE_FULL_EA_INFORMATION OldEaItem = *ppEaItem;
+    PFILE_FULL_EA_INFORMATION OldEaItem = PtrReturnEa[0];
     LPTSTR szBinBuffer = NULL;
     HWND hWndName = GetDlgItem(hDlg, IDC_DATA_NAME);
     HWND hWndValue = GetDlgItem(hDlg, IDC_DATA_VALUE_BIN);
@@ -362,7 +362,7 @@ static BOOL OnSaveDialog(HWND hDlg)
     // Replace the item
     if(OldEaItem != NULL)
         delete OldEaItem;
-    *ppEaItem = NewEaItem;
+    PtrReturnEa[0] = NewEaItem;
     delete [] szBinBuffer;
     return TRUE;
 }

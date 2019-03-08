@@ -801,162 +801,295 @@ void SetWindowEnumText(HWND hWndChild, LPCTSTR TextArray[], size_t nArraySize, s
     SetWindowText(hWndChild, szTextToSet);
 }
 
-void SetResultInfo(HWND hDlg, NTSTATUS Status, HANDLE hHandle, UINT_PTR ResultLength, PLARGE_INTEGER pResultLength)
+int GetLastErrorSeverity(DWORD dwErrCode)
 {
-    LPCTSTR szStatus;
-    LPTSTR szError;
-    TCHAR szText[256] = _T("");
+    switch(dwErrCode)
+    {
+        case ERROR_SUCCESS:
+            return SEVERITY_SUCCESS;
+
+        case ERROR_IO_PENDING:
+            return SEVERITY_PENDING;
+
+        default:
+            return SEVERITY_ERROR;
+    }
+}
+
+void SetResultInfo(HWND hDlg, DWORD dwFlags, ...)
+{
+    TCHAR szText[256];
     HWND hWndChild;
-    int nSeverity = SEVERITY_SUCCESS;
-    BOOL bEnable = TRUE;
+    va_list argList;
 
-    LPCTSTR szNtCreateResult[] = 
+    // Start the argument list
+    va_start(argList, dwFlags);
+
+    //
+    // 1) RSI_LAST_ERROR: DWORD dwErrCode
+    // 
+
+    if(dwFlags & RSI_LAST_ERROR)
     {
-        _T("FILE_SUPERSEDED"),
-        _T("FILE_OPENED"),
-        _T("FILE_CREATED"),
-        _T("FILE_OVERWRITTEN"),
-        _T("FILE_EXISTS"),
-        _T("FILE_DOES_NOT_EXIST"),
-        _T("0x00000006"),
-        _T("FILE_OPLOCK_BROKEN_TO_LEVEL_2"),
-        _T("FILE_OPLOCK_BROKEN_TO_NONE"),
-        _T("FILE_OPBATCH_BREAK_UNDERWAY")
-    };
+        LPTSTR szError;
+        DWORD dwErrCode = va_arg(argList, DWORD);
 
-    // Set the text for NTSTATUS
-    hWndChild = GetDlgItem(hDlg, IDC_RESULT_STATUS);
-    if(hWndChild != NULL)
-    {
-        switch(Status)
+        // Set the title
+        if((hWndChild = GetDlgItem(hDlg, IDC_ERROR_CODE_TITLE)) != NULL)
+            SetWindowText(hWndChild, _T("GetLastError:"));
+
+        // Set the error text and the blinking icon
+        if((hWndChild = GetDlgItem(hDlg, IDC_ERROR_CODE)) != NULL)
         {
-            case STATUS_PENDING:
-                szStatus = NtStatus2Text(Status);
-                nSeverity = SEVERITY_PENDING;
-                break;
+            // Create the error text (code + text)
+            szError = GetErrorText(dwErrCode);
+            if(szError != NULL)
+            {
+                StringCchPrintf(szText, _countof(szText), _T("(0x%08lX) %s"), dwErrCode, szError);
+                SetWindowText(hWndChild, szText);
+                delete [] szError;
+            }
 
-            case STATUS_INVALID_DATA_FORMAT:
-                szStatus = _T("The entered value has bad format.");
-                nSeverity = SEVERITY_ERROR;
-                break;
-
-            case STATUS_CANNOT_EDIT_THIS:
-                szStatus = _T("This item is not editable.");
-                nSeverity = SEVERITY_ERROR;
-                break;
-
-            case STATUS_FILE_ID_CONVERSION:
-                szStatus = _T("Skipped conversion of File ID to an NT name.");
-                nSeverity = SEVERITY_SUCCESS;
-                break;
-
-            case STATUS_COPIED_TO_CLIPBOARD:
-                szStatus = _T("Item value copied to clipboard.");
-                nSeverity = SEVERITY_SUCCESS;
-                break;
-
-            default:
-                szStatus = NtStatus2Text(Status);
-                nSeverity = NT_SUCCESS(Status) ? SEVERITY_SUCCESS : SEVERITY_ERROR;
-                break;
-        }
-
-        SetWindowText(hWndChild, szStatus);
-    }
-
-    // Set the text for GetLastError() result
-    hWndChild = GetDlgItem(hDlg, IDC_LAST_ERROR);
-    if(hWndChild != NULL)
-    {
-        switch(Status)
-        {
-            case ERROR_SUCCESS:
-                nSeverity = SEVERITY_SUCCESS;
-                break;
-
-            case ERROR_IO_PENDING:
-                nSeverity = SEVERITY_PENDING;
-                break;
-
-            default:
-                nSeverity = SEVERITY_ERROR;
-                break;
-        }
-
-        // Format the result string
-        szError = GetErrorText(Status);
-        if(szError != NULL)
-        {
-            StringCchPrintf(szText, _countof(szText), _T("(0x%08lX) %s"), Status, szError);
-            SetWindowText(hWndChild, szText);
-            delete [] szError;
+            // Create the blinking icon
+            CreateBlinkingIcon(hDlg, hWndChild, GetLastErrorSeverity(dwErrCode));
         }
     }
 
-    // Set the handle, if present
-    hWndChild = GetDlgItem(hDlg, IDC_HANDLE);
-    if(hWndChild != NULL)
-    {
-        if(hHandle == INVALID_HANDLE_VALUE)
-            SetWindowText(hWndChild, _T("INVALID_HANDLE_VALUE"));
-        else if(hHandle == NULL)
-            SetWindowText(hWndChild, _T("NULL"));
-        else
-            Hex2DlgTextPtr(hDlg, IDC_HANDLE, (DWORD_PTR)hHandle);
-    }
+    //
+    // 2) RSI_NTSTATUS: NTSTATUS Status
+    //
 
-    // Enable/disable the "CloseHandle" button, if present
-    hWndChild = GetDlgItem(hDlg, IDC_CLOSE_HANDLE);
-    if(hWndChild != NULL)
+    if(dwFlags & RSI_NTSTATUS)
     {
-        if(IsHandleInvalid(hHandle))
-            bEnable = FALSE;
-        EnableWindow(hWndChild, bEnable);
-    }
+        LPCTSTR szStatus;
+        NTSTATUS Status = va_arg(argList, NTSTATUS);
+        int nSeverity;
 
-    // Enable/disable the hint for close handle, if any
-    hWndChild = GetDlgItem(hDlg, IDC_CLOSE_HANDLE_HINT);
-    if(hWndChild != NULL)
-    {
-        if(IsHandleInvalid(hHandle))
-            bEnable = FALSE;
-        EnableWindow(hWndChild, bEnable);
-    }
+        // Set the title
+        if((hWndChild = GetDlgItem(hDlg, IDC_ERROR_CODE_TITLE)) != NULL)
+            SetWindowText(hWndChild, _T("Status:"));
 
-    // Set the extra length, if present
-    hWndChild = GetDlgItem(hDlg, IDC_IOSTATUS_INFO);
-    if(hWndChild != NULL)
-    {
-        if(pResultLength != NULL)
+        // Set the error text and the blinking icon
+        if((hWndChild = GetDlgItem(hDlg, IDC_ERROR_CODE)) != NULL)
         {
-            Hex2Text64(szText, (ULONGLONG)pResultLength->QuadPart);
-            SetWindowText(hWndChild, szText);
+            switch(Status)
+            {
+                case STATUS_PENDING:
+                    szStatus = NtStatus2Text(Status);
+                    nSeverity = SEVERITY_PENDING;
+                    break;
+
+                case STATUS_INVALID_DATA_FORMAT:
+                    szStatus = _T("The entered value has bad format.");
+                    nSeverity = SEVERITY_ERROR;
+                    break;
+
+                case STATUS_CANNOT_EDIT_THIS:
+                    szStatus = _T("This item is not editable.");
+                    nSeverity = SEVERITY_ERROR;
+                    break;
+
+                case STATUS_FILE_ID_CONVERSION:
+                    szStatus = _T("Skipped conversion of File ID to an NT name.");
+                    nSeverity = SEVERITY_SUCCESS;
+                    break;
+
+                case STATUS_COPIED_TO_CLIPBOARD:
+                    szStatus = _T("Item value copied to clipboard.");
+                    nSeverity = SEVERITY_SUCCESS;
+                    break;
+
+                default:
+                    szStatus = NtStatus2Text(Status);
+                    nSeverity = NT_SUCCESS(Status) ? SEVERITY_SUCCESS : SEVERITY_ERROR;
+                    break;
+            }
+
+            // Set the status text and blinking icon
+            SetWindowText(hWndChild, szStatus);
+            CreateBlinkingIcon(hDlg, hWndChild, nSeverity);
         }
-        else
+    }
+
+    //
+    // 3) RSI_HANDLE: HANDLE hHandle
+    //
+
+    if(dwFlags & RSI_HANDLE)
+    {
+        HANDLE hHandle = va_arg(argList, HANDLE);
+        BOOL bEnable = TRUE;
+
+        // Enable/disable the hint for close handle, if any
+        if((hWndChild = GetDlgItem(hDlg, IDC_CLOSE_HANDLE_HINT)) != NULL)
         {
-            Hex2Text32(szText, (DWORD)ResultLength);
-            SetWindowText(hWndChild, szText);
+            if(IsHandleInvalid(hHandle))
+                bEnable = FALSE;
+            EnableWindow(hWndChild, bEnable);
+        }
+
+        // Enable/disable the "CloseHandle" button, if present
+        if((hWndChild = GetDlgItem(hDlg, IDC_CLOSE_HANDLE)) != NULL)
+        {
+            if(IsHandleInvalid(hHandle))
+                bEnable = FALSE;
+            EnableWindow(hWndChild, bEnable);
+        }
+
+        // Set the handle value
+        if((hWndChild = GetDlgItem(hDlg, IDC_HANDLE)) != NULL)
+        {
+            if(hHandle == INVALID_HANDLE_VALUE)
+                SetWindowText(hWndChild, _T("INVALID_HANDLE_VALUE"));
+            else if(hHandle == NULL)
+                SetWindowText(hWndChild, _T("NULL"));
+            else
+                Hex2DlgTextPtr(hDlg, IDC_HANDLE, (DWORD_PTR)hHandle);
         }
     }
 
-    // Set the result of NtCreate, if present
-    hWndChild = GetDlgItem(hDlg, IDC_NTCREATE_RESULT);
-    if(hWndChild != NULL && NT_SUCCESS(Status))
-        SetWindowEnumText(hWndChild, szNtCreateResult, _countof(szNtCreateResult), (size_t)ResultLength);
+    //
+    // 4) RSI_NOINFO: Set the info field to empty
+    //
 
-    // Blink the icon on LastError, if any
-    hWndChild = GetDlgItem(hDlg, IDC_LAST_ERROR);
-    if(hWndChild != NULL)
+    if(dwFlags & RSI_NOINFO)
     {
-        CreateBlinkingIcon(hDlg, hWndChild, nSeverity);
+        // Set the title
+        if((hWndChild = GetDlgItem(hDlg, IDC_INFORMATION_TITLE)) != NULL)
+            SetWindowText(hWndChild, _T("Result:"));
+        SetDlgItemText(hDlg, IDC_INFORMATION, _T(""));
     }
 
-    // Blink the icon on status, if any
-    hWndChild = GetDlgItem(hDlg, IDC_RESULT_STATUS);
-    if(hWndChild != NULL)
+    //
+    // 5) RSI_INFORMATION: PIO_STATUS_BLOCK IoStatus
+    //
+
+    if(dwFlags & RSI_INFORMATION)
     {
-        CreateBlinkingIcon(hDlg, hWndChild, nSeverity);
+        PIO_STATUS_BLOCK IoStatus = va_arg(argList, PIO_STATUS_BLOCK);
+
+        // Set the title
+        if((hWndChild = GetDlgItem(hDlg, IDC_INFORMATION_TITLE)) != NULL)
+            SetWindowText(hWndChild, _T("IoStatus.Info:"));
+        Hex2DlgTextPtr(hDlg, IDC_INFORMATION, IoStatus->Information);
     }
+
+    //
+    // 6) RSI_INFO_INT32: DWORD dwInfo
+    //
+
+    if(dwFlags & RSI_INFO_INT32)
+    {
+        DWORD dwInfo = va_arg(argList, DWORD);
+
+        // Set the title
+        if((hWndChild = GetDlgItem(hDlg, IDC_INFORMATION_TITLE)) != NULL)
+            SetWindowText(hWndChild, _T("Length:"));
+        Hex2DlgText32(hDlg, IDC_INFORMATION, dwInfo);
+    }
+
+    //
+    // 7) RSI_NTCREATE: PIO_STATUS_BLOCK IoStatus (result of NtCreateFile)
+    //
+
+    if(dwFlags & RSI_NTCREATE)
+    {
+        PIO_STATUS_BLOCK IoStatus = va_arg(argList, PIO_STATUS_BLOCK);
+
+        if((hWndChild = GetDlgItem(hDlg, IDC_INFORMATION)) != NULL)
+        {
+            LPCTSTR szNtCreateResult[] = 
+            {
+                _T("FILE_SUPERSEDED"),
+                _T("FILE_OPENED"),
+                _T("FILE_CREATED"),
+                _T("FILE_OVERWRITTEN"),
+                _T("FILE_EXISTS"),
+                _T("FILE_DOES_NOT_EXIST"),
+                _T("0x00000006"),
+                _T("FILE_OPLOCK_BROKEN_TO_LEVEL_2"),
+                _T("FILE_OPLOCK_BROKEN_TO_NONE"),
+                _T("FILE_OPBATCH_BREAK_UNDERWAY")
+            };
+
+            SetWindowEnumText(hWndChild, szNtCreateResult, _countof(szNtCreateResult), IoStatus->Information);
+        }
+    }
+
+    //
+    // 8) RSI_READ: DWORD dwBytesRead
+    //
+
+    if(dwFlags & RSI_READ)
+    {
+        DWORD dwBytesRead = va_arg(argList, DWORD);
+
+        // Set the title text
+        if((hWndChild = GetDlgItem(hDlg, IDC_INFORMATION_TITLE)) != NULL)
+        {
+            SetWindowText(hWndChild, _T("Bytes Read:"));
+        }
+
+        // Set the value
+        Hex2DlgText32(hDlg, IDC_INFORMATION, dwBytesRead);
+    }
+
+    //
+    // 9) RSI_WRITTEN: DWORD dwBytesWritten
+    //
+
+    if(dwFlags & RSI_WRITTEN)
+    {
+        DWORD dwBytesWritten = va_arg(argList, DWORD);
+
+        // Set the title text
+        if((hWndChild = GetDlgItem(hDlg, IDC_INFORMATION_TITLE)) != NULL)
+        {
+            SetWindowText(hWndChild, _T("Bytes Written:"));
+        }
+
+        // Set the value
+        Hex2DlgText32(hDlg, IDC_INFORMATION, dwBytesWritten);
+    }
+
+    //
+    // 10) RSI_FILESIZE: PLARGE_INTEGER pFileSize
+    //
+
+    if(dwFlags & RSI_FILESIZE)
+    {
+        PLARGE_INTEGER pFileSize = va_arg(argList, PLARGE_INTEGER);
+
+        // Set the title text
+        if((hWndChild = GetDlgItem(hDlg, IDC_INFORMATION_TITLE)) != NULL)
+        {
+            SetWindowText(hWndChild, _T("File Size:"));
+        }
+
+        // Set the value
+        Hex2DlgText64(hDlg, IDC_INFORMATION, pFileSize->QuadPart);
+    }
+
+    //
+    // 11) RSI_FILEPOS: PLARGE_INTEGER pFilePos
+    //
+
+    if(dwFlags & RSI_FILEPOS)
+    {
+        PLARGE_INTEGER pFilePos = va_arg(argList, PLARGE_INTEGER);
+
+        // Set the title text
+        if((hWndChild = GetDlgItem(hDlg, IDC_INFORMATION_TITLE)) != NULL)
+        {
+            SetWindowText(hWndChild, _T("File Pos:"));
+        }
+
+        // Set the value
+        Hex2DlgText64(hDlg, IDC_INFORMATION, pFilePos->QuadPart);
+    }
+
+    // End the arguments
+    va_end(argList);
 }
 
 //-----------------------------------------------------------------------------
@@ -1772,11 +1905,6 @@ NTSTATUS NtDeleteReparsePoint(HANDLE ObjectHandle)
                                  NULL,
                                  0);
     }
-    else
-    {
-        if(Status == STATUS_NOT_A_REPARSE_POINT)
-            Status = STATUS_SUCCESS;
-    }
 
     return Status;
 }
@@ -1872,4 +2000,47 @@ ULONG RtlComputeCrc32(ULONG InitialCrc, PVOID Buffer, ULONG Length)
     }
     
     return ~Crc32;
+}
+
+//-----------------------------------------------------------------------------
+// Methods of the TDataBlob structure
+
+DWORD TDataBlob::SetLength(SIZE_T cbNewData)
+{
+    LPBYTE pbNewData;
+    SIZE_T cbNewDataAligned = ALIGN_TO_SIZE(cbNewData, WIN32_PAGE_SIZE);
+
+    if (cbNewData > cbDataMax)
+    {
+        // Allocate new data
+        pbNewData = (LPBYTE)VirtualAlloc(NULL, cbNewDataAligned, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+        if(pbNewData == NULL)
+            return ERROR_NOT_ENOUGH_MEMORY;
+
+        // Copy and free old data
+        if(pbData != NULL)
+        {
+            if(cbData != 0)
+                memcpy(pbNewData, pbData, cbData);
+            VirtualFree(pbData, cbDataMax, MEM_RELEASE);
+        }
+
+        // Assign the new data
+        pbData = pbNewData;
+        cbDataMax = cbNewDataAligned;
+    }
+
+    // Set the new length and exit
+    cbData = cbNewData;
+    return ERROR_SUCCESS;
+}
+
+void TDataBlob::Free()
+{
+    if (pbData != NULL)
+        VirtualFree(pbData, cbDataMax, MEM_RELEASE);
+
+    pbData = NULL;
+    cbData = 0;
+    cbDataMax = 0;
 }

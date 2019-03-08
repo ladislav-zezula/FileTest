@@ -85,9 +85,9 @@ static int SaveDialog(HWND hDlg)
     return ERROR_SUCCESS;
 }
 
-static int MyCreateDirectory(TFileTestData * pData, LPCTSTR szDirectory)
+static DWORD MyCreateDirectory(TFileTestData * pData, LPCTSTR szDirectory)
 {
-    int nError = ERROR_SUCCESS;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
     if(pData->bUseTransaction)
     {
@@ -96,18 +96,15 @@ static int MyCreateDirectory(TFileTestData * pData, LPCTSTR szDirectory)
             return ERROR_NOT_SUPPORTED;
 
         if(!pfnCreateDirectoryTransacted(NULL, szDirectory, NULL, pData->hTransaction))
-            nError = GetLastError();
+            dwErrCode = GetLastError();
     }
     else
     {
         if(!CreateDirectory(szDirectory, NULL))
-            nError = GetLastError();
+            dwErrCode = GetLastError();
     }
 
-    // If the directory already exists, take it as success
-    if(nError == ERROR_ALREADY_EXISTS)
-        nError = ERROR_SUCCESS;
-    return nError;
+    return dwErrCode;
 }
 
 //-----------------------------------------------------------------------------
@@ -152,8 +149,8 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
         pAnchors->AddAnchor(hDlg, IDC_CREATE_FILE, akRight | akBottom);
         pAnchors->AddAnchor(hDlg, IDC_CLOSE_HANDLE, akRight | akBottom);
         pAnchors->AddAnchor(hDlg, IDC_RESULT_FRAME, akLeft | akRight | akBottom);
-        pAnchors->AddAnchor(hDlg, IDC_LAST_ERROR_TITLE, akLeft | akBottom);
-        pAnchors->AddAnchor(hDlg, IDC_LAST_ERROR, akLeft | akRight | akBottom);
+        pAnchors->AddAnchor(hDlg, IDC_ERROR_CODE_TITLE, akLeft | akBottom);
+        pAnchors->AddAnchor(hDlg, IDC_ERROR_CODE, akLeft | akRight | akBottom);
         pAnchors->AddAnchor(hDlg, IDC_HANDLE_TITLE, akLeft | akBottom);
         pAnchors->AddAnchor(hDlg, IDC_HANDLE, akLeft | akRight | akBottom);
     }
@@ -286,7 +283,7 @@ static int OnMakeDirectoryClick(HWND hDlg)
     LPTSTR szPathPart = pData->szDirName;
     LPTSTR szTemp;
     TCHAR chSaveChar;
-    int nError = ERROR_SUCCESS;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
     // Get the values from dialog controls to the dialog data
     if(SaveDialog(hDlg) != ERROR_SUCCESS)
@@ -307,8 +304,8 @@ static int OnMakeDirectoryClick(HWND hDlg)
                 // Create the directory part
                 chSaveChar = szTemp[0];
                 szTemp[0] = 0;
-                nError = MyCreateDirectory(pData, szDirectory);
-                if(nError != ERROR_SUCCESS)
+                dwErrCode = MyCreateDirectory(pData, szDirectory);
+                if(dwErrCode != ERROR_SUCCESS)
                     break;
 
                 // Go to the next part of the path
@@ -318,15 +315,15 @@ static int OnMakeDirectoryClick(HWND hDlg)
         }
         else
         {
-            nError = MyCreateDirectory(pData, szDirectory);
+            dwErrCode = MyCreateDirectory(pData, szDirectory);
         }
     }
     else
     {
-        nError = MyCreateDirectory(pData, szDirectory);
+        dwErrCode = MyCreateDirectory(pData, szDirectory);
     }
 
-    SetResultInfo(hDlg, nError, pData->hFile);
+    SetResultInfo(hDlg, RSI_LAST_ERROR | RSI_HANDLE, dwErrCode, pData->hFile);
     return TRUE;
 }
 
@@ -334,7 +331,7 @@ static int OnCreateFileClick(HWND hDlg)
 {
     TFileTestData * pData = GetDialogData(hDlg);
     HANDLE hTemplateFile = NULL;
-    int nError = ERROR_SUCCESS;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
     // Close the handle, if already open
     if(IsHandleValid(pData->hFile))
@@ -344,19 +341,18 @@ static int OnCreateFileClick(HWND hDlg)
     if(SaveDialog(hDlg) != ERROR_SUCCESS)
         return FALSE;
 
-    // Change the directory (If any)
+    // Change the directory (if any)
     if(pData->szDirName[0] != 0)
     {
         if(!SetCurrentDirectory(pData->szDirName))
         {
-            nError = GetLastError();
-            SetResultInfo(hDlg, nError, INVALID_HANDLE_VALUE);
+            SetResultInfo(hDlg, RSI_LAST_ERROR | RSI_HANDLE, GetLastError(), INVALID_HANDLE_VALUE);
             return TRUE;
         }
     }
 
     // Prepare the template file
-    if(nError == ERROR_SUCCESS && pData->szTemplate[0] != 0)
+    if(dwErrCode == ERROR_SUCCESS && pData->szTemplate[0] != 0)
     {
         hTemplateFile = CreateFile(pData->szTemplate,
                                    FILE_READ_EA,
@@ -366,11 +362,11 @@ static int OnCreateFileClick(HWND hDlg)
                                    0,
                                    NULL);
         if(hTemplateFile == INVALID_HANDLE_VALUE)
-            nError = GetLastError();
+            dwErrCode = GetLastError();
     }
 
     // Prepare the file open
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
         if(pData->bUseTransaction == FALSE)
         {
@@ -409,19 +405,19 @@ static int OnCreateFileClick(HWND hDlg)
         }
 
         if(IsHandleInvalid(pData->hFile))
-            nError = GetLastError();
+            dwErrCode = GetLastError();
     }
 
     if(IsHandleValid(hTemplateFile))
         CloseHandle(hTemplateFile);
-    SetResultInfo(hDlg, nError, pData->hFile);
+    SetResultInfo(hDlg, RSI_LAST_ERROR | RSI_HANDLE, dwErrCode, pData->hFile);
     return TRUE;
 }
 
 static int OnCloseHandleClick(HWND hDlg)
 {
     TFileTestData * pData = GetDialogData(hDlg);
-    int nError = ERROR_SUCCESS;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
     if(IsHandleValid(pData->hFile))
     {
@@ -436,11 +432,11 @@ static int OnCloseHandleClick(HWND hDlg)
         }
 
         if(!CloseHandle(pData->hFile))
-            nError = GetLastError();
+            dwErrCode = GetLastError();
+        pData->hFile = INVALID_HANDLE_VALUE;
     }
 
-    pData->hFile = NULL;
-    SetResultInfo(hDlg, nError, pData->hFile);
+    SetResultInfo(hDlg, RSI_LAST_ERROR | RSI_HANDLE, dwErrCode, pData->hFile);
     return TRUE;
 }
 

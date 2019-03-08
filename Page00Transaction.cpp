@@ -11,7 +11,7 @@
 #include "FileTest.h"
 #include "resource.h"
 
-static void UpdateDialog(HWND hDlg, int nError)
+static void UpdateDialog(HWND hDlg, DWORD dwErrCode)
 {
     TFileTestData * pData = GetDialogData(hDlg);
     BOOL bEnable;
@@ -28,7 +28,7 @@ static void UpdateDialog(HWND hDlg, int nError)
                                       IDC_ROLLBACK_TRANSACTION, IDC_ROLLBACK_TRANSACTION_HINT,
                                       0);
 
-        SetResultInfo(hDlg, nError, pData->hTransaction);
+        SetResultInfo(hDlg, RSI_LAST_ERROR | RSI_HANDLE, dwErrCode, pData->hTransaction);
     }
     else
     {
@@ -68,8 +68,8 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
         pAnchors->AddAnchor(hDlg, IDC_CLOSE_HANDLE, akLeft | akTop | akRight);
         pAnchors->AddAnchor(hDlg, IDC_CLOSE_HANDLE_HINT, akLeft | akTop | akRight);
         pAnchors->AddAnchor(hDlg, IDC_RESULT_FRAME, akLeft | akRight | akBottom);
-        pAnchors->AddAnchor(hDlg, IDC_LAST_ERROR_TITLE, akLeft | akBottom);
-        pAnchors->AddAnchor(hDlg, IDC_LAST_ERROR, akLeft | akRight | akBottom);
+        pAnchors->AddAnchor(hDlg, IDC_ERROR_CODE_TITLE, akLeft | akBottom);
+        pAnchors->AddAnchor(hDlg, IDC_ERROR_CODE, akLeft | akRight | akBottom);
         pAnchors->AddAnchor(hDlg, IDC_HANDLE_TITLE, akLeft | akBottom);
         pAnchors->AddAnchor(hDlg, IDC_HANDLE, akLeft | akRight | akBottom);
     }

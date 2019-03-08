@@ -41,10 +41,10 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
         pAnchors->AddAnchor(hDlg, IDC_DELETE, akRight | akBottom);
         pAnchors->AddAnchor(hDlg, IDC_SET_EA, akRight | akBottom);
         pAnchors->AddAnchor(hDlg, IDC_RESULT_FRAME, akLeft | akRight | akBottom);
-        pAnchors->AddAnchor(hDlg, IDC_RESULT_STATUS_TITLE, akLeft | akBottom);
-        pAnchors->AddAnchor(hDlg, IDC_RESULT_STATUS, akLeft | akRight | akBottom);
-        pAnchors->AddAnchor(hDlg, IDC_IOSTATUS_INFO_TITLE, akLeft | akBottom);
-        pAnchors->AddAnchor(hDlg, IDC_IOSTATUS_INFO, akLeft | akRight | akBottom);
+        pAnchors->AddAnchor(hDlg, IDC_ERROR_CODE_TITLE, akLeft | akBottom);
+        pAnchors->AddAnchor(hDlg, IDC_ERROR_CODE, akLeft | akRight | akBottom);
+        pAnchors->AddAnchor(hDlg, IDC_INFORMATION_TITLE, akLeft | akBottom);
+        pAnchors->AddAnchor(hDlg, IDC_INFORMATION, akLeft | akRight | akBottom);
     }
 
     return TRUE;
@@ -140,7 +140,7 @@ static int OnQueryEa(HWND hDlg)
     }
 
     // Set the result to the dialog
-    SetResultInfo(hDlg, Status, NULL, IoStatus.Information);
+    SetResultInfo(hDlg, RSI_NTSTATUS | RSI_INFORMATION, Status, &IoStatus);
     if(EaBuffer != NULL)
         HeapFree(g_hHeap, 0, EaBuffer);
     return TRUE;
@@ -165,7 +165,7 @@ static int OnSetEa(HWND hDlg)
                          dwEaLength);
 
     // Set the result to the dialog
-    SetResultInfo(hDlg, Status, NULL, IoStatus.Information);
+    SetResultInfo(hDlg, RSI_NTSTATUS | RSI_INFORMATION, Status, &IoStatus);
 
     // Delete buffers and exit
     if(pFileEa != NULL)

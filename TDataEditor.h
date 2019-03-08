@@ -25,7 +25,13 @@
 // Data Editor styles
 #define DES_HSCROLL                    0x00000010
 #define DES_VSCROLL                    0x00000020
-#define DES_ADDRESS64                  0x00000040   // The address is always 64-bit
+
+enum TPointerFormat
+{
+    PtrPlatformSpecific = 0,
+    PtrPointer32Bit,
+    PtrPointer64Bit
+};
 
 //-----------------------------------------------------------------------------
 // Messages for data editor (via WM_NOTIFY)
@@ -63,10 +69,10 @@ extern const LPTSTR szDataEditClassName;
 // Registers the data editor
 int RegisterDataEditor(HINSTANCE hInst);
 
-// Set the number of bytes per line
-int DataEditor_SetBytesPerLine(HWND hWndDataEdit, int cbBytesPerLine);
-
 // Applies the new data
 int DataEditor_SetData(HWND hWndDataEdit, ULONGLONG BaseAddress, LPVOID pvData, SIZE_T cbData);
+
+// Sets the pointer format
+int DataEditor_SetDataFormat(HWND hWndDataEdit, TPointerFormat PtrFormat, SIZE_T cbBytesPerLine);
 
 #endif // __TDATAEDITOR_H__

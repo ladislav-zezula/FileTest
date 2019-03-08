@@ -5,11 +5,11 @@
 /*---------------------------------------------------------------------------*/
 /*   Date    Ver   Who  Comment                                              */
 /* --------  ----  ---  -------                                              */
-/* 14.07.03  1.00  Lad  The first version of TestFile.h                      */
+/* 14.07.03  1.00  Lad  The first version of FileTest.h                      */
 /*****************************************************************************/
 
-#ifndef __TESTFILE_H__
-#define __TESTFILE_H__
+#ifndef __FILETEST_H__
+#define __FILETEST_H__
 
 #ifndef UNICODE
 #define UNICODE
@@ -81,7 +81,9 @@
 
 #define APC_TYPE_NONE               0
 #define APC_TYPE_READ_WRITE         1
-#define APC_TYPE_FSCTL              2
+#define APC_TYPE_LOCK_UNLOCK        2
+#define APC_TYPE_FSCTL              3
+#define APC_TYPE_IOCTL              4
 
 #define COPY_FILE_USE_READ_WRITE    0x01000000      // Manual file copy - use ReadFile + WriteFile
 #define COPY_FILE_SKIP_IO_ERRORS    0x02000000      // On I/O errors, replace loaded data with zeros if failed
@@ -122,26 +124,33 @@ struct TContextMenu
     HMENU hMenu;                            // Pre-loaded HMENU
 };
 
+// Common structure for data blob 
+struct TDataBlob
+{
+    DWORD SetLength(SIZE_T NewLength);
+    void Free();
+
+    LPBYTE pbData;                          // Pointer to the data
+    SIZE_T cbData;                          // Current length of the data
+    SIZE_T cbDataMax;                       // Maximum length of the data
+};
+
 // Common structure for APCs. Keep its size 8-byte aligned
 struct TApcEntry
 {
     // Common APC entry members
     IO_STATUS_BLOCK IoStatus;               // IO_STATUS_BLOCK for the entry
+    LARGE_INTEGER ByteOffset;               // Starting offset of the operation
     OVERLAPPED Overlapped;                  // Overlapped structure for the Win32 APIs
     LIST_ENTRY Entry;                       // Links to other APC entries
     HANDLE hEvent;                          // When signalled, triggers this APC
     HWND hWndPage;                          // Page that initiated the APC
-    UINT ApcType;                           // Common member for determining type of the APC
-    UINT UserParam;                         // Any user-defined 32-bit value (e.g. FSCTL code)
-};
-
-// Extended structure for read/write APCs
-struct TApcReadWrite : public TApcEntry
-{
-    LARGE_INTEGER ByteOffset;               // Starting offset of the operation
-    bool bIncrementPosition;                // If true, the file position will be incremented when complete
-    bool bNativeCall;                       // If true, the native function has been called (NtReadFile / NtWriteFile)
-    bool bUpdateData;                       // If true, data need to be updated after operation is complete
+    ULONG ApcType;                          // Common member for determining type of the APC
+    ULONG UserParam;                        // Any user-defined 32-bit value (e.g. FSCTL code)
+    ULONG BufferLength;                     // Length of data buffer (following the TApcEntry structure)
+    ULONG bAsynchronousCompletion:1;        // If truem the request returned pending status and will be completed asynchronously
+    ULONG bIncrementPosition:1;             // If true, the file position will be incremented when complete
+    ULONG bHasIoStatus:1;                   // If true, the IO_STATUS_BLOCK is valid (otherwise it's OVERLAPED)
 };
 
 // Structure used by main dialog to hold all its data
@@ -216,6 +225,7 @@ struct TFileTestData : public TWindowData
     size_t        cbSectViewSize;
     ULONG         dwSectAllocType;          // AllocationType for NtMapViewOfSection
     ULONG         dwSectWin32Protect;       // Win32Protect for NtMapViewOfSection
+    UINT          FillPattern;              // Fill data pattern
 
     ULONG         dwCopyFileFlags;          // For file copying
     ULONG         dwMoveFileFlags;          // For MoveFileEx
@@ -228,13 +238,10 @@ struct TFileTestData : public TWindowData
     HWND          hWndBlink;                // It not NULL, this is the handle of blink window
     BOOL          bEnableResizing;          // TRUE if the dialog is allowed to be resized
 
-    LPBYTE        pbFileData;               // Buffer for ReadFile/WriteFile
-    ULONG         cbFileData;               // Size of pbNtInfoBuff in bytes
-    ULONG         cbFileDataMax;            // Size of the buffer pointed by pbFileData
-    UINT          FillPattern;              // Fill data pattern type
-
-    LPBYTE        pbNtInfoBuff;             // Buffer for NtQueryInformationFile/NtSetInformationFile
-    ULONG         cbNtInfoBuff;             // Size of pbNtInfoBuff in bytes
+    TDataBlob     RdWrData;                 // Buffer for ReadFile / WriteFile
+    TDataBlob     NtInfoData;               // Buffer for NtQueryInformationFile/NtSetInformationFile
+    TDataBlob     InData;                   // Input buffer for DeviceIoControlFile / NtDeviceIoControlFile / NtfsControlFile
+    TDataBlob     OutData;                  // Output buffer for DeviceIoControlFile / NtDeviceIoControlFile / NtfsControlFile
 
     PREPARSE_DATA_BUFFER ReparseData;       // Buffer for reparse points
     ULONG         ReparseDataLength;        // Total length of reparse data buffer
@@ -312,30 +319,6 @@ struct TInfoData
 
 #define FILE_INFO_NOTIMPL(classname, structname, ischain)   \
     {(int)classname, _T(#classname), NULL, NULL, FALSE, FALSE}
-
-
-//-----------------------------------------------------------------------------
-// Prototypes for read/write APIs
-
-typedef BOOL (WINAPI * READWRITE)(
-    IN HANDLE hFile,
-    IN LPVOID lpBuffer,
-    IN DWORD nNumberOfBytesToRead,
-    OUT LPDWORD lpNumberOfBytesRead,
-    IN LPOVERLAPPED lpOverlapped
-    );
-
-typedef NTSTATUS (NTAPI * NTREADWRITE)(
-    IN HANDLE FileHandle,
-    IN HANDLE Event OPTIONAL,
-    IN PIO_APC_ROUTINE ApcRoutine OPTIONAL,
-    IN PVOID ApcContext OPTIONAL,
-    OUT PIO_STATUS_BLOCK IoStatusBlock,
-    OUT PVOID Buffer,
-    IN ULONG Length,
-    IN PLARGE_INTEGER ByteOffset OPTIONAL,
-    IN PULONG Key OPTIONAL
-    );
 
 //-----------------------------------------------------------------------------
 // Prototypes for transaction APIs
@@ -469,7 +452,6 @@ BOOL GetTokenVirtualizationEnabled(PBOOL pbEnabled);
 BOOL SetTokenVirtualizationEnabled(BOOL bEnabled);
 
 HWND AttachIconToEdit(HWND hDlg, HWND hWndChild, UINT nIDIcon);
-void SetResultInfo(HWND hDlg, NTSTATUS Status, HANDLE hHandle = NULL, UINT_PTR ResultLength = 0, PLARGE_INTEGER pResultLength = NULL);
 
 void ResolveDynamicLoadedAPIs();
 void UnloadDynamicLoadedAPIs();
@@ -502,6 +484,24 @@ ULONG RtlComputeCrc32(ULONG InitialCrc, PVOID Buffer, ULONG Length);
 BOOL WINAPI MyAddMandatoryAce(PACL pAcl, DWORD dwAceRevision, DWORD dwAceFlags, DWORD MandatoryPolicy, PSID pLabelSid);
 
 //-----------------------------------------------------------------------------
+// Common function to set result of an operation
+
+// Supported flags
+#define RSI_LAST_ERROR  0x00000001              // IDC_ERROR_CODE  -> DWORD dwErrCode (with blinking icon)
+#define RSI_NTSTATUS    0x00000002              // IDC_ERROR_CODE  -> NTSTATUS Status (with blinking icon)
+#define RSI_HANDLE      0x00000004              // IDC_HANDLE      -> HANDLE hHandle;
+#define RSI_NOINFO      0x00000008              // IDC_INFORMATION -> Set empty
+#define RSI_INFORMATION 0x00000010              // IDC_INFORMATION -> PIO_STATUS_BLOCK IoStatus
+#define RSI_INFO_INT32  0x00000020              // IDC_INFORMATION -> DWORD Information
+#define RSI_NTCREATE    0x00000040              // IDC_INFORMATION -> PIO_STATUS_BLOCK IoStatus
+#define RSI_READ        0x00000080              // IDC_INFORMATION -> DWORD BytesRead
+#define RSI_WRITTEN     0x00000100              // IDC_INFORMATION -> DWORD BytesWritten
+#define RSI_FILESIZE    0x00000200              // IDC_INFORMATION -> PLARGE_INTEGER FileSize
+#define RSI_FILEPOS     0x00000400              // IDC_INFORMATION -> PLARGE_INTEGER FilePos
+
+void SetResultInfo(HWND hDlg, DWORD dwFlags, ...);
+
+//-----------------------------------------------------------------------------
 // Conversion of FILETIME to text and back
 
 LPTSTR FileTimeToText(
@@ -531,11 +531,10 @@ INT_PTR FlagsDialog_PreArranged(HWND hWndParent, UINT nIDDialog, UINT nIDCtrl, T
 INT_PTR EaEditorDialog(HWND hParent, PFILE_FULL_EA_INFORMATION * pEaInfo);
 INT_PTR PrivilegesDialog(HWND hParent);
 INT_PTR ObjectIDActionDialog(HWND hParent);
-INT_PTR FileActionDialog(HWND hParent);
 INT_PTR ObjectGuidHelpDialog(HWND hParent);
 INT_PTR CopyFileDialog(HWND hParent, TFileTestData * pData);
 
-TApcEntry * CreateApcEntry(TWindowData * pData, UINT ApcType, size_t cbApcSize);
+TApcEntry * CreateApcEntry(TWindowData * pData, UINT ApcType, size_t cbExtraSize = 0);
 bool InsertApcEntry(TWindowData * pData, TApcEntry * pApc);
 void FreeApcEntry(TApcEntry * pApc);
 
@@ -567,8 +566,9 @@ INT_PTR CALLBACK PageProc08(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);
 INT_PTR CALLBACK PageProc09(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);
 INT_PTR CALLBACK PageProc10(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);
 INT_PTR CALLBACK PageProc11(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);
+INT_PTR CALLBACK PageProc12(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 //-----------------------------------------------------------------------------
 // Debugging functions
 
-#endif // __TESTFILE_H__
+#endif // __FILETEST_H__

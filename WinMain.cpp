@@ -14,11 +14,6 @@
 #pragma comment(lib, "Comctl32.lib")
 
 //-----------------------------------------------------------------------------
-// Local defines
-
-#define INITIAL_FILEINFO_BUFFER_SIZE 0x10000
-
-//-----------------------------------------------------------------------------
 // Global variables
 
 TContextMenu g_ContextMenus[MAX_CONTEXT_MENUS];
@@ -244,10 +239,6 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
     memset(g_ContextMenus, 0, sizeof(g_ContextMenus));
     EnumResourceNames(g_hInst, RT_MENU, EnumMenusProc, NULL);
 
-    // Allocate default size for the FileInfo.
-    pData->pbNtInfoBuff = (LPBYTE)HeapAlloc(g_hHeap, HEAP_ZERO_MEMORY, INITIAL_FILEINFO_BUFFER_SIZE);
-    pData->cbNtInfoBuff = INITIAL_FILEINFO_BUFFER_SIZE;
-
     // Set default values for opening relative file by NtOpenFile
     pData->dwDesiredAccessRF     = FILE_READ_DATA;
     pData->dwOpenOptionsRF       = 0;
@@ -286,13 +277,15 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
     // Call the dialog
     FileTestDialog(NULL, pData);
 
+    // Free the data blobs
+    pData->NtInfoData.Free();
+    pData->RdWrData.Free();
+    pData->OutData.Free();
+    pData->InData.Free();
+
     // Cleanup the TFileTestData structure and exit
     if(pData->pFileEa != NULL)
         delete [] pData->pFileEa;
-    if(pData->pbFileData != NULL)
-        VirtualFree(pData->pbFileData, pData->cbFileDataMax, MEM_RELEASE);
-    if(pData->pbNtInfoBuff != NULL)
-        HeapFree(g_hHeap, 0, pData->pbNtInfoBuff);
     HeapFree(g_hHeap, 0, pData);
 
     UnloadDynamicLoadedAPIs();

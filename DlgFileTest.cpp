@@ -81,15 +81,17 @@ static DWORD WINAPI ApcThread(LPVOID pvParameter)
 
         // Prepare the list of handles to wait
         EnterCriticalSection(&pData->ApcLock);
-        pHeadEntry = &pData->ApcList;
-        for(pListEntry = pHeadEntry->Flink; pListEntry != pHeadEntry; pListEntry = pListEntry->Flink)
         {
-            // Retrieve the APC entry
-            pApc = CONTAINING_RECORD(pListEntry, TApcEntry, Entry);
+            pHeadEntry = &pData->ApcList;
+            for(pListEntry = pHeadEntry->Flink; pListEntry != pHeadEntry; pListEntry = pListEntry->Flink)
+            {
+                // Retrieve the APC entry
+                pApc = CONTAINING_RECORD(pListEntry, TApcEntry, Entry);
 
-            // Insert the APC entry to the wait list
-            WaitHandles[dwWaitCount] = pApc->hEvent;
-            ApcList[dwWaitCount++] = pApc;
+                // Insert the APC entry to the wait list
+                WaitHandles[dwWaitCount] = pApc->hEvent;
+                ApcList[dwWaitCount++] = pApc;
+            }
         }
         LeaveCriticalSection(&pData->ApcLock);
 
@@ -102,43 +104,51 @@ static DWORD WINAPI ApcThread(LPVOID pvParameter)
         {
             // If we need just to update wait list, do it
             if(pData->dwAlertReason == ALERT_REASON_UPDATE_WAIT)
-                continue;                        
+                continue;
             break;
         }
 
-        // Check if any of the APCs has broken
+        // Check if any of the APCs has triggered
         if(WAIT_OBJECT_0 < dwWaitResult && dwWaitResult < (WAIT_OBJECT_0 + dwWaitCount))
         {
             // Get the pointer to the triggered APC
             pApc = ApcList[dwWaitResult - WAIT_OBJECT_0];
             assert(pApc != NULL);
 
-            // Lock the list and remove the APC from the list
+            // Remove the APC from the list (locked)
             EnterCriticalSection(&pData->ApcLock);
-            RemoveEntryList(&pApc->Entry);
-            pData->nApcCount--;
+            {
+                RemoveEntryList(&pApc->Entry);
+                pApc->Entry.Flink = NULL;
+                pApc->Entry.Blink = NULL;
+                pData->nApcCount--;
+            }
             LeaveCriticalSection(&pData->ApcLock);
 
             // Send the APC to the main dialog
             // Note that the main dialog is responsible for freeing the APC
-            PostMessage(pData->hDlg, WM_APC, 0, (LPARAM)pApc);
+            PostMessage(pApc->hWndPage, WM_APC, 0, (LPARAM)pApc);
         }
     }
 
     // Now we need to free all the APCs
     EnterCriticalSection(&pData->ApcLock);
-    pHeadEntry = &pData->ApcList;
-    for(pListEntry = pHeadEntry->Flink; pListEntry != pHeadEntry; )
     {
-        // Retrieve the APC entry
-        pApc = CONTAINING_RECORD(pListEntry, TApcEntry, Entry);
-        pListEntry = pListEntry->Flink;
+        pHeadEntry = &pData->ApcList;
+        for(pListEntry = pHeadEntry->Flink; pListEntry != pHeadEntry; )
+        {
+            // Retrieve the APC entry
+            pApc = CONTAINING_RECORD(pListEntry, TApcEntry, Entry);
+            pListEntry = pListEntry->Flink;
 
-        // Remove the APC from the list and free it
-        RemoveEntryList(&pApc->Entry);
-        FreeApcEntry(pApc);
+            // Remove the APC from the list and free it
+            FreeApcEntry(pApc);
+        }
+        
+        // Reset the APC list
+        InitializeListHead(&pData->ApcList);
+        pData->nApcCount = 0;
     }
-    pData->nApcCount = 0;;
     LeaveCriticalSection(&pData->ApcLock);
     
     return 0;
@@ -317,13 +327,23 @@ static void InitializeTabControl(HWND hDlg, TWindowData * pData)
 #endif
     nPages++;
 
-    // Fill the "Streams".
+    // Fill the "Streams" page.
     ZeroMemory(&psp[nPages], sizeof(PROPSHEETPAGE));
     psp[nPages].dwSize      = sizeof(PROPSHEETPAGE);
     psp[nPages].dwFlags     = PSP_DEFAULT;
     psp[nPages].hInstance   = g_hInst;
     psp[nPages].pszTemplate = MAKEINTRESOURCE(IDD_PAGE11_STREAMS);
     psp[nPages].pfnDlgProc  = PageProc11;
+    psp[nPages].lParam      = (LPARAM)pData;
+    nPages++;
+
+    // Fill the "Ioctl" page.
+    ZeroMemory(&psp[nPages], sizeof(PROPSHEETPAGE));
+    psp[nPages].dwSize      = sizeof(PROPSHEETPAGE);
+    psp[nPages].dwFlags     = PSP_DEFAULT;
+    psp[nPages].hInstance   = g_hInst;
+    psp[nPages].pszTemplate = MAKEINTRESOURCE(IDD_PAGE12_IOCTL);
+    psp[nPages].pfnDlgProc  = PageProc12;
     psp[nPages].lParam      = (LPARAM)pData;
     nPages++;
 
@@ -662,24 +682,6 @@ static void OnTimerCheckMouse(HWND hDlg)
     }
 }
 
-static void OnApc(HWND /* hDlg */, LPARAM lParam)
-{
-    TApcEntry * pApc = (TApcEntry *)lParam;
-
-    // Only if the APC is valid
-    if(pApc != NULL)
-    {
-        // Let the same page to handle the APC operation.
-        // The page may be invisible (switched away from) at the moment,
-        // but it must exist
-        if(IsWindow(pApc->hWndPage))
-            SendMessage(pApc->hWndPage, WM_APC, 0, lParam);
-
-        // Delete the APC after the page has handled it.
-        FreeApcEntry(pApc);
-    }
-}
-
 static void OnHelpAbout(HWND hDlg)
 {
     HelpAboutDialog(hDlg);
@@ -771,10 +773,6 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM l
                 OnTimerCheckMouse(hDlg);
             break;
 
-        case WM_APC:
-            OnApc(hDlg, lParam);
-            return TRUE;
-
         case WM_COMMAND:
             return OnCommand(hDlg, HIWORD(wParam), LOWORD(wParam));
 
@@ -843,7 +841,7 @@ static BOOL IsMyDialogMessage(HWND hDlg, LPMSG pMsg)
 //-----------------------------------------------------------------------------
 // Public functions - APC support
 
-TApcEntry * CreateApcEntry(TWindowData * pData, UINT ApcType, size_t cbApcSize)
+TApcEntry * CreateApcEntry(TWindowData * pData, UINT ApcType, size_t cbExtraSize)
 {
     TApcEntry * pApc = NULL;
 
@@ -851,7 +849,7 @@ TApcEntry * CreateApcEntry(TWindowData * pData, UINT ApcType, size_t cbApcSize)
     if(pData->nApcCount < MAXIMUM_WAIT_OBJECTS - 1)
     {
         // Allocate space for the APC structure
-        pApc = (TApcEntry *)HeapAlloc(g_hHeap, HEAP_ZERO_MEMORY, cbApcSize);
+        pApc = (TApcEntry *)HeapAlloc(g_hHeap, HEAP_ZERO_MEMORY, sizeof(TApcEntry) + cbExtraSize);
         if(pApc != NULL)
         {
             // Create new event object for the APC entry
@@ -882,6 +880,9 @@ bool InsertApcEntry(TWindowData * pData, TApcEntry * pApc)
         // If there is too many APCs queued, do nothing
         if(pData->nApcCount < MAXIMUM_WAIT_OBJECTS - 1)
         {
+            // Mark the APC as complete asynchronously
+            pApc->bAsynchronousCompletion = TRUE;
+
             // Insert the APC to the APC list.
             // The APC thread does not know about it yet
             EnterCriticalSection(&pData->ApcLock);
@@ -895,7 +896,6 @@ bool InsertApcEntry(TWindowData * pData, TApcEntry * pApc)
         }
     }
 
-    // TODO: Memory leak when failed!!!
     return false;
 }
 

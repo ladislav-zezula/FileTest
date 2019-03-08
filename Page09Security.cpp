@@ -1414,10 +1414,10 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
         pAnchors->AddAnchor(hDlg, IDC_SET_BLANK, akLeftCenter | akBottom);
         pAnchors->AddAnchor(hDlg, IDC_SET_SECURITY, akRight | akBottom);
         pAnchors->AddAnchor(hDlg, IDC_RESULT_FRAME, akLeft | akRight | akBottom);
-        pAnchors->AddAnchor(hDlg, IDC_RESULT_STATUS_TITLE, akLeft | akBottom);
-        pAnchors->AddAnchor(hDlg, IDC_RESULT_STATUS, akLeft | akRight | akBottom);
-        pAnchors->AddAnchor(hDlg, IDC_IOSTATUS_INFO_TITLE, akLeft | akBottom);
-        pAnchors->AddAnchor(hDlg, IDC_IOSTATUS_INFO, akLeft | akRight | akBottom);
+        pAnchors->AddAnchor(hDlg, IDC_ERROR_CODE_TITLE, akLeft | akBottom);
+        pAnchors->AddAnchor(hDlg, IDC_ERROR_CODE, akLeft | akRight | akBottom);
+        pAnchors->AddAnchor(hDlg, IDC_INFORMATION_TITLE, akLeft | akBottom);
+        pAnchors->AddAnchor(hDlg, IDC_INFORMATION, akLeft | akRight | akBottom);
     }
 
     // Set the default security information to query
@@ -1623,7 +1623,7 @@ static int OnQuerySecurity(HWND hDlg)
     }
 
     // Set the result to the dialog controls
-    SetResultInfo(hDlg, Status, NULL, cbSD);
+    SetResultInfo(hDlg, RSI_NTSTATUS | RSI_INFO_INT32, Status, cbSD);
 
     // If succeeded, load our tree view with security information
     if(NT_SUCCESS(Status))
@@ -1739,7 +1739,7 @@ static int OnSetSecurity(HWND hDlg)
     {
         // Set the result to the dialog controls
         Status = NtSetSecurityObject(pData->hFile, AppliedSecInfo, &sd);
-        SetResultInfo(hDlg, Status);
+        SetResultInfo(hDlg, RSI_NTSTATUS | RSI_NOINFO, Status);
     }
 
     // Free all 4 parts of the security information
@@ -1985,7 +1985,7 @@ static int OnBeginLabelEdit(HWND hDlg, LPNMTVDISPINFO pTVDispInfo)
             break;
 
         default:
-            SetResultInfo(hDlg, STATUS_CANNOT_EDIT_THIS);
+            SetResultInfo(hDlg, RSI_NTSTATUS, STATUS_CANNOT_EDIT_THIS);
             break;
     }
 
@@ -2011,54 +2011,54 @@ static int OnEndLabelEdit(HWND hDlg, LPNMTVDISPINFO pTVDispInfo)
             case TREE_ITEM_ACE_HEADER_FLAGS:
                 bAcceptChanges = DeferSetItemNumericValue(hDlg, pTVDispInfo, AceHdrFlags, szAceHdrFlagsFmt);
                 if(bAcceptChanges == FALSE)
-                    SetResultInfo(hDlg, STATUS_INVALID_DATA_FORMAT);
+                    SetResultInfo(hDlg, RSI_NTSTATUS, STATUS_INVALID_DATA_FORMAT);
                 break;
 
             case TREE_ITEM_ACE_MASK:
                 bAcceptChanges = DeferSetItemNumericValue(hDlg, pTVDispInfo, AceMasks, szAceMaskFmt);
                 if(bAcceptChanges == FALSE)
-                    SetResultInfo(hDlg, STATUS_INVALID_DATA_FORMAT);
+                    SetResultInfo(hDlg, RSI_NTSTATUS, STATUS_INVALID_DATA_FORMAT);
                 break;
 
             case TREE_ITEM_ADS_ACE_MASK:
                 bAcceptChanges = DeferSetItemNumericValue(hDlg, pTVDispInfo, AdsAceMasks, szAceMaskFmt);
                 if(bAcceptChanges == FALSE)
-                    SetResultInfo(hDlg, STATUS_INVALID_DATA_FORMAT);
+                    SetResultInfo(hDlg, RSI_NTSTATUS, STATUS_INVALID_DATA_FORMAT);
                 break;
 
             case TREE_ITEM_MANDATORY_MASK:
                 bAcceptChanges = DeferSetItemNumericValue(hDlg, pTVDispInfo, MandatoryMasks, szAceMaskFmt);
                 if(bAcceptChanges == FALSE)
-                    SetResultInfo(hDlg, STATUS_INVALID_DATA_FORMAT);
+                    SetResultInfo(hDlg, RSI_NTSTATUS, STATUS_INVALID_DATA_FORMAT);
                 break;
 
             case TREE_ITEM_MANDATORY_LABEL:
                 bAcceptChanges = DeferSetItemNumericValue(hDlg, pTVDispInfo, NULL, szIntLevelFmt);
                 if(bAcceptChanges == FALSE)
-                    SetResultInfo(hDlg, STATUS_INVALID_DATA_FORMAT);
+                    SetResultInfo(hDlg, RSI_NTSTATUS, STATUS_INVALID_DATA_FORMAT);
                 break;
 
             case TREE_ITEM_ACE_OBJ_GUID:
                 bAcceptChanges = DeferSetItemGuidValue(hDlg, pTVDispInfo, szAceObjTypeFmt);
                 if(bAcceptChanges == FALSE)
-                    SetResultInfo(hDlg, STATUS_INVALID_DATA_FORMAT);
+                    SetResultInfo(hDlg, RSI_NTSTATUS, STATUS_INVALID_DATA_FORMAT);
                 break;
 
             case TREE_ITEM_ACE_OBJ_GUID2:
                 bAcceptChanges = DeferSetItemGuidValue(hDlg, pTVDispInfo, szAceObjTypeFmt2);
                 if(bAcceptChanges == FALSE)
-                    SetResultInfo(hDlg, STATUS_INVALID_DATA_FORMAT);
+                    SetResultInfo(hDlg, RSI_NTSTATUS, STATUS_INVALID_DATA_FORMAT);
                 break;
 
             case TREE_ITEM_SID:
             case TREE_ITEM_NO_SID:
                 bAcceptChanges = DeferSetItemSidValue(hDlg, pTVDispInfo);
                 if(bAcceptChanges == FALSE)
-                    SetResultInfo(hDlg, STATUS_INVALID_DATA_FORMAT);
+                    SetResultInfo(hDlg, RSI_NTSTATUS, STATUS_INVALID_DATA_FORMAT);
                 break;
 
             default:
-                SetResultInfo(hDlg, STATUS_CANNOT_EDIT_THIS);
+                SetResultInfo(hDlg, RSI_NTSTATUS, STATUS_CANNOT_EDIT_THIS);
                 break;
         }
     }

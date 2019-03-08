@@ -91,7 +91,7 @@ static LPTSTR StringFromWide(LPCWSTR szStringW, ULONG cchLength)
 
     return szStringT;
 }
-
+/*
 static void NormalizeStreamName(LPTSTR szStreamName)
 {
     LPTSTR szSrc = szStreamName;
@@ -106,7 +106,7 @@ static void NormalizeStreamName(LPTSTR szStreamName)
         *szTrg++ = *szSrc++;
     *szTrg = 0;
 }
-
+*/
 static void ItemDataToString(
     LPTSTR szStreamData,
     size_t nMaxChars,
@@ -692,7 +692,7 @@ static NTSTATUS StreamsToListView(
     {
         // Get the name and value from the EA
         szStreamName = StringFromWide(StrmBuffer->StreamName, StrmBuffer->StreamNameLength / sizeof(WCHAR));
-        NormalizeStreamName(szStreamName);
+//      NormalizeStreamName(szStreamName);
 
         // Get the stream size
         cbStreamData = StrmBuffer->StreamSize.LowPart;
@@ -704,7 +704,7 @@ static NTSTATUS StreamsToListView(
         if(pbStreamData != NULL)
         {
             // Prepare the ADS name
-            szFormat = (szStreamName[0] != 0) ? _T("%s:%s") : _T("%s");
+            szFormat = (szStreamName[0] != 0) ? _T("%s%s") : _T("%s");
             StringCchPrintf(szFileName, _countof(szFileName), szFormat, pData->szFileName1, szStreamName);
             Status = FileNameToUnicodeString(&FileName, szFileName);
             if(!NT_SUCCESS(Status))
@@ -797,10 +797,10 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
         pAnchors->AddAnchor(hDlg, IDC_EXPORT_STREAMS, akLeftCenter | akBottom);
         pAnchors->AddAnchor(hDlg, IDC_IMPORT_STREAMS, akRight | akBottom);
         pAnchors->AddAnchor(hDlg, IDC_RESULT_FRAME, akLeft | akRight | akBottom);
-        pAnchors->AddAnchor(hDlg, IDC_RESULT_STATUS_TITLE, akLeft | akBottom);
-        pAnchors->AddAnchor(hDlg, IDC_RESULT_STATUS, akLeft | akRight | akBottom);
-        pAnchors->AddAnchor(hDlg, IDC_IOSTATUS_INFO_TITLE, akLeft | akBottom);
-        pAnchors->AddAnchor(hDlg, IDC_IOSTATUS_INFO, akLeft | akRight | akBottom);
+        pAnchors->AddAnchor(hDlg, IDC_ERROR_CODE_TITLE, akLeft | akBottom);
+        pAnchors->AddAnchor(hDlg, IDC_ERROR_CODE, akLeft | akRight | akBottom);
+        pAnchors->AddAnchor(hDlg, IDC_INFORMATION_TITLE, akLeft | akBottom);
+        pAnchors->AddAnchor(hDlg, IDC_INFORMATION, akLeft | akRight | akBottom);
     }
 
     return TRUE;
@@ -919,7 +919,7 @@ static int OnExportStreams(HWND hDlg, bool bExportAsWell)
         StreamsToListView(pData, hDlg, hListView, StrmBuffer, bExportAsWell);
 
     // Set the status info
-    SetResultInfo(hDlg, Status, NULL, IoStatus.Information);
+    SetResultInfo(hDlg, RSI_NTSTATUS | RSI_NOINFO, Status);
 
     // Free buffers
     if(StrmBuffer != NULL)
@@ -1053,7 +1053,7 @@ static int OnImportStreams(HWND hDlg)
         NtClose(FileHandle);
 
     // Set the result of the operation
-    SetResultInfo(hDlg, Status);
+    SetResultInfo(hDlg, RSI_NTSTATUS | RSI_NOINFO, Status);
     return TRUE;
 }
 

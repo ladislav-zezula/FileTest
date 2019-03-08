@@ -252,8 +252,8 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
         pAnchors->AddAnchor(hDlg, IDC_UNMAP_VIEW, akRight | akTop);
 
         pAnchors->AddAnchor(hDlg, IDC_RESULT_FRAME, akLeft | akRight | akBottom);
-        pAnchors->AddAnchor(hDlg, IDC_RESULT_STATUS_TITLE, akLeft | akBottom);
-        pAnchors->AddAnchor(hDlg, IDC_RESULT_STATUS, akLeft | akRight | akBottom);
+        pAnchors->AddAnchor(hDlg, IDC_ERROR_CODE_TITLE, akLeft | akBottom);
+        pAnchors->AddAnchor(hDlg, IDC_ERROR_CODE, akLeft | akRight | akBottom);
         pAnchors->AddAnchor(hDlg, IDC_HANDLE_TITLE, akLeft | akBottom);
         pAnchors->AddAnchor(hDlg, IDC_HANDLE, akLeft | akRight | akBottom);
     }
@@ -371,7 +371,7 @@ static int OnNtCreateSectionClick(HWND hDlg, UINT nIDCtrl)
     }
 
     // Set the result info
-    SetResultInfo(hDlg, Status, pData->hSection);
+    SetResultInfo(hDlg, RSI_NTSTATUS | RSI_HANDLE, Status, pData->hSection);
     UpdateDialog(hDlg, pData);
     return TRUE;
 }
@@ -387,7 +387,7 @@ static int OnNtCloseClick(HWND hDlg)
     pData->hSection = NULL;
 
     // Set the result info
-    SetResultInfo(hDlg, Status, pData->hSection);
+    SetResultInfo(hDlg, RSI_NTSTATUS | RSI_HANDLE, Status, pData->hSection);
     UpdateDialog(hDlg, pData);
     return TRUE;
 }
@@ -440,7 +440,7 @@ static int OnMapViewClick(HWND hDlg)
         pData->bSectionViewMapped = TRUE;
     }
 
-    SetResultInfo(hDlg, Status, pData->hSection);
+    SetResultInfo(hDlg, RSI_NTSTATUS | RSI_HANDLE, Status, pData->hSection);
     UpdateDialog(hDlg, pData);
     return TRUE;
 }
@@ -475,7 +475,7 @@ static int OnUnmapViewClick(HWND hDlg)
         pData->cbSectViewSize = 0;
 
         // Show the result
-        SetResultInfo(hDlg, Status, pData->hSection);
+        SetResultInfo(hDlg, RSI_NTSTATUS | RSI_HANDLE, Status, pData->hSection);
         UpdateDialog(hDlg, pData);
     }
     return TRUE;

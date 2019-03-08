@@ -43,10 +43,11 @@ struct TEditorData
     DWORD    dwId;                          // Control ID
     ULONG    ExceptionCode;                 // Last exception code
 
+    SIZE_T   cbBytesPerLine;                // Number of bytes per line
     size_t   nTopIndex;                     // Index of the top line
     size_t   nLines;                        // Number of lines
 
-    int      cbBytesPerLine;                // Number of bytes per line
+	TPointerFormat PointerFormat;           // Format of the pointer
     int      nPointerSize;                  // Width of the address, in chars
     int      nAddressWidth;                 // Width of the address, in chars
     int      nBeginHexaValues;              // Start of the hexa values in the line
@@ -519,33 +520,44 @@ static void RecalculateView(TEditorData * pData)
     }
 }
 
-static void SetBytesPerLine(TEditorData * pData, int cbBytesPerLine)
+static void SetBytesPerLine(TEditorData * pData, SIZE_T cbBytesPerLine)
 {
     // Don't accept zero number of bytes per line
     if(cbBytesPerLine <= 0)
         cbBytesPerLine = 0x10;
 
-    // Always initialize the size of pointer
-    pData->nPointerSize  = (pData->dwStyles & DES_ADDRESS64) ? sizeof(ULONGLONG) : sizeof(void *);
-    pData->nAddressWidth = (pData->nPointerSize == 8) ? 17 : 8;
-
-    // If the bytes per line is being changed
-    if(cbBytesPerLine != pData->cbBytesPerLine)
+    // Set the width of the pointer
+    switch (pData->PointerFormat)
     {
-        // Calculate the sizes
-        pData->nBeginHexaValues = pData->nAddressWidth + DATAEDIT_SPACES_BEFORE_HEXA;
-        pData->nEndHexaValues   = pData->nBeginHexaValues + (cbBytesPerLine * 3) - 1;
-        pData->nBeginTextValues = pData->nEndHexaValues + DATAEDIT_SPACES_BEFORE_TEXT;
-        pData->nEndTextValues   = pData->nBeginTextValues + cbBytesPerLine;
+        case PtrPlatformSpecific:
+            pData->nAddressWidth = (pData->nPointerSize == 8) ? 17 : 8;
+            pData->nPointerSize = sizeof(void *);
+            break;
 
-        // Remember the number of bytes per line
-        pData->cbBytesPerLine = cbBytesPerLine;
+        case PtrPointer64Bit:
+            pData->nAddressWidth = 17;
+            pData->nPointerSize = 8;
+            break;
 
-        // Reallocate the line buffer
-        if(pData->szLineBuffer != NULL)
-            HeapFree(GetProcessHeap(), 0, pData->szLineBuffer);
-        pData->szLineBuffer = (LPTSTR)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, (pData->nEndTextValues + 1) * sizeof(TCHAR));
+        case PtrPointer32Bit:
+            pData->nAddressWidth = 8;
+            pData->nPointerSize = 4;
+            break;
     }
+
+    // Calculate the sizes
+    pData->nBeginHexaValues = (int)(pData->nAddressWidth + DATAEDIT_SPACES_BEFORE_HEXA);
+    pData->nEndHexaValues   = (int)(pData->nBeginHexaValues + (cbBytesPerLine * 3) - 1);
+    pData->nBeginTextValues = (int)(pData->nEndHexaValues + DATAEDIT_SPACES_BEFORE_TEXT);
+    pData->nEndTextValues   = (INT)(pData->nBeginTextValues + cbBytesPerLine);
+
+    // Remember the number of bytes per line
+    pData->cbBytesPerLine = cbBytesPerLine;
+
+    // Reallocate the line buffer
+    if(pData->szLineBuffer != NULL)
+        HeapFree(GetProcessHeap(), 0, pData->szLineBuffer);
+    pData->szLineBuffer = (LPTSTR)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, (pData->nEndTextValues + 1) * sizeof(TCHAR));
 
     // Force the view to be recalculated
     RecalculateView(pData);
@@ -1208,8 +1220,8 @@ static void OnPaste(HWND hWnd)
     TEditorData * pData = GetEditorData(hWnd);
     size_t nLineOffset = pData->nCaretLine * pData->cbBytesPerLine;
     size_t cchPasteText = 0;
+    size_t nByteIndex = (size_t)(-1);
     LPSTR szPasteText;
-    int nByteIndex = -1;
 
     // Is the cursor before the hexa part?
     if(pData->nCaretCol < pData->nBeginHexaValues)
@@ -1652,19 +1664,6 @@ int RegisterDataEditor(HINSTANCE hInst)
     return nError;
 }
 
-int DataEditor_SetBytesPerLine(HWND hWndDataEdit, int cbBytesPerLine)
-{
-    TEditorData * pData = GetEditorData(hWndDataEdit);
-
-    // Verify the validity of the window and data
-    if(pData == NULL)
-        return ERROR_INVALID_PARAMETER;
-
-    // Apply the byte count
-    SetBytesPerLine(pData, cbBytesPerLine);
-    return ERROR_SUCCESS;
-}
-
 // Applies the new data
 int DataEditor_SetData(HWND hWndDataEdit, ULONGLONG BaseAddress, LPVOID pvData, SIZE_T cbData)
 {
@@ -1690,5 +1689,21 @@ int DataEditor_SetData(HWND hWndDataEdit, ULONGLONG BaseAddress, LPVOID pvData, 
     // Recalculate the view
     RecalculateView(pData);
     InvalidateRect(hWndDataEdit, NULL, TRUE);
+    return ERROR_SUCCESS;
+}
+
+int DataEditor_SetDataFormat(HWND hWndDataEdit, TPointerFormat PointerFormat, SIZE_T cbBytesPerLine)
+{
+    TEditorData * pData = GetEditorData(hWndDataEdit);
+
+    // Verify the validity of the window and data
+    if(pData == NULL)
+        return ERROR_INVALID_PARAMETER;
+
+    // Set the pointer format
+    pData->PointerFormat = PointerFormat;
+
+    // Apply the byte count
+    SetBytesPerLine(pData, cbBytesPerLine);
     return ERROR_SUCCESS;
 }
