@@ -737,8 +737,10 @@ HWND AttachIconToEdit(HWND hDlg, HWND hWndChild, UINT nIDIcon)
     POINT pt;
     HWND hWndBlink = NULL;
     RECT rect;
+    int cx = 16; // GetSystemMetrics(SM_CXSMICON);
+    int cy = 16; // GetSystemMetrics(SM_CYSMICON);
 
-    hIcon = (HICON)LoadImage(g_hInst, MAKEINTRESOURCE(nIDIcon), IMAGE_ICON, 16, 16, LR_SHARED);
+    hIcon = (HICON)LoadImage(g_hInst, MAKEINTRESOURCE(nIDIcon), IMAGE_ICON, cx, cy, LR_SHARED);
     if(hIcon != NULL)
     {
         // Get the position of the edit box window
@@ -746,15 +748,15 @@ HWND AttachIconToEdit(HWND hDlg, HWND hWndChild, UINT nIDIcon)
         pt.x = rect.left;
         pt.y = rect.top;
         ScreenToClient(hDlg, &pt);
-        pt.x = pt.x - 18;
-        pt.y = pt.y + (rect.bottom - rect.top - 16) / 2;
+        pt.x = pt.x - cx - 4;
+        pt.y = pt.y + (rect.bottom - rect.top - cx) / 2;
 
         // Create the window for icon
         hWndBlink = CreateWindowEx(WS_EX_NOPARENTNOTIFY,
                                    WC_STATIC,
                                    NULL,
                                    WS_CHILD | WS_VISIBLE | SS_ICON,
-                                   pt.x, pt.y, 18, 18,
+                                   pt.x, pt.y, cx, cx,
                                    hDlg,
                                    NULL,
                                    g_hInst,
