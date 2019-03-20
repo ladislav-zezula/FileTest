@@ -17,7 +17,7 @@
 #endif
 
 #pragma warning(disable: 4091)  // warning C4091: 'typedef ': ignored on left of 'tagGPFIDL_FLAGS' when no variable is declared
-
+#define OEMRESOURCE
 #include <tchar.h>
 #include <stdio.h>
 
@@ -451,7 +451,7 @@ BOOL GetTokenElevation(PBOOL pbElevated);
 BOOL GetTokenVirtualizationEnabled(PBOOL pbEnabled);
 BOOL SetTokenVirtualizationEnabled(BOOL bEnabled);
 
-HWND AttachIconToEdit(HWND hDlg, HWND hWndChild, UINT nIDIcon);
+HWND AttachIconToEdit(HWND hDlg, HWND hWndChild, LPTSTR szIDIcon);
 
 void ResolveDynamicLoadedAPIs();
 void UnloadDynamicLoadedAPIs();

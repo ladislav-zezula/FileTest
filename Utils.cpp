@@ -731,8 +731,9 @@ static VOID CALLBACK BlinkTimerProc(HWND hDlg, UINT uMsg, UINT_PTR idEvent, DWOR
     }
 }
 
-HWND AttachIconToEdit(HWND hDlg, HWND hWndChild, UINT nIDIcon)
+HWND AttachIconToEdit(HWND hDlg, HWND hWndChild, LPTSTR szIDIcon)
 {
+    HINSTANCE hInst = g_hInst;
     HICON hIcon;
     POINT pt;
     HWND hWndBlink = NULL;
@@ -740,7 +741,12 @@ HWND AttachIconToEdit(HWND hDlg, HWND hWndChild, UINT nIDIcon)
     int cx = 16; // GetSystemMetrics(SM_CXSMICON);
     int cy = 16; // GetSystemMetrics(SM_CYSMICON);
 
-    hIcon = (HICON)LoadImage(g_hInst, MAKEINTRESOURCE(nIDIcon), IMAGE_ICON, cx, cy, LR_SHARED);
+    // Load OEM icons if it's their ID
+    if(IDI_APPLICATION <= szIDIcon && szIDIcon <= IDI_SHIELD)
+        hInst = NULL;
+
+    // Load the icon, 16x16
+    hIcon = (HICON)LoadImage(hInst, szIDIcon, IMAGE_ICON, cx, cy, LR_SHARED);
     if(hIcon != NULL)
     {
         // Get the position of the edit box window
@@ -755,7 +761,7 @@ HWND AttachIconToEdit(HWND hDlg, HWND hWndChild, UINT nIDIcon)
         hWndBlink = CreateWindowEx(WS_EX_NOPARENTNOTIFY,
                                    WC_STATIC,
                                    NULL,
-                                   WS_CHILD | WS_VISIBLE | SS_ICON,
+                                   WS_CHILD | WS_VISIBLE | SS_ICON | SS_REALSIZECONTROL,
                                    pt.x, pt.y, cx, cx,
                                    hDlg,
                                    NULL,
@@ -774,6 +780,7 @@ HWND AttachIconToEdit(HWND hDlg, HWND hWndChild, UINT nIDIcon)
 static void CreateBlinkingIcon(HWND hDlg, HWND hWndChild, int nSeverity)
 {
     TFileTestData * pData = GetDialogData(hDlg);
+//  LPTSTR IconSet[] = { IDI_INFORMATION, IDI_ERROR, MAKEINTRESOURCE(IDI_ICON_WAIT)};
     HWND hWndBlink;
     UINT IconSet[] = {IDI_ICON_INFORMATION, IDI_ICON_ERROR, IDI_ICON_WAIT};
 
@@ -781,7 +788,9 @@ static void CreateBlinkingIcon(HWND hDlg, HWND hWndChild, int nSeverity)
     DeleteBlinkTimer(hDlg);
 
     // Create the icon, left-attached to the edit field
-    hWndBlink = AttachIconToEdit(hDlg, hWndChild, IconSet[nSeverity]);
+    // Note that I tried the system icons, but they look like shit
+    // when reduced to small icon.
+    hWndBlink = AttachIconToEdit(hDlg, hWndChild, MAKEINTRESOURCE(IconSet[nSeverity]));
 
     // Create timer for hiding the window
     pData->BlinkTimer = SetTimer(hDlg, WM_TIMER_BLINK, 800, BlinkTimerProc);

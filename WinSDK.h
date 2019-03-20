@@ -539,8 +539,9 @@ DWORD
 #define IO_REPARSE_TAG_FILE_PLACEHOLDER         (0x80000015L)       
 #define IO_REPARSE_TAG_WOF                      (0x80000017L)       
 #define IO_REPARSE_TAG_WCI                      (0x80000018L)       
+#define IO_REPARSE_TAG_UNHANDLED                (0x80000020L)       
+#define IO_REPARSE_TAG_ONEDRIVE                 (0x80000021L)       
 #define IO_REPARSE_TAG_WCI_1                    (0x90001018L)       
-#define IO_REPARSE_TAG_GLOBAL_REPARSE           (0xA0000019L)       
 #define IO_REPARSE_TAG_CLOUD                    (0x9000001AL)       
 #define IO_REPARSE_TAG_CLOUD_1                  (0x9000101AL)       
 #define IO_REPARSE_TAG_CLOUD_2                  (0x9000201AL)       
@@ -559,12 +560,13 @@ DWORD
 #define IO_REPARSE_TAG_CLOUD_F                  (0x9000F01AL)       
 #define IO_REPARSE_TAG_CLOUD_MASK               (0x0000F000L)       
 #define IO_REPARSE_TAG_APPEXECLINK              (0x8000001BL)       
-#define IO_REPARSE_TAG_GVFS                     (0x9000001CL)       
+#define IO_REPARSE_TAG_PROJFS                   (0x9000001CL)       
 #define IO_REPARSE_TAG_STORAGE_SYNC             (0x8000001EL)       
 #define IO_REPARSE_TAG_WCI_TOMBSTONE            (0xA000001FL)       
 #define IO_REPARSE_TAG_UNHANDLED                (0x80000020L)       
 #define IO_REPARSE_TAG_ONEDRIVE                 (0x80000021L)       
-#define IO_REPARSE_TAG_GVFS_TOMBSTONE           (0xA0000022L)    
+#define IO_REPARSE_TAG_PROJFS_TOMBSTONE         (0xA0000022L)       
+#define IO_REPARSE_TAG_AF_UNIX                  (0x80000023L)       
 
 #ifndef FSCTL_SET_REPARSE_POINT
 #define FSCTL_SET_REPARSE_POINT         CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 41, METHOD_BUFFERED, FILE_SPECIAL_ACCESS) // REPARSE_DATA_BUFFER,

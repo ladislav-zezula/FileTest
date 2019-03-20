@@ -59,12 +59,13 @@ static TFlagInfo ReparseTags[] =
     FLAG_INFO_ENTRY(IO_REPARSE_TAG_CLOUD_E),
     FLAG_INFO_ENTRY(IO_REPARSE_TAG_CLOUD_F),
     FLAG_INFO_ENTRY(IO_REPARSE_TAG_APPEXECLINK),
-    FLAG_INFO_ENTRY(IO_REPARSE_TAG_GVFS),
+    FLAG_INFO_ENTRY(IO_REPARSE_TAG_PROJFS),
     FLAG_INFO_ENTRY(IO_REPARSE_TAG_STORAGE_SYNC),
     FLAG_INFO_ENTRY(IO_REPARSE_TAG_WCI_TOMBSTONE),
     FLAG_INFO_ENTRY(IO_REPARSE_TAG_UNHANDLED),
     FLAG_INFO_ENTRY(IO_REPARSE_TAG_ONEDRIVE),
-    FLAG_INFO_ENTRY(IO_REPARSE_TAG_GVFS_TOMBSTONE),
+    FLAG_INFO_ENTRY(IO_REPARSE_TAG_PROJFS_TOMBSTONE),
+    FLAG_INFO_ENTRY(IO_REPARSE_TAG_AF_UNIX),
     FLAG_INFO_END
 };
 
@@ -686,7 +687,7 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
     EnablePrivilege(_T("SeCreateSymbolicLinkPrivilege"));
 
     // Congigure the right-arrow image 
-    AttachIconToEdit(hDlg, GetDlgItem(hDlg, IDC_SYMLINK_TARGET), IDI_RIGHT_ARROW);
+    AttachIconToEdit(hDlg, GetDlgItem(hDlg, IDC_SYMLINK_TARGET), MAKEINTRESOURCE(IDI_RIGHT_ARROW));
 
     // Default number of characters for combo box's edit field is 46.
     // We have to increase it.
