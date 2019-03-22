@@ -31,7 +31,6 @@
 #define IDD_EAS_EDITOR                  128
 #define IDR_FILL_DATA_MENU              129
 #define IDD_VALUES_DIALOG_OLD           130
-#define IDD_PRIVILEGES                  131
 #define IDD_FILE_TEST                   132
 #define IDD_OBJECT_ID_MORE              133
 #define IDD_DATA_EDITOR                 137
@@ -50,9 +49,12 @@
 #define IDI_RIGHT_ARROW                 143
 #define IDD_OBJECT_GUID_HELP            143
 #define IDR_ACL_TYPE_MENU               144
+#define IDD_SETTINGS01                  144
 #define IDS_INTEGRITY_LEVEL             145
 #define IDR_DELETE_OBJECT_MENU          145
+#define IDD_SETTINGS02                  145
 #define IDR_DELETE_FILE_MENU            146
+#define IDD_SETTINGS03                  146
 #define IDC_FILE_ATTRIBUTE_READONLY     800
 #define IDC_FILE_ATTRIBUTE_HIDDEN       801
 #define IDC_FILE_ATTRIBUTE_SYSTEM       802
@@ -233,7 +235,9 @@
 #define IDC_INTLEVEL_EXPLAIN            1137
 #define IDC_EXIT                        1138
 #define IDC_INTLEVEL_EXPLAIN2           1138
+#define IDC_INTLEVEL_FRAME2             1138
 #define IDC_TAB                         1139
+#define IDC_INTLEVEL_EXPLAIN3           1139
 #define IDC_MAIN_FRAME                  1140
 #define IDC_RESULT_FRAME                1141
 #define IDC_HANDLE_TITLE                1143
@@ -349,11 +353,14 @@
 #define IDC_IOCTL_CODE_DECODED          1250
 #define IDC_ERROR_CODE                  1251
 #define IDC_ERROR_CODE_TITLE            1252
+#define IDC_ENABLE_LONG_PATH_NAME       1252
 #define IDS_FLUSH_FILE_BUFFERS_TIP      4000
 #define IDS_OPLOCK_BROKE                4002
 #define IDS_FILE_INFO_CLASS             4003
 #define IDS_VOLUME_INFO_CLASS           4004
 #define IDS_ENTER_FLAGS                 4005
+#define IDS_SETTINGS                    4006
+#define IDS_E_APPLY_SETTINGS            4007
 #define IDS_NOFILESELECTED              4010
 #define IDS_INVALIDACCESS               4011
 #define IDS_OPERATIONCOMPLETE           4012
@@ -471,7 +478,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        149
 #define _APS_NEXT_COMMAND_VALUE         40065
-#define _APS_NEXT_CONTROL_VALUE         1252
+#define _APS_NEXT_CONTROL_VALUE         1253
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

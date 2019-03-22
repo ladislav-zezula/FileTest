@@ -21,6 +21,7 @@ HINSTANCE g_hInst;
 TToolTip g_Tooltip;
 HANDLE g_hHeap;
 DWORD g_dwWinVer;
+DWORD g_dwWinBuild;
 TCHAR g_szInitialDirectory[MAX_PATH];
 DWORD g_dwMenuCount = 0;
 

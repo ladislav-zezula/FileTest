@@ -37,7 +37,7 @@ END
 // RT_MANIFEST
 //
 
-1 24 "res\\FileTest.exe.manifest"
+1                       RT_MANIFEST             "res\\FileTest.exe.manifest"
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -109,8 +109,8 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 2,7,0,580
- PRODUCTVERSION 2,7,0,580
+ FILEVERSION 2,7,0,581
+ PRODUCTVERSION 2,7,0,581
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -127,13 +127,13 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Ladislav Zezula"
             VALUE "FileDescription", "Interactive File System API Test"
-            VALUE "FileVersion", "2, 7, 0, 580\0"
+            VALUE "FileVersion", "2, 7, 0, 581\0"
             VALUE "InternalName", "FileTest"
             VALUE "LegalCopyright", "Copyright © 2004 - 2018 Ladislav Zezula"
             VALUE "LegalTrademarks", "http://www.zezula.net"
             VALUE "OriginalFilename", "FileTest.exe"
             VALUE "ProductName", "FileTest"
-            VALUE "ProductVersion", "2, 7, 0, 580\0"
+            VALUE "ProductVersion", "2, 7, 0, 581\0"
         END
     END
     BLOCK "VarFileInfo"
@@ -624,33 +624,6 @@ BEGIN
     DEFPUSHBUTTON   "OK",IDOK,185,71,50,14,WS_GROUP
 END
 
-IDD_PRIVILEGES DIALOGEX 0, 0, 250, 203
-STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
-CAPTION "Process Privileges"
-FONT 8, "MS Shell Dlg", 0, 0, 0x1
-BEGIN
-    GROUPBOX        " Privileges of the FileTest process ",IDC_STATIC,7,7,236,89,WS_GROUP
-    CONTROL         "SeTakeOwnershipPrivilege",IDC_TAKE_OWNERSHIP_NAME,
-                    "Button",BS_AUTOCHECKBOX | WS_DISABLED | WS_GROUP | WS_TABSTOP,15,22,108,10
-    CONTROL         "SeChangeNotifyPrivilege",IDC_CHANGE_NOTIFY_NAME,"Button",BS_AUTOCHECKBOX | WS_DISABLED | WS_TABSTOP,15,35,108,10
-    CONTROL         "SeManageVolumePrivilege",IDC_MANAGE_VOLUME_NAME,"Button",BS_AUTOCHECKBOX | WS_DISABLED | WS_TABSTOP,15,48,108,10
-    CONTROL         "SeSecurityPrivilege",IDC_SECURITY_NAME,"Button",BS_AUTOCHECKBOX | WS_DISABLED | WS_TABSTOP,15,61,108,10
-    CONTROL         "SeRestorePrivilege",IDC_RESTORE_NAME,"Button",BS_AUTOCHECKBOX | WS_DISABLED | WS_TABSTOP,129,22,108,10
-    CONTROL         "SeBackupPrivilege",IDC_BACKUP_NAME,"Button",BS_AUTOCHECKBOX | WS_DISABLED | WS_TABSTOP,129,35,108,10
-    CONTROL         "SeTcbPrivilege",IDC_TCB_NAME,"Button",BS_AUTOCHECKBOX | WS_DISABLED | WS_TABSTOP,129,48,108,10
-    PUSHBUTTON      "Select All",IDC_SELECT_ALL,134,74,50,14,WS_GROUP
-    PUSHBUTTON      "Clear All",IDC_CLEAR_ALL,188,74,50,14
-    GROUPBOX        " Integrity Level (requires Windows Vista) ",IDC_INTLEVEL_FRAME,7,100,236,76
-    LTEXT           "FileTest's Integrity Level: ",IDC_INTLEVEL_TITLE,15,112,84,14,SS_CENTERIMAGE
-    EDITTEXT        IDC_INTLEVEL_VALUE,102,112,59,14,ES_AUTOHSCROLL
-    CONTROL         "",IDC_INTLEVEL_UPDOWN,"msctls_updown32",UDS_ARROWKEYS,161,112,10,14
-    LTEXT           "(unknown)",IDC_INTLEVEL_TEXT,174,112,64,14,SS_CENTERIMAGE
-    LTEXT           "A thread can only access objects with integrity level lower or equal to its integrity level.",IDC_INTLEVEL_EXPLAIN,13,132,224,17
-    LTEXT           "Note: Increasing process integrity level requires SeTcbPrivilege enabled.",IDC_INTLEVEL_EXPLAIN2,13,153,224,17
-    DEFPUSHBUTTON   "OK",IDOK,139,182,50,14
-    PUSHBUTTON      "Cancel",IDCANCEL,193,182,50,14
-END
-
 IDD_OBJECT_ID_MORE DIALOGEX 0, 0, 265, 111
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Object ID Options"
@@ -873,6 +846,49 @@ BEGIN
     EDITTEXT        IDC_INFORMATION,73,313,220,14,ES_AUTOHSCROLL | ES_READONLY
 END
 
+IDD_SETTINGS01 DIALOGEX 0, 0, 251, 107
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Privileges"
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    GROUPBOX        " Privileges of the FileTest process ",IDC_STATIC,7,7,237,92,WS_GROUP
+    CONTROL         "SeTakeOwnershipPrivilege",IDC_TAKE_OWNERSHIP_NAME,
+                    "Button",BS_AUTOCHECKBOX | WS_DISABLED | WS_GROUP | WS_TABSTOP,15,22,108,10
+    CONTROL         "SeChangeNotifyPrivilege",IDC_CHANGE_NOTIFY_NAME,"Button",BS_AUTOCHECKBOX | WS_DISABLED | WS_TABSTOP,15,35,108,10
+    CONTROL         "SeManageVolumePrivilege",IDC_MANAGE_VOLUME_NAME,"Button",BS_AUTOCHECKBOX | WS_DISABLED | WS_TABSTOP,15,48,108,10
+    CONTROL         "SeSecurityPrivilege",IDC_SECURITY_NAME,"Button",BS_AUTOCHECKBOX | WS_DISABLED | WS_TABSTOP,15,61,108,10
+    CONTROL         "SeRestorePrivilege",IDC_RESTORE_NAME,"Button",BS_AUTOCHECKBOX | WS_DISABLED | WS_TABSTOP,129,22,108,10
+    CONTROL         "SeBackupPrivilege",IDC_BACKUP_NAME,"Button",BS_AUTOCHECKBOX | WS_DISABLED | WS_TABSTOP,129,35,108,10
+    CONTROL         "SeTcbPrivilege",IDC_TCB_NAME,"Button",BS_AUTOCHECKBOX | WS_DISABLED | WS_TABSTOP,129,48,108,10
+    PUSHBUTTON      "Select All",IDC_SELECT_ALL,135,81,50,14,WS_GROUP
+    PUSHBUTTON      "Clear All",IDC_CLEAR_ALL,189,81,50,14
+END
+
+IDD_SETTINGS02 DIALOGEX 0, 0, 251, 107
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Integrity Level"
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    GROUPBOX        " FileTest's Integrity Level ",IDC_INTLEVEL_FRAME,7,7,237,93
+    EDITTEXT        IDC_INTLEVEL_VALUE,12,20,53,14,ES_AUTOHSCROLL
+    CONTROL         "",IDC_INTLEVEL_UPDOWN,"msctls_updown32",UDS_ARROWKEYS,65,20,12,14
+    LTEXT           "(unknown)",IDC_INTLEVEL_TEXT,81,20,159,14,SS_CENTERIMAGE
+    LTEXT           "A thread can only access objects with integrity level lower or equal to its integrity level. Increasing process integrity level requires SeTcbPrivilege enabled.",IDC_INTLEVEL_EXPLAIN,12,42,227,27
+    LTEXT           "Integrity levels are supported in Windows Vista or newer.",IDC_STATIC,12,76,227,11
+END
+
+IDD_SETTINGS03 DIALOGEX 0, 0, 251, 107
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Long Paths"
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    GROUPBOX        " Long Path Name Support ",IDC_INTLEVEL_FRAME2,7,7,237,93
+    CONTROL         "Enable long path name support",IDC_ENABLE_LONG_PATH_NAME,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,13,20,224,10
+    LTEXT           "With long path names enables, applications can create folders with names of length exceeding MAX_PATH. Requires FileTest restart.",IDC_INTLEVEL_EXPLAIN3,10,35,230,24
+    LTEXT           "This feature is supported in Windows 10 build 14393 or newer.\nYou need to restart FileTest to apply this setting.",IDC_STATIC,10,61,230,19
+END
+
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -1010,14 +1026,6 @@ BEGIN
         BOTTOMMARGIN, 85
     END
 
-    IDD_PRIVILEGES, DIALOG
-    BEGIN
-        LEFTMARGIN, 7
-        RIGHTMARGIN, 243
-        TOPMARGIN, 7
-        BOTTOMMARGIN, 196
-    END
-
     IDD_OBJECT_ID_MORE, DIALOG
     BEGIN
         LEFTMARGIN, 7
@@ -1088,6 +1096,30 @@ BEGIN
         RIGHTMARGIN, 301
         TOPMARGIN, 7
         BOTTOMMARGIN, 332
+    END
+
+    IDD_SETTINGS01, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 244
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 100
+    END
+
+    IDD_SETTINGS02, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 244
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 100
+    END
+
+    IDD_SETTINGS03, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 244
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 100
     END
 END
 #endif    // APSTUDIO_INVOKED
@@ -1201,6 +1233,8 @@ BEGIN
     IDS_FILE_INFO_CLASS     "File Information class"
     IDS_VOLUME_INFO_CLASS   "Volume Information class"
     IDS_ENTER_FLAGS         "Enter Flags"
+    IDS_SETTINGS            "Privileges and Settings"
+    IDS_E_APPLY_SETTINGS    "Failed to apply new settings for %s.\n%s."
     IDS_NOFILESELECTED      "No file selected."
     IDS_INVALIDACCESS       "Invalid access. Please, choose ANSI or Unicode access."
     IDS_OPERATIONCOMPLETE   "Operation complete, no errors."

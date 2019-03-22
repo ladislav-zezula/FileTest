@@ -85,10 +85,19 @@ static int SaveDialog(HWND hDlg)
     return ERROR_SUCCESS;
 }
 
-static DWORD MyCreateDirectory(TFileTestData * pData, LPCTSTR szDirectory)
+static DWORD MyCreateDirectory(TFileTestData * pData, LPCTSTR szDirectory, size_t nLength = MAX_NT_PATH)
 {
     DWORD dwErrCode = ERROR_SUCCESS;
+    TCHAR szCutName[MAX_NT_PATH];
 
+    // Prepare shorter version of the directory name
+    if(nLength < MAX_NT_PATH)
+    {
+        StringCchCopyN(szCutName, _countof(szCutName), szDirectory, nLength);
+        szDirectory = szCutName;
+    }
+
+    // Create the directory, either normal or transacted
     if(pData->bUseTransaction)
     {
         // If the transacted version doesn't exist, do nothing
@@ -279,15 +288,16 @@ static int OnVirtualization(HWND hDlg)
 static int OnMakeDirectoryClick(HWND hDlg)
 {
     TFileTestData * pData = GetDialogData(hDlg);
+    LPTSTR szDirectoryEnd;
     LPTSTR szDirectory = pData->szDirName;
     LPTSTR szPathPart = pData->szDirName;
     LPTSTR szTemp;
-    TCHAR chSaveChar;
     DWORD dwErrCode = ERROR_SUCCESS;
 
     // Get the values from dialog controls to the dialog data
     if(SaveDialog(hDlg) != ERROR_SUCCESS)
         return FALSE;
+    szDirectoryEnd = pData->szDirName + _tcslen(pData->szDirName);
 
     // Now parse the directory as-is, create every sub-directory
     if(szDirectory[0] != 0)
@@ -296,21 +306,16 @@ static int OnMakeDirectoryClick(HWND hDlg)
         szPathPart = FindDirectoryPathPart(szDirectory);
         if(szPathPart != NULL)
         {
-            while(szPathPart[0] != 0)
+            while(dwErrCode == ERROR_SUCCESS && szPathPart[0] != 0)
             {
                 // Find either next backslash or end of string
                 szTemp = FindNextPathSeparator(szPathPart);
+                szPathPart = szTemp + 1;
                 
-                // Create the directory part
-                chSaveChar = szTemp[0];
-                szTemp[0] = 0;
-                dwErrCode = MyCreateDirectory(pData, szDirectory);
-                if(dwErrCode != ERROR_SUCCESS)
-                    break;
-
-                // Go to the next part of the path
-                szPathPart = szTemp;
-                szTemp[0] = chSaveChar;
+                // Attempt to create the directory. For parent directories, allow ERROR_ALREADY_EXISTS
+                dwErrCode = MyCreateDirectory(pData, szDirectory, (szTemp - szDirectory));
+                if(dwErrCode == ERROR_ALREADY_EXISTS && szTemp < szDirectoryEnd)
+                    dwErrCode = ERROR_SUCCESS;
             }
         }
         else

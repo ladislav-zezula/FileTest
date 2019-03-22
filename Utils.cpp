@@ -761,7 +761,7 @@ HWND AttachIconToEdit(HWND hDlg, HWND hWndChild, LPTSTR szIDIcon)
         hWndBlink = CreateWindowEx(WS_EX_NOPARENTNOTIFY,
                                    WC_STATIC,
                                    NULL,
-                                   WS_CHILD | WS_VISIBLE | SS_ICON | SS_REALSIZECONTROL,
+                                   WS_CHILD | WS_VISIBLE | SS_ICON,
                                    pt.x, pt.y, cx, cx,
                                    hDlg,
                                    NULL,
@@ -1121,25 +1121,36 @@ static HINSTANCE hKernel32 = NULL;
 static HINSTANCE hAdvapi32 = NULL;
 static HINSTANCE hKtmw32 = NULL;
 
+DWORD GetBuildNumber(HMODULE hNtdll)
+{
+    ULARGE_INTEGER Version;
+    TCHAR szFileName[MAX_PATH];
+
+    GetModuleFileName(hNtdll, szFileName, _countof(szFileName));
+    GetModuleVersion(szFileName, &Version);
+    return HIWORD(Version.LowPart);
+}
+
 void ResolveDynamicLoadedAPIs()
 {
     // Get imports from Ntdll.dll
     if(hNtdll == NULL)
     {
-        hNtdll = LoadLibrary(_T("Ntdll.dll"));
+        hNtdll = GetModuleHandle(_T("Ntdll.dll"));
         if(hNtdll != NULL)
         {
             pfnRtlGetCurrentTransaction = (RTLGETCURRENTTRANSACTION)
                                           GetProcAddress(hNtdll, "RtlGetCurrentTransaction");
             pfnRtlSetCurrentTransaction = (RTLSETCURRENTTRANSACTION)
                                           GetProcAddress(hNtdll, "RtlSetCurrentTransaction");
+            g_dwWinBuild = GetBuildNumber(hNtdll);
         }
     }
 
     // Get imports from Kernel32.dll
     if(hKernel32 == NULL)
     {
-        hKernel32 = LoadLibrary(_T("Kernel32.dll"));
+        hKernel32 = GetModuleHandle(_T("Kernel32.dll"));
         if(hKernel32 != NULL)
         {
 #ifdef _UNICODE

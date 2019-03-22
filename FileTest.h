@@ -94,6 +94,8 @@
 #define SECTOR_SIZE                 0x200           // Sector size for disk drives
 #endif
 
+#define INTEGRITY_LEVEL_NONE        0xFFFFFFFF
+
 //-----------------------------------------------------------------------------
 // Structures
 
@@ -384,6 +386,7 @@ extern HINSTANCE g_hInst;
 extern TToolTip g_Tooltip;
 extern HANDLE g_hHeap;
 extern DWORD g_dwWinVer;
+extern DWORD g_dwWinBuild;
 extern TCHAR g_szInitialDirectory[MAX_PATH];
 
 extern RTLGETCURRENTTRANSACTION pfnRtlGetCurrentTransaction;
