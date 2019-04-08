@@ -1121,12 +1121,12 @@ static HINSTANCE hKernel32 = NULL;
 static HINSTANCE hAdvapi32 = NULL;
 static HINSTANCE hKtmw32 = NULL;
 
-DWORD GetBuildNumber(HMODULE hNtdll)
+DWORD GetBuildNumber(HMODULE hMod)
 {
     ULARGE_INTEGER Version;
     TCHAR szFileName[MAX_PATH];
 
-    GetModuleFileName(hNtdll, szFileName, _countof(szFileName));
+    GetModuleFileName(hMod, szFileName, _countof(szFileName));
     GetModuleVersion(szFileName, &Version);
     return HIWORD(Version.LowPart);
 }

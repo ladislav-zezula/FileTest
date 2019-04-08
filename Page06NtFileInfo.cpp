@@ -765,12 +765,40 @@ TStructMember FileCaseSensitiveInformationMembers[] =
     { NULL, TYPE_NONE, 0 }
 };
 
+TFlagInfo FileLinkInformationExValues[] =
+{
+	FLAG_INFO_ENTRY(FILE_LINK_REPLACE_IF_EXISTS),
+	FLAG_INFO_ENTRY(FILE_LINK_POSIX_SEMANTICS),
+	FLAG_INFO_ENTRY(FILE_LINK_SUPPRESS_STORAGE_RESERVE_INHERITANCE),
+	FLAG_INFO_ENTRY(FILE_LINK_NO_INCREASE_AVAILABLE_SPACE),
+	FLAG_INFO_ENTRY(FILE_LINK_NO_DECREASE_AVAILABLE_SPACE),
+	FLAG_INFO_ENTRY(FILE_LINK_PRESERVE_AVAILABLE_SPACE),
+	FLAG_INFO_ENTRY(FILE_LINK_IGNORE_READONLY_ATTRIBUTE),
+	FLAG_INFO_END
+};
+
+
+TStructMember FileLinkInformationExMembers[] =
+{
+    {_T("Flags"),          TYPE_FLAG32,	    sizeof(ULONG), NULL, {(TStructMember *)FileLinkInformationExValues}},
+	{_T("<padding>"),      TYPE_PADDING,    sizeof(HANDLE) },
+    {_T("RootDirectory"),  TYPE_DIR_HANDLE, sizeof(HANDLE)},
+    {_T("FileNameLength"), TYPE_UINT32,     sizeof(ULONG)},
+    {_T("FileName"),       TYPE_WNAME_L32B, FIELD_OFFSET(FILE_LINK_INFORMATION, FileNameLength)},
+    {NULL, TYPE_NONE, 0}
+};
+
 #define FileAttributeCacheInformationMembers            FileUnknownInformationMembers
 #define FileRenameInformationBypassAccessCheckMembers   FileRenameInformationMembers
-#define FileLinkInformationBypassAccessCheckMembers     FileLinkInformationMembers
+#define FileLinkInformationBypassAccessCheckMembers     FileLinkInformationExMembers
 #define FileReplaceCompletionInformationMembers         FileCompletionInformationMembers
 #define FileRenameInformationExMembers                  FileRenameInformationExMembers
 #define FileRenameInformationExBypassAccessCheckMembers FileRenameInformationExMembers
+#define FileCaseSensitiveInformationBypassAccessCheckMembers FileCaseSensitiveInformationMembers
+#define FileLinkInformationExBypassAccessCheckMembers   FileLinkInformationExMembers
+#define FileStorageReserveIdInformationMembers          FileUnknownInformationMembers
+#define FileStorageReserveIdInformationMembers          FileUnknownInformationMembers
+#define FileCaseSensitiveInformationForceAccessCheckMembers  FileCaseSensitiveInformationMembers
 
 TInfoData FileInfoData[] =                                                  
 {
@@ -845,6 +873,11 @@ TInfoData FileInfoData[] =
     FILE_INFO_READONLY(FileMemoryPartitionInformation,          FILE_MEMORY_PARTITION_INFORMATION,           FALSE),
     FILE_INFO_READONLY(FileStatLxInformation,                   FILE_STAT_LX_INFORMATION,                    FALSE),
     FILE_INFO_EDITABLE(FileCaseSensitiveInformation,            FILE_CASE_SENSITIVE_INFORMATION,             FALSE),
+
+    FILE_INFO_EDITABLE(FileLinkInformationEx,                   FILE_LINK_INFORMATION_EX,                    FALSE),
+    FILE_INFO_EDITABLE(FileLinkInformationExBypassAccessCheck,  FILE_LINK_INFORMATION_EX,                    FALSE),
+    FILE_INFO_READONLY(FileStorageReserveIdInformation,         FILE_CASE_SENSITIVE_INFORMATION,             FALSE),
+    FILE_INFO_EDITABLE(FileCaseSensitiveInformationForceAccessCheck, FILE_CASE_SENSITIVE_INFORMATION,       FALSE),
 
     {FileMaximumInformation}                                                                                 
 };
