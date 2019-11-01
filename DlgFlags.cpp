@@ -245,7 +245,7 @@ static void CreateDialogLayout_Empty(TFlagDialogData * pData)
     // If there is at least one flag unused, we need to create an extra button
     if(dwFlags != 0)
     {
-        LoadString(g_hInst, IDS_CUSTOM_VALUE, pData->szCustomValue, _maxchars(pData->szCustomValue));
+        LoadString(g_hInst, IDS_CUSTOM_VALUE, pData->szCustomValue, _countof(pData->szCustomValue));
         pData->ExtraFlag.dwValue = dwFlags;
         pData->ExtraFlag.dwMask  = 0xFFFFFFFF;
         pData->ExtraFlag.szFlagText = pData->szCustomValue;

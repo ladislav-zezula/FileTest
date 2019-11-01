@@ -888,8 +888,8 @@ static int OnSymlinkCreate(HWND hDlg)
     TCHAR szTargetName[MAX_PATH];
 
     // Get the name of the symbolic link
-    GetDlgItemText(hDlg, IDC_SYMLINK, szSymlinkName, _maxchars(szSymlinkName));
-    GetDlgItemText(hDlg, IDC_SYMLINK_TARGET, szTargetName, _maxchars(szTargetName));
+    GetDlgItemText(hDlg, IDC_SYMLINK, szSymlinkName, _countof(szSymlinkName));
+    GetDlgItemText(hDlg, IDC_SYMLINK_TARGET, szTargetName, _countof(szTargetName));
 
     // Query the symbolic link
     InitializeObjectAttributes(&ObjAttr,
@@ -925,7 +925,7 @@ static int OnSymlinkQuery(HWND hDlg)
     ULONG Length = 0;
 
     // Get the name of the symbolic link
-    GetDlgItemText(hDlg, IDC_SYMLINK, szSymlinkName, _maxchars(szSymlinkName));
+    GetDlgItemText(hDlg, IDC_SYMLINK, szSymlinkName, _countof(szSymlinkName));
 
     // Query the symbolic link
     InitializeObjectAttributes(&ObjAttr, &SymlinkName, OBJ_CASE_INSENSITIVE, NULL, NULL);
@@ -1119,8 +1119,8 @@ static int OnHardlinkCreate(HWND hDlg)
     BYTE LinkInfoBuff[0x500];
 
     // Get the name of the symbolic link
-    GetDlgItemText(hDlg, IDC_HARDLINK_LIST, szFileName, _maxchars(szFileName));
-    GetDlgItemText(hDlg, IDC_NEW_HARDLINK, szHardlinkName, _maxchars(szHardlinkName));
+    GetDlgItemText(hDlg, IDC_HARDLINK_LIST, szFileName, _countof(szFileName));
+    GetDlgItemText(hDlg, IDC_NEW_HARDLINK, szHardlinkName, _countof(szHardlinkName));
 
     // Get the plain file name of the hardlink
     szPlainName = _tcsrchr(szHardlinkName, _T('\\'));
@@ -1210,7 +1210,7 @@ static int OnHardlinkQuery(HWND hDlg)
     HWND hCombo = GetDlgItem(hDlg, IDC_HARDLINK_LIST);
 
     // Get the name of the symbolic link
-    GetDlgItemText(hDlg, IDC_HARDLINK_LIST, szFileName, _maxchars(szFileName));
+    GetDlgItemText(hDlg, IDC_HARDLINK_LIST, szFileName, _countof(szFileName));
 
     // Open the hardlink as if it was file
     InitializeObjectAttributes(&ObjAttr, &FileName, OBJ_CASE_INSENSITIVE, NULL, NULL);
@@ -1302,7 +1302,7 @@ static int OnHardlinkDelete(HWND hDlg)
     TCHAR szHardlinkName[MAX_PATH];
 
     // Get the name of the symbolic link
-    GetDlgItemText(hDlg, IDC_HARDLINK_LIST, szHardlinkName, _maxchars(szHardlinkName));
+    GetDlgItemText(hDlg, IDC_HARDLINK_LIST, szHardlinkName, _countof(szHardlinkName));
 
     // Open the symlink and delete it
     InitializeObjectAttributes(&ObjAttr, &FileName, OBJ_CASE_INSENSITIVE, NULL, NULL);
@@ -1330,7 +1330,7 @@ static int OnReparseCreate(HWND hDlg)
     ULONG CreateOptions = FILE_SYNCHRONOUS_IO_ALERT | FILE_OPEN_REPARSE_POINT;
 
     // Get the name of the reparse point
-    GetDlgItemText(hDlg, IDC_REPARSE, szReparseName, _maxchars(szReparseName));
+    GetDlgItemText(hDlg, IDC_REPARSE, szReparseName, _countof(szReparseName));
     ReparseData = pData->ReparseData;
 
     // Prepare the name of the reparse point
@@ -1390,7 +1390,7 @@ static int OnReparseQuery(HWND hDlg)
     TCHAR szReparseName[MAX_PATH];
 
     // Get the name of the reparse point
-    GetDlgItemText(hDlg, IDC_REPARSE, szReparseName, _maxchars(szReparseName));
+    GetDlgItemText(hDlg, IDC_REPARSE, szReparseName, _countof(szReparseName));
     ReparseData = pData->ReparseData;
 
     // Open the reparse point
@@ -1448,7 +1448,7 @@ static int OnReparseDelete(HWND hDlg)
     TCHAR szReparseName[MAX_PATH];
 
     // Get the name of the reparse point
-    GetDlgItemText(hDlg, IDC_REPARSE, szReparseName, _maxchars(szReparseName));
+    GetDlgItemText(hDlg, IDC_REPARSE, szReparseName, _countof(szReparseName));
 
     // Open the reparse point
     Status = FileNameToUnicodeString(&FileName, szReparseName);

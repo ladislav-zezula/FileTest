@@ -158,7 +158,7 @@ static int InsertStreamToListView(
     lvi.iSubItem++;
 
     // Insert the item data
-    ItemDataToString(szStreamData, _maxchars(szStreamData), pbStreamData, cbStreamData);
+    ItemDataToString(szStreamData, _countof(szStreamData), pbStreamData, cbStreamData);
     lvi.pszText  = (LPTSTR)szStreamData;
     ListView_SetItem(hListView, &lvi);
 

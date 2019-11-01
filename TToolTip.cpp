@@ -124,7 +124,7 @@ BOOL TToolTip::AddToolTipInternal(HWND hDlg, UINT nIDCtrl, LPCTSTR szTip, LPARAM
         {
             // If the child window is a static text without SS_NOTIFY,
             // the tooltip would not activate. We need to set the SS_NOTIFY flag
-            GetClassName(hWndChild, szClassName, _maxchars(szClassName));
+            GetClassName(hWndChild, szClassName, _countof(szClassName));
             if(!_tcsicmp(szClassName, WC_STATIC))
             {
                 dwStyle = GetWindowLong(hWndChild, GWL_STYLE);
@@ -162,7 +162,7 @@ void TToolTip::OnGetTooltipText(LPNMTTDISPINFO pTTDispInfo)
         szToolTipText[0] = 0;
 
         // Retrieve the window text and convert it to 32-bit hexa value
-        GetWindowText(hWndChild, szWindowText, _maxchars(szWindowText));
+        GetWindowText(hWndChild, szWindowText, _countof(szWindowText));
         if(Text2Hex32(szWindowText, &dwValue32) == ERROR_SUCCESS)
         {
             // Convert the flags to string

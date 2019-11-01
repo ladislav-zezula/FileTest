@@ -176,7 +176,7 @@ int DlgText2Hex32(HWND hDlg, UINT nIDCtrl, PDWORD pValue)
     if(hWndChild != NULL)
     {
         // Retrieve the window text
-        GetWindowText(hWndChild, szText, _maxchars(szText));
+        GetWindowText(hWndChild, szText, _countof(szText));
     
         // Attempt to convert the value
         nError = Text2Hex32(szText, pValue);
@@ -244,7 +244,7 @@ int DlgText2HexPtr(HWND hDlg, UINT nIDCtrl, PDWORD_PTR pValue)
     if(hWndChild != NULL)
     {
         // Retrieve the window text
-        GetWindowText(hWndChild, szText, _maxchars(szText));
+        GetWindowText(hWndChild, szText, _countof(szText));
     
         // Attempt to convert the value
         nError = Text2HexPtr(szText, pValue);
@@ -314,7 +314,7 @@ int DlgText2Hex64(HWND hDlg, UINT nIDCtrl, PLONGLONG pValue)
     if(hWndChild != NULL)
     {
         // Retrieve the window text
-        GetWindowText(hWndChild, szText, _maxchars(szText));
+        GetWindowText(hWndChild, szText, _countof(szText));
     
         // Attempt to convert the value
         nError = Text2Hex64(szText, pValue);

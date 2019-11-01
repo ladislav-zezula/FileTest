@@ -127,13 +127,13 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Ladislav Zezula"
             VALUE "FileDescription", "Interactive File System API Test"
-            VALUE "FileVersion", "2, 7, 0, 595\0"
+            VALUE "FileVersion", "2, 7, 0, 595"
             VALUE "InternalName", "FileTest"
             VALUE "LegalCopyright", "Copyright © 2004 - 2018 Ladislav Zezula"
             VALUE "LegalTrademarks", "http://www.zezula.net"
             VALUE "OriginalFilename", "FileTest.exe"
             VALUE "ProductName", "FileTest"
-            VALUE "ProductVersion", "2, 7, 0, 595\0"
+            VALUE "ProductVersion", "2, 7, 0, 595"
         END
     END
     BLOCK "VarFileInfo"

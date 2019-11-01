@@ -348,8 +348,8 @@ static void SidToString(PSID pvSid, LPTSTR szString, size_t cchString, bool bAdd
         SID_NAME_USE SidNameUse;
         TCHAR szDomainName[128] = _T("");
         TCHAR szUserName[128] = _T("");
-        DWORD cchDomainName = _maxchars(szDomainName);
-        DWORD cchUserName = _maxchars(szUserName);
+        DWORD cchDomainName = _countof(szDomainName);
+        DWORD cchUserName = _countof(szUserName);
 
         if(LookupAccountSid(NULL, pSid, szUserName, &cchUserName, szDomainName, &cchDomainName, &SidNameUse))
         {
@@ -373,7 +373,7 @@ static bool StringToSid(LPTSTR szSid, PSID * ppSid)
     TCHAR szDomainName[128] = _T("");
     DWORD dwSubAuthCount = 0;
     DWORD dwSubAuth[8];
-    DWORD dwDomainName = _maxchars(szDomainName);
+    DWORD dwDomainName = _countof(szDomainName);
     DWORD dwRevision = SID_REVISION;
     DWORD dwLength = 0;
     BOOL bResult;
@@ -665,7 +665,7 @@ static bool TreeView_ItemToValue32(HWND hTreeView, HTREEITEM hItem, LPDWORD PtrV
     tvi.mask = TVIF_TEXT;
     tvi.hItem = hItem;
     tvi.pszText = szItemText;
-    tvi.cchTextMax = _maxchars(szItemText);
+    tvi.cchTextMax = _countof(szItemText);
     if(TreeView_GetItem(hTreeView, &tvi))
     {
         // Retrieve the value
@@ -691,7 +691,7 @@ static bool TreeView_ItemToGuid(HWND hTreeView, HTREEITEM hItem, LPGUID PtrGuid)
     tvi.mask = TVIF_TEXT;
     tvi.hItem = hItem;
     tvi.pszText = szItemText;
-    tvi.cchTextMax = _maxchars(szItemText);
+    tvi.cchTextMax = _countof(szItemText);
     if(TreeView_GetItem(hTreeView, &tvi))
     {
         // Retrieve the value
@@ -746,7 +746,7 @@ static bool TreeView_ItemToSid(HWND hTreeView, HTREEITEM hItem, PSID * ppSid, bo
     tvi.mask = TVIF_TEXT | TVIF_PARAM;
     tvi.hItem = hItem;
     tvi.pszText = szItemText;
-    tvi.cchTextMax = _maxchars(szItemText);
+    tvi.cchTextMax = _countof(szItemText);
     TreeView_GetItem(hTreeView, &tvi);
 
     // Convert the tree item to SID
@@ -1191,7 +1191,7 @@ static void TreeView_SdToTreeView(
 
     // Clear all current tree view items
     TreeView_DeleteAllItems(hTreeView);
-    LoadString(g_hInst, IDS_NOT_PRESENT, szNotPresent, _maxchars(szNotPresent));
+    LoadString(g_hInst, IDS_NOT_PRESENT, szNotPresent, _countof(szNotPresent));
 
     //
     // Insert tree item for owner security information
