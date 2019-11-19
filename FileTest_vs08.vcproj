@@ -65,6 +65,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				AdditionalOptions="/PDBALTPATH:%_PDB%"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories="../aaa/lib32"
 				GenerateManifest="false"
@@ -145,6 +146,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				AdditionalOptions="/PDBALTPATH:%_PDB%"
 				LinkIncremental="2"
 				AdditionalLibraryDirectories="../aaa/lib64"
 				GenerateManifest="false"
@@ -221,6 +223,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				AdditionalOptions="/PDBALTPATH:%_PDB%"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="../aaa/lib32"
 				GenerateManifest="false"
@@ -303,6 +306,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				AdditionalOptions="/PDBALTPATH:%_PDB%"
 				LinkIncremental="1"
 				AdditionalLibraryDirectories="../aaa/lib64"
 				GenerateManifest="false"

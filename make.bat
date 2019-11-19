@@ -20,7 +20,7 @@ build.exe -czgw
 echo.
 
 :COPY_EXE_32
-PostBuild.exe .\objfre_w2k_x86\i386\%EXE_NAME%.exe /pdb /tools /subsystem4
+PostBuild.exe .\objfre_w2k_x86\i386\%EXE_NAME%.exe /tools /subsystem4
 del buildfre_w2k_x86.log
 echo.
 
@@ -34,7 +34,7 @@ build.exe -czgw
 echo.
 
 :COPY_EXE_64
-PostBuild.exe .\objfre_wlh_amd64\amd64\%EXE_NAME%.exe %EXE_NAME%.rc /pdb /tools /subsystem4
+PostBuild.exe .\objfre_wlh_amd64\amd64\%EXE_NAME%.exe %EXE_NAME%.rc /tools /subsystem4
 del buildfre_wlh_amd64.log
 echo.
 
