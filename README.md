@@ -8,14 +8,12 @@ If you use this tool with [Process Monitor](http://technet.microsoft.com/en-us/s
 ![Interactive File System Test Tool](https://dl.dropboxusercontent.com/u/29668275/filetest.png)
 
 ### Build Requirements
-* Visual Studio 2010
+To build FileTest, you need to have one of these build environments
+* Visual Studio 2017
+* Visual Studio 2008
+* WDK 6001
 
-And to build this project You need to clone [Aaa](https://github.com/ladislav-zezula/Aaa).  
-`Aaa` must be placed,  
-```
--- Your workspace   
-  |  
-  |-- Aaa  
-  |  
-  |-- FileTest  
-```
+1) Make a new directory, e.g. C:\Projects
+2) Clone both [Aaa](https://github.com/ladislav-zezula/Aaa) and [FileTest](https://github.com/ladislav-zezula/FileTest)
+3) Go to C:\Projects\FileTest
+4) Build FileTest by your favorite build environment. Supported are Visual Studio 2017 (use 'FileTest_vs17.bat'), Visual Studio 2008 (use 'FileTest_vs08.bat') or Windows Driver Kit (use `make.bat`).
