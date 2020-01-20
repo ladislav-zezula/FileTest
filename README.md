@@ -25,7 +25,7 @@ To build FileTest, you need to have one of these build environments
 ```
 3) Go to C:\Projects\FileTest
 ```
-   C:\Projects\FileTest
+   cd C:\Projects\FileTest
 ```
 4) Build FileTest by your favorite build environment. Supported are Visual Studio 2017 (use `FileTest_vs17.bat`), Visual Studio 2008 (use `FileTest_vs08.bat`) or Windows Driver Kit (use `make.bat`).
 ```
