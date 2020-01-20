@@ -14,10 +14,20 @@ To build FileTest, you need to have one of these build environments
 * WDK 6001
 
 1) Make a new directory, e.g. C:\Projects
+```
+   md C:\Projects
+   cd C:\Projects
+```
 2) Clone both [Aaa](https://github.com/ladislav-zezula/Aaa) and [FileTest](https://github.com/ladislav-zezula/FileTest)
 ```
    git clone https://github.com/ladislav-zezula/Aaa.git
    git clone https://github.com/ladislav-zezula/FileTest.git
 ```
 3) Go to C:\Projects\FileTest
+```
+   C:\Projects\FileTest
+```
 4) Build FileTest by your favorite build environment. Supported are Visual Studio 2017 (use `FileTest_vs17.bat`), Visual Studio 2008 (use `FileTest_vs08.bat`) or Windows Driver Kit (use `make.bat`).
+```
+   FileTest_vs17.bat
+```
