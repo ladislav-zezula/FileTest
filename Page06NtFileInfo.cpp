@@ -618,7 +618,7 @@ TStructMember FileVolumeNameInformationMembers[] =
 
 TStructMember FileIdInformationMembers[] =
 {
-    {_T("VolumeSerialNumber"), TYPE_UINT64,     sizeof(ULONG)},
+    {_T("VolumeSerialNumber"), TYPE_UINT64,     sizeof(LARGE_INTEGER)},
     {_T("FileId"),             TYPE_FILEID128,  sizeof(FILE_ID_128)},
     {NULL, TYPE_NONE, 0}
 };
