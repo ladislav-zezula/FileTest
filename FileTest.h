@@ -382,9 +382,7 @@ typedef BOOL (WINAPI * CREATEHARDLINK)(
 // Global variables
 
 extern TContextMenu g_ContextMenus[MAX_CONTEXT_MENUS];
-extern HINSTANCE g_hInst;
 extern TToolTip g_Tooltip;
-extern HANDLE g_hHeap;
 extern DWORD g_dwWinVer;
 extern DWORD g_dwWinBuild;
 extern TCHAR g_szInitialDirectory[MAX_PATH];

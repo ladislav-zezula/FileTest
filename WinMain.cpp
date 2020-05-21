@@ -17,9 +17,7 @@
 // Global variables
 
 TContextMenu g_ContextMenus[MAX_CONTEXT_MENUS];
-HINSTANCE g_hInst;
 TToolTip g_Tooltip;
-HANDLE g_hHeap;
 DWORD g_dwWinVer;
 DWORD g_dwWinBuild;
 TCHAR g_szInitialDirectory[MAX_PATH];
@@ -60,7 +58,7 @@ static void SetTokenObjectIntegrityLevel(DWORD dwIntegrityLevel)
         if(GetLastError() == ERROR_NO_TOKEN)
             OpenProcessToken(GetCurrentProcess(), WRITE_OWNER, &hToken);
     }
-    
+
     // If succeeded, set the integrity level
     if(hToken != NULL)
     {
@@ -127,9 +125,8 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
     bool bAsynchronousOpen = false;
     int nFileNameIndex = 0;
 
-    // Save the instance
-    g_hInst = hInstance;
-    g_hHeap = GetProcessHeap();
+    // Initialize the instance
+    InitInstance(hInstance);
     InitCommonControls();
 
     // Get the Windows version
@@ -169,7 +166,7 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
             // Check for default read+write access
             if(!_tcsnicmp(szArg, _T("DesiredAccess:"), 14))
                 Text2Hex32(szArg+14, &dwDesiredAccess);
-            
+
             // Check for default share read+write
             if(!_tcsnicmp(szArg, _T("ShareAccess:"), 12))
                 Text2Hex32(szArg+12, &dwShareAccess);
@@ -215,7 +212,7 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
     // to lowest possible value. This will allow us to open our token even if the user
     // lowers the integrity level.
     //
-    
+
     SetTokenObjectIntegrityLevel(SECURITY_MANDATORY_UNTRUSTED_RID);
 
     //
@@ -272,7 +269,7 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
     pData->dwSectWin32Protect    = PAGE_READONLY;
 
 #ifdef _DEBUG
-    DebugCode_TEST();    
+    DebugCode_TEST();
 #endif
 
     // Call the dialog

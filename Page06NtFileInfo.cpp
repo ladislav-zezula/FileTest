@@ -1404,8 +1404,15 @@ static int DataToItemText(TStructMember * pMember, LPTSTR szBuffer, size_t nMaxC
             break;
         }
 
-        case TYPE_ARRAY8_FIXED:
         case TYPE_FILEID128:
+        {
+            PLARGE_INTEGER pliValue = (PLARGE_INTEGER)pMember->pbDataPtr;
+
+            StringCchPrintfEx(szBuffer, (szEndChar - szBuffer), &szBuffer, NULL, 0, _T("%016I64X-%016I64X"), pliValue[1].QuadPart, pliValue[0].QuadPart);
+            break;
+        }
+
+        case TYPE_ARRAY8_FIXED:
         {
             LPBYTE pbData = (LPBYTE)pMember->pbDataPtr;
 
