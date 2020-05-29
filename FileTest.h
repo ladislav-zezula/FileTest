@@ -210,7 +210,7 @@ struct TFileTestData : public TWindowData
     ULONG         dwShareAccessRF;          // Share Access for the relative file
 
     ULONG         dwObjAttrFlags;           // ObjAttr.Attributes
-    ULONG         dwFileAttributes;
+    ULONG         dwFlagsAndAttributes;
     ULONG         dwShareAccess;
     ULONG         dwCreateDisposition1;     // For CreateFile
     ULONG         dwCreateDisposition2;     // For NtCreateFile

@@ -77,7 +77,7 @@ static int SaveDialog(HWND hDlg)
         return nError;
     if((nError = DlgText2Hex32(hDlg, IDC_SHARE_ACCESS, &pData->dwShareAccess)) != ERROR_SUCCESS)
         return nError;
-    if((nError = DlgText2Hex32(hDlg, IDC_FILE_ATTRIBUTES, &pData->dwFileAttributes)) != ERROR_SUCCESS)
+    if((nError = DlgText2Hex32(hDlg, IDC_FILE_ATTRIBUTES, &pData->dwFlagsAndAttributes)) != ERROR_SUCCESS)
         return nError;
 
     pData->dwCreateDisposition1 = ComboBox_GetCurSel(hCombo) + 1;
@@ -203,7 +203,7 @@ static int OnSetActive(HWND hDlg)
 
     // Set the various create options
     Hex2DlgText32(hDlg, IDC_DESIRED_ACCESS, pData->dwDesiredAccess);
-    Hex2DlgText32(hDlg, IDC_FILE_ATTRIBUTES, pData->dwFileAttributes);
+    Hex2DlgText32(hDlg, IDC_FILE_ATTRIBUTES, pData->dwFlagsAndAttributes);
     Hex2DlgText32(hDlg, IDC_SHARE_ACCESS, pData->dwShareAccess);
 
     // Enable/disable transaction
@@ -386,7 +386,7 @@ static int OnCreateFileClick(HWND hDlg)
                                       pData->dwShareAccess,
                                       NULL,
                                       pData->dwCreateDisposition1,
-                                      pData->dwFileAttributes,
+                                      pData->dwFlagsAndAttributes,
                                       hTemplateFile);
         }
         else
@@ -402,7 +402,7 @@ static int OnCreateFileClick(HWND hDlg)
                                                    pData->dwShareAccess,
                                                    NULL,
                                                    pData->dwCreateDisposition1,
-                                                   pData->dwFileAttributes,
+                                                   pData->dwFlagsAndAttributes,
                                                    hTemplateFile,
                                                    pData->hTransaction,
                                                    NULL,

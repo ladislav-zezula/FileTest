@@ -111,25 +111,34 @@ static void ItemDataToString(
     LPTSTR szStreamData,
     size_t nMaxChars,
     LPBYTE pbStreamData,
-    ULONG cbStreamData)
+    ULONG cbStreamData,
+    NTSTATUS Status)
 {
     LPBYTE pbStreamDataEnd = pbStreamData + cbStreamData;
     LPTSTR szStreamDataEnd = szStreamData + nMaxChars;
 
-    // Preset with default string
-    LoadString(g_hInst, IDS_EMPTY_STREAM, szStreamData, (int)nMaxChars);
-
     // Iterate over all data
-    while(pbStreamData < pbStreamDataEnd)
+    if(NT_SUCCESS(Status))
     {
-        // Is there enough space for the text data?
-        if(szStreamData + 3 > szStreamDataEnd)
-            break;
+        // Preset with default string
+        LoadString(g_hInst, IDS_EMPTY_STREAM, szStreamData, (int)nMaxChars);
 
-        // Print the data bytes
-        StringCchPrintf(szStreamData, (szStreamDataEnd - szStreamData), _T("%02X "), (DWORD)pbStreamData[0]);
-        szStreamData += 3;
-        pbStreamData++;
+        // Fill the stream data
+        while(pbStreamData < pbStreamDataEnd)
+        {
+            // Is there enough space for the text data?
+            if(szStreamData + 3 > szStreamDataEnd)
+                break;
+
+            // Print the data bytes
+            StringCchPrintf(szStreamData, (szStreamDataEnd - szStreamData), _T("%02X "), (DWORD)pbStreamData[0]);
+            szStreamData += 3;
+            pbStreamData++;
+        }
+    }
+    else
+    {
+        StringCchPrintf(szStreamData, nMaxChars, _T("Error %08X when reading data"), Status);
     }
 }
 
@@ -138,7 +147,8 @@ static int InsertStreamToListView(
     LPCTSTR szStreamName,
     LPBYTE pbStreamData,
     DWORD dwStreamType,
-    ULONG cbStreamData)
+    ULONG cbStreamData,
+    NTSTATUS Status = STATUS_SUCCESS)
 {
     LVITEM lvi;
     TCHAR szStreamData[0x100];
@@ -158,7 +168,7 @@ static int InsertStreamToListView(
     lvi.iSubItem++;
 
     // Insert the item data
-    ItemDataToString(szStreamData, _countof(szStreamData), pbStreamData, cbStreamData);
+    ItemDataToString(szStreamData, _countof(szStreamData), pbStreamData, cbStreamData, Status);
     lvi.pszText  = (LPTSTR)szStreamData;
     ListView_SetItem(hListView, &lvi);
 
@@ -684,8 +694,20 @@ static NTSTATUS StreamsToListView(
     HANDLE hFile;
     LPTSTR szStreamName;
     LPBYTE pbStreamData;
+    DWORD dwFlagsAndAttributes = FILE_SYNCHRONOUS_IO_ALERT;
     DWORD cbStreamData;
     DWORD dwStreamIndex = 1;
+
+    //
+    // If the parent file was open with FILE_OPEN_REPARSE_POINT,
+    // we need to propagate this flag to the streams too.
+    // This allows us to open file created with alternate streams that are links to non existing file
+    // 
+    // Example: mklink.exe C:\sample_file.exe:byebye \??\nul
+    //
+
+    dwFlagsAndAttributes |= (pData->dwFlagsAndAttributes & FILE_FLAG_OPEN_REPARSE_POINT);
+    dwFlagsAndAttributes |= (pData->dwCreateOptions & FILE_OPEN_REPARSE_POINT);
 
     // Iterate over all file streams and show them/save them
     for(;;)
@@ -717,31 +739,20 @@ static NTSTATUS StreamsToListView(
                                 &ObjAttr,
                                 &IoStatus,
                                  FILE_SHARE_READ,
-                                 FILE_SYNCHRONOUS_IO_ALERT);
-            FreeFileNameString(&FileName);
-            if(!NT_SUCCESS(Status))
+                                dwFlagsAndAttributes);
+            if(NT_SUCCESS(Status))
             {
-                MessageBoxError(hDlg, IDS_FAILED_TO_OPEN_STREAM, RtlNtStatusToDosError(Status), szFileName);
-                break;
+                // Read the data from the stream
+                Status = NtReadFile(hFile, NULL, NULL, NULL, &IoStatus, pbStreamData, cbStreamData, NULL, NULL);
+                NtClose(hFile);
             }
 
-            // Read the data from the stream
-            Status = NtReadFile(hFile, NULL, NULL, NULL, &IoStatus, pbStreamData, cbStreamData, NULL, NULL);
-            if(!NT_SUCCESS(Status))
-                break;
-
-            // Close the file
-            NtClose(hFile);
-
             // Fill them into the list view
-            InsertStreamToListView(hListView,
-                                   szStreamName,
-                                   pbStreamData,
-                                   STREAM_TYPE_ADS,
-                                   cbStreamData);
+            InsertStreamToListView(hListView, szStreamName, pbStreamData, STREAM_TYPE_ADS, cbStreamData, Status);
+            FreeFileNameString(&FileName);
 
             // If we shall also save to the file, do it
-            if(bExportAsWell)
+            if(NT_SUCCESS(Status) && bExportAsWell)
             {
                 Status = SaveStreamToFile(pData->szFileName1,
                                           szStreamName,

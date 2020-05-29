@@ -203,7 +203,7 @@ static int SaveDialog(HWND hDlg)
         return nError;
     if((nError = DlgText2Hex32(hDlg, IDC_DESIRED_ACCESS, &pData->dwDesiredAccess)) != ERROR_SUCCESS)
         return nError;
-    if((nError = DlgText2Hex32(hDlg, IDC_FILE_ATTRIBUTES, &pData->dwFileAttributes)) != ERROR_SUCCESS)
+    if((nError = DlgText2Hex32(hDlg, IDC_FILE_ATTRIBUTES, &pData->dwFlagsAndAttributes)) != ERROR_SUCCESS)
         return nError;
     if((nError = DlgText2Hex32(hDlg, IDC_SHARE_ACCESS, &pData->dwShareAccess)) != ERROR_SUCCESS)
         return nError;
@@ -315,7 +315,7 @@ static int OnSetActive(HWND hDlg)
     Hex2DlgText32(hDlg, IDC_OBJ_ATTR_FLAGS, pData->dwObjAttrFlags);
     Hex2DlgText32(hDlg, IDC_DESIRED_ACCESS, pData->dwDesiredAccess);
     Hex2DlgText64(hDlg, IDC_ALLOCATION_SIZE, pData->AllocationSize);
-    Hex2DlgText32(hDlg, IDC_FILE_ATTRIBUTES, pData->dwFileAttributes);
+    Hex2DlgText32(hDlg, IDC_FILE_ATTRIBUTES, pData->dwFlagsAndAttributes);
     Hex2DlgText32(hDlg, IDC_SHARE_ACCESS, pData->dwShareAccess);
     Hex2DlgText32(hDlg, IDC_CREATE_OPTIONS, pData->dwCreateOptions);
 
@@ -647,7 +647,7 @@ static int OnCreateFileClick(HWND hDlg)
                               &ObjAttr,
                               &IoStatus,
                               &AllocationSize,
-                               pData->dwFileAttributes,
+                               pData->dwFlagsAndAttributes,
                                pData->dwShareAccess,
                                pData->dwCreateDisposition2,
                                pData->dwCreateOptions,

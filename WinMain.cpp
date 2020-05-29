@@ -246,7 +246,7 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
     pData->dwCreateDisposition1  = OPEN_ALWAYS;
     pData->dwCreateDisposition2  = FILE_OPEN_IF;
     pData->dwDesiredAccess       = dwDesiredAccess;
-    pData->dwFileAttributes      = FILE_ATTRIBUTE_NORMAL;
+    pData->dwFlagsAndAttributes  = FILE_ATTRIBUTE_NORMAL;
     pData->dwShareAccess         = dwShareAccess;
     pData->dwCreateOptions       = dwCreateOptions;
     pData->dwObjAttrFlags        = OBJ_CASE_INSENSITIVE;
