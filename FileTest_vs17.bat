@@ -12,17 +12,20 @@ if exist "%ProgramFiles(x86)%" set PROGRAM_FILES_DIR=%ProgramFiles(x86)%
 
 rem Determine the installed version of Visual Studio (Professional/Enterprise)
 if exist "%PROGRAM_FILES_DIR%\Microsoft Visual Studio\2017\Professional\VC\Auxiliary\Build\vcvarsall.bat" set VCVARS_BAT=%PROGRAM_FILES_DIR%\Microsoft Visual Studio\2017\Professional\VC\Auxiliary\Build\vcvarsall.bat
-if exist "%PROGRAM_FILES_DIR%\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" set VCVARS_BAT=%PROGRAM_FILES_DIR%\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvarsall.bat
+if exist "%PROGRAM_FILES_DIR%\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvarsall.bat"   set VCVARS_BAT=%PROGRAM_FILES_DIR%\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvarsall.bat
+if exist "%PROGRAM_FILES_DIR%\Microsoft Visual Studio\2019\Professional\VC\Auxiliary\Build\vcvarsall.bat" set VCVARS_BAT=%PROGRAM_FILES_DIR%\Microsoft Visual Studio\2019\Professional\VC\Auxiliary\Build\vcvarsall.bat
+if exist "%PROGRAM_FILES_DIR%\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat"   set VCVARS_BAT=%PROGRAM_FILES_DIR%\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat
 
 :BUILD_32BIT
 call :RestoreEnvVars
 call "%VCVARS_BAT%" x86
-devenv.com FileTest_vs17.sln /rebuild "Release|Win32" /project "FileTest"
+devenv.com FileTest_vs17.sln /project "FileTest" /rebuild "Release|Win32"
+
 
 :BUILD_64BIT
 call :RestoreEnvVars
 call "%VCVARS_BAT%" x64
-devenv.com FileTest_vs17.sln /rebuild "Release|x64" /project "FileTest"
+devenv.com FileTest_vs17.sln /project "FileTest" /rebuild "Release|x64"
 goto:eof
 
 :RestoreEnvVars
