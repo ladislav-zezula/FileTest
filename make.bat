@@ -31,8 +31,8 @@ del buildfre_w2k_x86.log
 echo.
 
 :COPY_EXE
-PostBuild.exe .\objfre_wlh_amd64\amd64\%EXE_NAME%.exe %EXE_NAME%.rc /tools /subsystem4
-PostBuild.exe .\objfre_w2k_x86\i386\%EXE_NAME%.exe /tools /subsystem4
+PostBuild.exe .\objfre_wlh_amd64\amd64\%EXE_NAME%.exe %EXE_NAME%.rc /subsystem4 /tools
+PostBuild.exe .\objfre_w2k_x86\i386\%EXE_NAME%.exe /subsystem4 /tools
 
 :CLEANUP
 if exist build.bat del build.bat

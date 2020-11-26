@@ -176,7 +176,7 @@
       <AdditionalOptions>/PDBALTPATH:%_PDB% %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <PostBuildEvent>
-      <Command>Postbuild.exe $(TargetPath) FileTest.rc /tools /subsystem4</Command>
+      <Command>Postbuild.exe $(TargetPath) FileTest.rc /subsystem4</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -205,7 +205,7 @@
       <AdditionalOptions>/PDBALTPATH:%_PDB% %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <PostBuildEvent>
-      <Command>Postbuild.exe $(TargetPath) FileTest.rc /tools /subsystem4</Command>
+      <Command>Postbuild.exe $(TargetPath) FileTest.rc /subsystem4</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>

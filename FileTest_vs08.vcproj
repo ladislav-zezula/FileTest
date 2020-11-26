@@ -67,7 +67,7 @@
 				Name="VCLinkerTool"
 				AdditionalOptions="/PDBALTPATH:%_PDB%"
 				LinkIncremental="2"
-				AdditionalLibraryDirectories="../aaa/lib32"
+				AdditionalLibraryDirectories="../aaa/lib32/vs2008"
 				GenerateManifest="false"
 				GenerateDebugInformation="true"
 				SubSystem="2"
@@ -148,7 +148,7 @@
 				Name="VCLinkerTool"
 				AdditionalOptions="/PDBALTPATH:%_PDB%"
 				LinkIncremental="2"
-				AdditionalLibraryDirectories="../aaa/lib64"
+				AdditionalLibraryDirectories="../aaa/lib64/vs2008"
 				GenerateManifest="false"
 				GenerateDebugInformation="true"
 				SubSystem="2"
@@ -225,7 +225,7 @@
 				Name="VCLinkerTool"
 				AdditionalOptions="/PDBALTPATH:%_PDB%"
 				LinkIncremental="1"
-				AdditionalLibraryDirectories="../aaa/lib32"
+				AdditionalLibraryDirectories="../aaa/lib32/vs2008"
 				GenerateManifest="false"
 				IgnoreDefaultLibraryNames=""
 				GenerateDebugInformation="true"
@@ -257,7 +257,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="PostBuild.exe $(OutDir)\$(ProjectName).exe /subsystem4 /tools"
+				CommandLine="PostBuild.exe $(OutDir)\$(ProjectName).exe /subsystem4"
 			/>
 		</Configuration>
 		<Configuration
@@ -308,7 +308,7 @@
 				Name="VCLinkerTool"
 				AdditionalOptions="/PDBALTPATH:%_PDB%"
 				LinkIncremental="1"
-				AdditionalLibraryDirectories="../aaa/lib64"
+				AdditionalLibraryDirectories="../aaa/lib64/vs2008"
 				GenerateManifest="false"
 				GenerateDebugInformation="true"
 				SubSystem="2"
@@ -338,7 +338,7 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-				CommandLine="PostBuild.exe $(OutDir)\$(ProjectName).exe /subsystem4 /tools"
+				CommandLine="PostBuild.exe $(OutDir)\$(ProjectName).exe /subsystem4"
 			/>
 		</Configuration>
 	</Configurations>
