@@ -133,6 +133,12 @@
     <ClInclude Include="ReparseDataHsm.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="TFastString.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="TFlagString.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Manifest Include="res\FileTest.exe.manifest">

@@ -14,50 +14,49 @@
 //-----------------------------------------------------------------------------
 // Flags
 
-static TFlagInfo FileAttributesValues_CreateFile[] =
+static TFlagInfo FlagsAndAttributesValues[] =
 {
-    FLAG_INFO_CTRLID(FILE_ATTRIBUTE_READONLY),                  // 0x00000001
-    FLAG_INFO_CTRLID(FILE_ATTRIBUTE_HIDDEN),                    // 0x00000002
-    FLAG_INFO_CTRLID(FILE_ATTRIBUTE_SYSTEM),                    // 0x00000004
-    FLAG_INFO_CTRLID(OLD_DOS_VOLID),                            // 0x00000008
-    FLAG_INFO_CTRLID(FILE_ATTRIBUTE_DIRECTORY),                 // 0x00000010
-    FLAG_INFO_CTRLID(FILE_ATTRIBUTE_ARCHIVE),                   // 0x00000020
-    FLAG_INFO_CTRLID(FILE_ATTRIBUTE_DEVICE),                    // 0x00000040
-    FLAG_INFO_CTRLID(FILE_ATTRIBUTE_NORMAL),                    // 0x00000080
-    FLAG_INFO_CTRLID(FILE_ATTRIBUTE_TEMPORARY),                 // 0x00000100
-    FLAG_INFO_CTRLID(FILE_ATTRIBUTE_SPARSE_FILE),               // 0x00000200
-    FLAG_INFO_CTRLID(FILE_ATTRIBUTE_REPARSE_POINT),             // 0x00000400
-    FLAG_INFO_CTRLID(FILE_ATTRIBUTE_COMPRESSED),                // 0x00000800
-    FLAG_INFO_CTRLID(FILE_ATTRIBUTE_OFFLINE),                   // 0x00001000
-    FLAG_INFO_CTRLID(FILE_ATTRIBUTE_NOT_CONTENT_INDEXED),       // 0x00002000
-    FLAG_INFO_CTRLID(FILE_ATTRIBUTE_ENCRYPTED),                 // 0x00004000
-    FLAG_INFO_CTRLID(FILE_ATTRIBUTE_INTEGRITY_STREAM),          // 0x00008000
-    FLAG_INFO_CTRLID(SECURITY_SQOS_PRESENT),                    // 0x00100000
-    FLAG_INFO_CTRLID(SECURITY_EFFECTIVE_ONLY),                  // 0x00080000
-    FLAG_INFO_CTRLID(SECURITY_CONTEXT_TRACKING),                // 0x00040000
-    FLAG_INFO_MASK(SECURITY_VALUE_MASK,SECURITY_ANONYMOUS),     // 0x00000000
-    FLAG_INFO_MASK(SECURITY_VALUE_MASK,SECURITY_IDENTIFICATION),// 0x00010000
-    FLAG_INFO_MASK(SECURITY_VALUE_MASK,SECURITY_IMPERSONATION), // 0x00020000
-    FLAG_INFO_MASK(SECURITY_VALUE_MASK,SECURITY_DELEGATION),    // 0x00030000
-
-    FLAG_INFO_CTRLID(FILE_FLAG_OPEN_REPARSE_POINT),             // 0x00200000
-    FLAG_INFO_CTRLID(FILE_FLAG_POSIX_SEMANTICS),                // 0x01000000
-    FLAG_INFO_CTRLID(FILE_FLAG_BACKUP_SEMANTICS),               // 0x02000000
-    FLAG_INFO_CTRLID(FILE_FLAG_DELETE_ON_CLOSE),                // 0x04000000
-    FLAG_INFO_CTRLID(FILE_FLAG_SEQUENTIAL_SCAN),                // 0x08000000
-    FLAG_INFO_CTRLID(FILE_FLAG_RANDOM_ACCESS),                  // 0x10000000
-    FLAG_INFO_CTRLID(FILE_FLAG_NO_BUFFERING),                   // 0x20000000
-    FLAG_INFO_CTRLID(FILE_FLAG_OVERLAPPED),                     // 0x40000000
-    FLAG_INFO_CTRLID(FILE_FLAG_WRITE_THROUGH),                  // 0x80000000
-    FLAG_INFO_END
+    FLAGINFO_BITV(FILE_ATTRIBUTE_READONLY),                     // 0x00000001
+    FLAGINFO_BITV(FILE_ATTRIBUTE_HIDDEN),                       // 0x00000002
+    FLAGINFO_BITV(FILE_ATTRIBUTE_SYSTEM),                       // 0x00000004
+    FLAGINFO_BITV(OLD_DOS_VOLID),                               // 0x00000008
+    FLAGINFO_BITV(FILE_ATTRIBUTE_DIRECTORY),                    // 0x00000010
+    FLAGINFO_BITV(FILE_ATTRIBUTE_ARCHIVE),                      // 0x00000020
+    FLAGINFO_BITV(FILE_ATTRIBUTE_DEVICE),                       // 0x00000040
+    FLAGINFO_BITV(FILE_ATTRIBUTE_NORMAL),                       // 0x00000080
+    FLAGINFO_BITV(FILE_ATTRIBUTE_TEMPORARY),                    // 0x00000100
+    FLAGINFO_BITV(FILE_ATTRIBUTE_SPARSE_FILE),                  // 0x00000200
+    FLAGINFO_BITV(FILE_ATTRIBUTE_REPARSE_POINT),                // 0x00000400
+    FLAGINFO_BITV(FILE_ATTRIBUTE_COMPRESSED),                   // 0x00000800
+    FLAGINFO_BITV(FILE_ATTRIBUTE_OFFLINE),                      // 0x00001000
+    FLAGINFO_BITV(FILE_ATTRIBUTE_NOT_CONTENT_INDEXED),          // 0x00002000
+    FLAGINFO_BITV(FILE_ATTRIBUTE_ENCRYPTED),                    // 0x00004000
+    FLAGINFO_BITV(FILE_ATTRIBUTE_INTEGRITY_STREAM),             // 0x00008000
+    FLAGINFO_BITV(SECURITY_SQOS_PRESENT),                       // 0x00100000
+    FLAGINFO_BITV(SECURITY_EFFECTIVE_ONLY),                     // 0x00080000
+    FLAGINFO_BITV(SECURITY_CONTEXT_TRACKING),                   // 0x00040000
+    FLAGINFO_MASK(SECURITY_VALUE_MASK,SECURITY_ANONYMOUS),      // 0x00000000*
+    FLAGINFO_MASK(SECURITY_VALUE_MASK,SECURITY_IDENTIFICATION), // 0x00010000*
+    FLAGINFO_MASK(SECURITY_VALUE_MASK,SECURITY_IMPERSONATION),  // 0x00020000*
+    FLAGINFO_MASK(SECURITY_VALUE_MASK,SECURITY_DELEGATION),     // 0x00030000*
+    FLAGINFO_BITV(FILE_FLAG_OPEN_REPARSE_POINT),                // 0x00200000
+    FLAGINFO_BITV(FILE_FLAG_POSIX_SEMANTICS),                   // 0x01000000
+    FLAGINFO_BITV(FILE_FLAG_BACKUP_SEMANTICS),                  // 0x02000000
+    FLAGINFO_BITV(FILE_FLAG_DELETE_ON_CLOSE),                   // 0x04000000
+    FLAGINFO_BITV(FILE_FLAG_SEQUENTIAL_SCAN),                   // 0x08000000
+    FLAGINFO_BITV(FILE_FLAG_RANDOM_ACCESS),                     // 0x10000000
+    FLAGINFO_BITV(FILE_FLAG_NO_BUFFERING),                      // 0x20000000
+    FLAGINFO_BITV(FILE_FLAG_OVERLAPPED),                        // 0x40000000
+    FLAGINFO_BITV(FILE_FLAG_WRITE_THROUGH),                     // 0x80000000
+    FLAGINFO_END()
 };
 
-static TFlagInfo ShareAccessValues[] =
+TFlagInfo ShareAccessValues[] =
 {
-    FLAG_INFO_ENTRY(FILE_SHARE_READ),
-    FLAG_INFO_ENTRY(FILE_SHARE_WRITE),
-    FLAG_INFO_ENTRY(FILE_SHARE_DELETE),
-    FLAG_INFO_END
+    FLAGINFO_BITV(FILE_SHARE_READ),
+    FLAGINFO_BITV(FILE_SHARE_WRITE),
+    FLAGINFO_BITV(FILE_SHARE_DELETE),
+    FLAGINFO_END()
 };
 
 //-----------------------------------------------------------------------------
@@ -170,9 +169,9 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
         ComboBox_SetCurSel(hCombo, pData->dwCreateDisposition1 - 1);
 
     // If we have a tooltip window, init tooltips 
-    g_Tooltip.AddToolTip(hDlg, IDC_DESIRED_ACCESS, DesiredAccessValues);
-    g_Tooltip.AddToolTip(hDlg, IDC_SHARE_ACCESS, ShareAccessValues);
-    g_Tooltip.AddToolTip(hDlg, IDC_FILE_ATTRIBUTES, (TFlagInfo *)NULL);
+    g_Tooltip.AddToolTip(hDlg, IDC_DESIRED_ACCESS,  AccessMaskValues);
+    g_Tooltip.AddToolTip(hDlg, IDC_SHARE_ACCESS,    ShareAccessValues);
+    g_Tooltip.AddToolTip(hDlg, IDC_FILE_ATTRIBUTES, FlagsAndAttributesValues);
 
     // On pre-Vista, disable the virtualization button
     if(GetTokenVirtualizationEnabled(NULL))
@@ -261,19 +260,19 @@ static int OnBrowseTemplateClick(HWND hDlg)
 
 static int OnDesiredAccessClick(HWND hDlg)
 {
-    FlagsDialog_OnControl(hDlg, IDC_DESIRED_ACCESS, IDS_DESIRED_ACCESS, DesiredAccessValues);
+    FlagsDialog_OnControl(hDlg, IDS_DESIRED_ACCESS, AccessMaskValues, IDC_DESIRED_ACCESS);
     return TRUE;
 }
 
 static int OnFileAttributesClick(HWND hDlg)
 {
-    FlagsDialog_PreArranged(hDlg, IDD_FLAGS_AND_ATTRS, IDC_FILE_ATTRIBUTES, FileAttributesValues_CreateFile);
+    FlagsDialog_OnControl(hDlg, IDS_FLAGS_AND_ATTRIBUTES, FlagsAndAttributesValues, IDC_FILE_ATTRIBUTES);
     return TRUE;
 }
 
 static int OnShareAccessClick(HWND hDlg)
 {
-    FlagsDialog_OnControl(hDlg, IDC_SHARE_ACCESS, IDS_SHARE_ACCESS, ShareAccessValues);
+    FlagsDialog_OnControl(hDlg, IDS_SHARE_ACCESS, ShareAccessValues, IDC_SHARE_ACCESS);
     return TRUE;
 }
 

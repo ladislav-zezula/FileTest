@@ -39,8 +39,6 @@
 
 #define MAXIMUM_ACL_SIZE         0xFFF8             // The biggest ACL that can possibly exist
 
-#define FLAG_EDIT_VALUES         0x80000000         // Means that the item is value, not a bit mask
-
 typedef bool (*ACE_FILTER_PROC)(PACE_HEADER pAceHeader);
 
 // Masks for each tre item
@@ -62,136 +60,136 @@ static SID_IDENTIFIER_AUTHORITY SiaLabel = SECURITY_MANDATORY_LABEL_AUTHORITY;
 
 static TFlagInfo AceHdrTypes[] =
 {
-    FLAG_INFO_ENTRY(ACCESS_ALLOWED_ACE_TYPE),
-    FLAG_INFO_ENTRY(ACCESS_DENIED_ACE_TYPE),
-    FLAG_INFO_ENTRY(SYSTEM_AUDIT_ACE_TYPE),
-    FLAG_INFO_ENTRY(SYSTEM_ALARM_ACE_TYPE),
-    FLAG_INFO_ENTRY(ACCESS_ALLOWED_COMPOUND_ACE_TYPE),
-    FLAG_INFO_ENTRY(ACCESS_ALLOWED_OBJECT_ACE_TYPE),
-    FLAG_INFO_ENTRY(ACCESS_DENIED_OBJECT_ACE_TYPE),
-    FLAG_INFO_ENTRY(SYSTEM_AUDIT_OBJECT_ACE_TYPE),
-    FLAG_INFO_ENTRY(SYSTEM_ALARM_OBJECT_ACE_TYPE),
-    FLAG_INFO_ENTRY(ACCESS_ALLOWED_CALLBACK_ACE_TYPE),
-    FLAG_INFO_ENTRY(ACCESS_DENIED_CALLBACK_ACE_TYPE),
-    FLAG_INFO_ENTRY(ACCESS_ALLOWED_CALLBACK_OBJECT_ACE_TYPE),
-    FLAG_INFO_ENTRY(ACCESS_DENIED_CALLBACK_OBJECT_ACE_TYPE),
-    FLAG_INFO_ENTRY(SYSTEM_AUDIT_CALLBACK_ACE_TYPE),
-    FLAG_INFO_ENTRY(SYSTEM_ALARM_CALLBACK_ACE_TYPE),
-    FLAG_INFO_ENTRY(SYSTEM_AUDIT_CALLBACK_OBJECT_ACE_TYPE),
-    FLAG_INFO_ENTRY(SYSTEM_ALARM_CALLBACK_OBJECT_ACE_TYPE),
-    FLAG_INFO_ENTRY(SYSTEM_MANDATORY_LABEL_ACE_TYPE),
-    FLAG_INFO_END
-};  
+    FLAGINFO_NUMV(ACCESS_ALLOWED_ACE_TYPE),
+    FLAGINFO_NUMV(ACCESS_DENIED_ACE_TYPE),
+    FLAGINFO_NUMV(SYSTEM_AUDIT_ACE_TYPE),
+    FLAGINFO_NUMV(SYSTEM_ALARM_ACE_TYPE),
+    FLAGINFO_NUMV(ACCESS_ALLOWED_COMPOUND_ACE_TYPE),
+    FLAGINFO_NUMV(ACCESS_ALLOWED_OBJECT_ACE_TYPE),
+    FLAGINFO_NUMV(ACCESS_DENIED_OBJECT_ACE_TYPE),
+    FLAGINFO_NUMV(SYSTEM_AUDIT_OBJECT_ACE_TYPE),
+    FLAGINFO_NUMV(SYSTEM_ALARM_OBJECT_ACE_TYPE),
+    FLAGINFO_NUMV(ACCESS_ALLOWED_CALLBACK_ACE_TYPE),
+    FLAGINFO_NUMV(ACCESS_DENIED_CALLBACK_ACE_TYPE),
+    FLAGINFO_NUMV(ACCESS_ALLOWED_CALLBACK_OBJECT_ACE_TYPE),
+    FLAGINFO_NUMV(ACCESS_DENIED_CALLBACK_OBJECT_ACE_TYPE),
+    FLAGINFO_NUMV(SYSTEM_AUDIT_CALLBACK_ACE_TYPE),
+    FLAGINFO_NUMV(SYSTEM_ALARM_CALLBACK_ACE_TYPE),
+    FLAGINFO_NUMV(SYSTEM_AUDIT_CALLBACK_OBJECT_ACE_TYPE),
+    FLAGINFO_NUMV(SYSTEM_ALARM_CALLBACK_OBJECT_ACE_TYPE),
+    FLAGINFO_NUMV(SYSTEM_MANDATORY_LABEL_ACE_TYPE),
+    FLAGINFO_END()
+};
 
 static TFlagInfo AceHdrFlags[] =
 {
-    FLAG_INFO_ENTRY(OBJECT_INHERIT_ACE),
-    FLAG_INFO_ENTRY(CONTAINER_INHERIT_ACE),
-    FLAG_INFO_ENTRY(NO_PROPAGATE_INHERIT_ACE),
-    FLAG_INFO_ENTRY(INHERIT_ONLY_ACE),
-    FLAG_INFO_ENTRY(INHERITED_ACE),
-    FLAG_INFO_ENTRY(SUCCESSFUL_ACCESS_ACE_FLAG),
-    FLAG_INFO_ENTRY(FAILED_ACCESS_ACE_FLAG),
-    FLAG_INFO_END
+    FLAGINFO_BITV(OBJECT_INHERIT_ACE),
+    FLAGINFO_BITV(CONTAINER_INHERIT_ACE),
+    FLAGINFO_BITV(NO_PROPAGATE_INHERIT_ACE),
+    FLAGINFO_BITV(INHERIT_ONLY_ACE),
+    FLAGINFO_BITV(INHERITED_ACE),
+    FLAGINFO_BITV(SUCCESSFUL_ACCESS_ACE_FLAG),
+    FLAGINFO_BITV(FAILED_ACCESS_ACE_FLAG),
+    FLAGINFO_END()
 };
 
 static TFlagInfo AceMasks[] =
 {
-    FLAG_INFO_ENTRY(FILE_READ_DATA),       
-    FLAG_INFO_ENTRY(FILE_WRITE_DATA),      
-    FLAG_INFO_ENTRY(FILE_APPEND_DATA),     
-    FLAG_INFO_ENTRY(FILE_READ_EA),         
-    FLAG_INFO_ENTRY(FILE_WRITE_EA),        
-    FLAG_INFO_ENTRY(FILE_EXECUTE),         
-    FLAG_INFO_ENTRY(FILE_DELETE_CHILD),    
-    FLAG_INFO_ENTRY(FILE_READ_ATTRIBUTES), 
-    FLAG_INFO_ENTRY(FILE_WRITE_ATTRIBUTES),
-    FLAG_INFO_ENTRY(DELETE),                
-    FLAG_INFO_ENTRY(READ_CONTROL),          
-    FLAG_INFO_ENTRY(WRITE_DAC),             
-    FLAG_INFO_ENTRY(WRITE_OWNER),           
-    FLAG_INFO_ENTRY(SYNCHRONIZE),           
-    FLAG_INFO_ENTRY(GENERIC_WRITE),         
-    FLAG_INFO_ENTRY(GENERIC_READ),          
-    FLAG_INFO_ENTRY(GENERIC_WRITE),         
-    FLAG_INFO_ENTRY(GENERIC_EXECUTE),       
-    FLAG_INFO_ENTRY(GENERIC_ALL),           
-    FLAG_INFO_END
+    FLAGINFO_BITV(FILE_READ_DATA),
+    FLAGINFO_BITV(FILE_WRITE_DATA),
+    FLAGINFO_BITV(FILE_APPEND_DATA),
+    FLAGINFO_BITV(FILE_READ_EA),
+    FLAGINFO_BITV(FILE_WRITE_EA),
+    FLAGINFO_BITV(FILE_EXECUTE),
+    FLAGINFO_BITV(FILE_DELETE_CHILD),
+    FLAGINFO_BITV(FILE_READ_ATTRIBUTES),
+    FLAGINFO_BITV(FILE_WRITE_ATTRIBUTES),
+    FLAGINFO_BITV(DELETE),
+    FLAGINFO_BITV(READ_CONTROL),
+    FLAGINFO_BITV(WRITE_DAC),
+    FLAGINFO_BITV(WRITE_OWNER),
+    FLAGINFO_BITV(SYNCHRONIZE),
+    FLAGINFO_BITV(GENERIC_WRITE),
+    FLAGINFO_BITV(GENERIC_READ),
+    FLAGINFO_BITV(GENERIC_WRITE),
+    FLAGINFO_BITV(GENERIC_EXECUTE),
+    FLAGINFO_BITV(GENERIC_ALL),
+    FLAGINFO_END()
 };
 
-static TFlagInfo AdsAceMasks[] = 
+static TFlagInfo AdsAceMasks[] =
 {
-    FLAG_INFO_ENTRY(ADS_RIGHT_DS_CREATE_CHILD),
-    FLAG_INFO_ENTRY(ADS_RIGHT_DS_DELETE_CHILD),
-    FLAG_INFO_ENTRY(ADS_RIGHT_ACTRL_DS_LIST),
-    FLAG_INFO_ENTRY(ADS_RIGHT_DS_SELF),
-    FLAG_INFO_ENTRY(ADS_RIGHT_DS_READ_PROP),
-    FLAG_INFO_ENTRY(ADS_RIGHT_DS_WRITE_PROP),
-    FLAG_INFO_ENTRY(ADS_RIGHT_DS_DELETE_TREE),
-    FLAG_INFO_ENTRY(ADS_RIGHT_DS_LIST_OBJECT),
-    FLAG_INFO_ENTRY(ADS_RIGHT_DS_CONTROL_ACCESS),
-    FLAG_INFO_ENTRY(ADS_RIGHT_DELETE),
-    FLAG_INFO_ENTRY(ADS_RIGHT_READ_CONTROL),
-    FLAG_INFO_ENTRY(ADS_RIGHT_WRITE_DAC),
-    FLAG_INFO_ENTRY(ADS_RIGHT_WRITE_OWNER),
-    FLAG_INFO_ENTRY(ADS_RIGHT_SYNCHRONIZE),
-    FLAG_INFO_ENTRY(ADS_RIGHT_ACCESS_SYSTEM_SECURITY),
-    FLAG_INFO_ENTRY(ADS_RIGHT_GENERIC_READ),
-    FLAG_INFO_ENTRY(ADS_RIGHT_GENERIC_WRITE),
-    FLAG_INFO_ENTRY(ADS_RIGHT_GENERIC_EXECUTE),
-    FLAG_INFO_ENTRY(ADS_RIGHT_GENERIC_ALL),
-    FLAG_INFO_END
+    FLAGINFO_BITV(ADS_RIGHT_DS_CREATE_CHILD),
+    FLAGINFO_BITV(ADS_RIGHT_DS_DELETE_CHILD),
+    FLAGINFO_BITV(ADS_RIGHT_ACTRL_DS_LIST),
+    FLAGINFO_BITV(ADS_RIGHT_DS_SELF),
+    FLAGINFO_BITV(ADS_RIGHT_DS_READ_PROP),
+    FLAGINFO_BITV(ADS_RIGHT_DS_WRITE_PROP),
+    FLAGINFO_BITV(ADS_RIGHT_DS_DELETE_TREE),
+    FLAGINFO_BITV(ADS_RIGHT_DS_LIST_OBJECT),
+    FLAGINFO_BITV(ADS_RIGHT_DS_CONTROL_ACCESS),
+    FLAGINFO_BITV(ADS_RIGHT_DELETE),
+    FLAGINFO_BITV(ADS_RIGHT_READ_CONTROL),
+    FLAGINFO_BITV(ADS_RIGHT_WRITE_DAC),
+    FLAGINFO_BITV(ADS_RIGHT_WRITE_OWNER),
+    FLAGINFO_BITV(ADS_RIGHT_SYNCHRONIZE),
+    FLAGINFO_BITV(ADS_RIGHT_ACCESS_SYSTEM_SECURITY),
+    FLAGINFO_BITV(ADS_RIGHT_GENERIC_READ),
+    FLAGINFO_BITV(ADS_RIGHT_GENERIC_WRITE),
+    FLAGINFO_BITV(ADS_RIGHT_GENERIC_EXECUTE),
+    FLAGINFO_BITV(ADS_RIGHT_GENERIC_ALL),
+    FLAGINFO_END()
 };
 
 static TFlagInfo MandatoryMasks[] =
 {
-    FLAG_INFO_ENTRY(SYSTEM_MANDATORY_LABEL_NO_WRITE_UP),
-    FLAG_INFO_ENTRY(SYSTEM_MANDATORY_LABEL_NO_READ_UP),
-    FLAG_INFO_ENTRY(SYSTEM_MANDATORY_LABEL_NO_EXECUTE_UP),
-    FLAG_INFO_END
+    FLAGINFO_BITV(SYSTEM_MANDATORY_LABEL_NO_WRITE_UP),
+    FLAGINFO_BITV(SYSTEM_MANDATORY_LABEL_NO_READ_UP),
+    FLAGINFO_BITV(SYSTEM_MANDATORY_LABEL_NO_EXECUTE_UP),
+    FLAGINFO_END()
 };
 
 static TFlagInfo AceFlags[] =
 {
-    FLAG_INFO_ENTRY(ACE_OBJECT_TYPE_PRESENT),
-    FLAG_INFO_ENTRY(ACE_INHERITED_OBJECT_TYPE_PRESENT),
-    FLAG_INFO_END
+    FLAGINFO_BITV(ACE_OBJECT_TYPE_PRESENT),
+    FLAGINFO_BITV(ACE_INHERITED_OBJECT_TYPE_PRESENT),
+    FLAGINFO_END()
 };
 
 static TFlagInfo IntegrityLevels[] =
 {
-    FLAG_INFO_ENTRY(SECURITY_MANDATORY_UNTRUSTED_RID),
-    FLAG_INFO_ENTRY(SECURITY_MANDATORY_LOW_RID),
-    FLAG_INFO_ENTRY(SECURITY_MANDATORY_MEDIUM_RID),
-    FLAG_INFO_ENTRY(SECURITY_MANDATORY_HIGH_RID),
-    FLAG_INFO_ENTRY(SECURITY_MANDATORY_SYSTEM_RID),
-    FLAG_INFO_ENTRY(SECURITY_MANDATORY_PROTECTED_PROCESS_RID),     
-    FLAG_INFO_END
+    FLAGINFO_NUMV(SECURITY_MANDATORY_UNTRUSTED_RID),
+    FLAGINFO_NUMV(SECURITY_MANDATORY_LOW_RID),
+    FLAGINFO_NUMV(SECURITY_MANDATORY_MEDIUM_RID),
+    FLAGINFO_NUMV(SECURITY_MANDATORY_HIGH_RID),
+    FLAGINFO_NUMV(SECURITY_MANDATORY_SYSTEM_RID),
+    FLAGINFO_NUMV(SECURITY_MANDATORY_PROTECTED_PROCESS_RID),
+    FLAGINFO_END()
 };
 
 static DWORD AceSizes[] =
 {
-    sizeof(ACCESS_ALLOWED_ACE),                 // ACCESS_ALLOWED_ACE_TYPE          
-    sizeof(ACCESS_DENIED_ACE),                  // ACCESS_DENIED_ACE_TYPE           
-    sizeof(SYSTEM_AUDIT_ACE),                   // SYSTEM_AUDIT_ACE_TYPE            
-    sizeof(SYSTEM_ALARM_ACE),                   // SYSTEM_ALARM_ACE_TYPE            
+    sizeof(ACCESS_ALLOWED_ACE),                 // ACCESS_ALLOWED_ACE_TYPE
+    sizeof(ACCESS_DENIED_ACE),                  // ACCESS_DENIED_ACE_TYPE
+    sizeof(SYSTEM_AUDIT_ACE),                   // SYSTEM_AUDIT_ACE_TYPE
+    sizeof(SYSTEM_ALARM_ACE),                   // SYSTEM_ALARM_ACE_TYPE
     0,                                          // ACCESS_ALLOWED_COMPOUND_ACE_TYPE (?)
-    sizeof(ACCESS_ALLOWED_OBJECT_ACE),          // ACCESS_ALLOWED_OBJECT_ACE_TYPE   
-    sizeof(ACCESS_DENIED_OBJECT_ACE),           // ACCESS_DENIED_OBJECT_ACE_TYPE    
-    sizeof(SYSTEM_AUDIT_OBJECT_ACE),            // SYSTEM_AUDIT_OBJECT_ACE_TYPE     
-    sizeof(SYSTEM_ALARM_OBJECT_ACE),            // SYSTEM_ALARM_OBJECT_ACE_TYPE     
-    sizeof(ACCESS_ALLOWED_CALLBACK_ACE),        // ACCESS_ALLOWED_CALLBACK_ACE_TYPE 
-    sizeof(ACCESS_DENIED_CALLBACK_ACE),         // ACCESS_DENIED_CALLBACK_ACE_TYPE  
+    sizeof(ACCESS_ALLOWED_OBJECT_ACE),          // ACCESS_ALLOWED_OBJECT_ACE_TYPE
+    sizeof(ACCESS_DENIED_OBJECT_ACE),           // ACCESS_DENIED_OBJECT_ACE_TYPE
+    sizeof(SYSTEM_AUDIT_OBJECT_ACE),            // SYSTEM_AUDIT_OBJECT_ACE_TYPE
+    sizeof(SYSTEM_ALARM_OBJECT_ACE),            // SYSTEM_ALARM_OBJECT_ACE_TYPE
+    sizeof(ACCESS_ALLOWED_CALLBACK_ACE),        // ACCESS_ALLOWED_CALLBACK_ACE_TYPE
+    sizeof(ACCESS_DENIED_CALLBACK_ACE),         // ACCESS_DENIED_CALLBACK_ACE_TYPE
     sizeof(ACCESS_ALLOWED_CALLBACK_OBJECT_ACE), // ACCESS_ALLOWED_CALLBACK_OBJECT_ACE_TYPE
     sizeof(ACCESS_DENIED_CALLBACK_OBJECT_ACE),  // ACCESS_DENIED_CALLBACK_OBJECT_ACE_TYPE
-    sizeof(SYSTEM_AUDIT_CALLBACK_ACE),          // SYSTEM_AUDIT_CALLBACK_ACE_TYPE   
-    sizeof(SYSTEM_ALARM_CALLBACK_ACE),          // SYSTEM_ALARM_CALLBACK_ACE_TYPE       
+    sizeof(SYSTEM_AUDIT_CALLBACK_ACE),          // SYSTEM_AUDIT_CALLBACK_ACE_TYPE
+    sizeof(SYSTEM_ALARM_CALLBACK_ACE),          // SYSTEM_ALARM_CALLBACK_ACE_TYPE
     sizeof(SYSTEM_AUDIT_CALLBACK_OBJECT_ACE),   // SYSTEM_AUDIT_CALLBACK_OBJECT_ACE_TYPE
     sizeof(SYSTEM_ALARM_CALLBACK_OBJECT_ACE),   // SYSTEM_ALARM_CALLBACK_OBJECT_ACE_TYPE
-    sizeof(SYSTEM_MANDATORY_LABEL_ACE),         // SYSTEM_MANDATORY_LABEL_ACE_TYPE      
+    sizeof(SYSTEM_MANDATORY_LABEL_ACE),         // SYSTEM_MANDATORY_LABEL_ACE_TYPE
 };
 
-static DWORD AceSidOffsets[] = 
+static DWORD AceSidOffsets[] =
 {
     FIELD_OFFSET(ACCESS_ALLOWED_ACE, SidStart),
     FIELD_OFFSET(ACCESS_DENIED_ACE, SidStart),
@@ -202,7 +200,7 @@ static DWORD AceSidOffsets[] =
     FIELD_OFFSET(ACCESS_DENIED_OBJECT_ACE, SidStart),
     FIELD_OFFSET(SYSTEM_AUDIT_OBJECT_ACE, SidStart),
     FIELD_OFFSET(SYSTEM_ALARM_OBJECT_ACE, SidStart),
-    
+
     FIELD_OFFSET(ACCESS_ALLOWED_CALLBACK_ACE, SidStart),
     FIELD_OFFSET(ACCESS_DENIED_CALLBACK_ACE, SidStart),
     FIELD_OFFSET(ACCESS_ALLOWED_CALLBACK_OBJECT_ACE, SidStart),
@@ -343,7 +341,7 @@ static void SidToString(PSID pvSid, LPTSTR szString, size_t cchString, bool bAdd
     }
 
     // If we are required to add user name, do it.
-    if(bAddUserName)                                  
+    if(bAddUserName)
     {
         SID_NAME_USE SidNameUse;
         TCHAR szDomainName[128] = _T("");
@@ -408,11 +406,11 @@ static bool StringToSid(LPTSTR szSid, PSID * ppSid)
             *ppSid = Sid_AllocateAndInitialize(&Sia, (BYTE)dwSubAuthCount,
                                                            dwSubAuth[0],
                                                            dwSubAuth[1],
-                                                           dwSubAuth[2], 
-                                                           dwSubAuth[3], 
-                                                           dwSubAuth[4], 
-                                                           dwSubAuth[5], 
-                                                           dwSubAuth[6], 
+                                                           dwSubAuth[2],
+                                                           dwSubAuth[3],
+                                                           dwSubAuth[4],
+                                                           dwSubAuth[5],
+                                                           dwSubAuth[6],
                                                            dwSubAuth[7]);
             return (*ppSid != NULL);
         }
@@ -449,7 +447,7 @@ static bool StringToSid(LPTSTR szSid, PSID * ppSid)
 //
 // - IdentifierAuthority is set to SECURITY_MANDATORY_LABEL_AUTHORITY
 // - The last subauthority is set to one of the SECURITY_MANDATORY_XXXX values
-//           
+//
 static DWORD SidToIntegrityLevel(PSID pSid)
 {
     DWORD dwSubAuthCount;
@@ -487,7 +485,7 @@ static PACL Acl_CreateEmpty(DWORD dwAclSize = MAXIMUM_ACL_SIZE)
     return pAcl;
 }
 
-// Creates a new ACL with one ACE, granting full access to Everyone 
+// Creates a new ACL with one ACE, granting full access to Everyone
 // Caller must free the returned buffer using HeapFree
 static PACL Acl_CreateOneItem(BYTE AceType)
 {
@@ -593,12 +591,12 @@ static BOOL IsTreeItemAce(LPARAM lParam)
     return ((lParam & TREE_ITEM_TYPE_MASK) == TREE_ITEM_ACE) ? TRUE : FALSE;
 }
 
-static LPCTSTR GetAceTypeString(DWORD AceType)
+static LPCSTR GetAceTypeString(DWORD AceType)
 {
     BYTE MaxAceType = (BYTE)(_countof(AceHdrTypes) - 1);
 
     // Insert the "root" item with ACE type
-    return (AceType < MaxAceType) ? AceHdrTypes[AceType].szFlagText : _T("UNKNOWN_ACE");
+    return (AceType < MaxAceType) ? AceHdrTypes[AceType].szFlagText : "UNKNOWN_ACE";
 }
 
 // The item text is expected to be in format "Name: 0x12345678"
@@ -623,7 +621,7 @@ static LPTSTR GetItemTextValue(LPTSTR szItemText)
             szSpacePtr[0] = 0;
     }
 
-    // Return the text 
+    // Return the text
     return szItemText;
 }
 
@@ -661,7 +659,7 @@ static bool TreeView_ItemToValue32(HWND hTreeView, HTREEITEM hItem, LPDWORD PtrV
     TCHAR szItemText[256];
     int nError;
 
-    // Get the text from the 
+    // Get the text from the
     tvi.mask = TVIF_TEXT;
     tvi.hItem = hItem;
     tvi.pszText = szItemText;
@@ -687,7 +685,7 @@ static bool TreeView_ItemToGuid(HWND hTreeView, HTREEITEM hItem, LPGUID PtrGuid)
     LPTSTR szValue;
     TCHAR szItemText[256];
 
-    // Get the text from the 
+    // Get the text from the
     tvi.mask = TVIF_TEXT;
     tvi.hItem = hItem;
     tvi.pszText = szItemText;
@@ -932,9 +930,10 @@ static HTREEITEM TreeView_InsertAceItem(
     PACE_HEADER pAceHeader)
 {
     HTREEITEM hItem;
+    LPCSTR szAceTypeString = GetAceTypeString(pAceHeader->AceType);
 
     // Insert the "root" item with ACE type
-    hItem = InsertTreeItem(hTreeView, hParent, hInsertAfter, GetAceTypeString(pAceHeader->AceType), (PVOID)(ULONG_PTR)(TREE_ITEM_ACE | pAceHeader->AceType));
+    hItem = InsertTreeItem(hTreeView, hParent, hInsertAfter, TWideString(szAceTypeString), (PVOID)(ULONG_PTR)(TREE_ITEM_ACE | pAceHeader->AceType));
     if(hItem != NULL)
     {
         // Fill the ACE structure
@@ -991,7 +990,7 @@ static bool TreeView_ItemToAce(
             case TREE_ITEM_ACE_OBJ_GUID:
                 bResult = TreeView_ItemToGuid(hTreeView, hItem, &AceHelper.ObjectType);
                 break;
-            
+
             case TREE_ITEM_ACE_OBJ_GUID2:
                 bResult = TreeView_ItemToGuid(hTreeView, hItem, &AceHelper.InheritedObjectType);
                 break;
@@ -1172,7 +1171,7 @@ static BOOL TreeView_ItemToAcl(
     if(hAclItem2 != NULL)
         TreeView_ItemToAcl_Add(hTreeView, hAclItem2, pAcl);
 
-    // Finalize the ACL 
+    // Finalize the ACL
     *ppAcl = Acl_FinishBuild(pAcl);
     return TRUE;
 }
@@ -1285,7 +1284,7 @@ static void UpdateContextMenu(HWND hTreeView, HTREEITEM hItem, HMENU hMainMenu)
             uEnable = MF_ENABLED;
     }
     EnableMenuItem(hSubMenu, IDC_MOVE_ACE_DOWN, uEnable);
-}                              
+}
 
 static HTREEITEM TreeView_GetPreviousItem(HWND hTreeView, HTREEITEM hItem)
 {
@@ -1663,10 +1662,10 @@ static int OnSetSecurity(HWND hDlg)
     hChildItem[3] = TreeView_GetNextSibling(hTreeView, hChildItem[2]);
     hChildItem[4] = TreeView_GetNextSibling(hTreeView, hChildItem[3]);
 
-    // 
+    //
     // Put owner into the security descriptor
-    // 
-    
+    //
+
     if(WantedSecInfo & OWNER_SECURITY_INFORMATION)
     {
         hItem = TreeView_GetChild(hTreeView, hChildItem[0]);
@@ -1680,10 +1679,10 @@ static int OnSetSecurity(HWND hDlg)
         }
     }
 
-    // 
+    //
     // Put group into the security descriptor
-    // 
-    
+    //
+
     if(WantedSecInfo & GROUP_SECURITY_INFORMATION)
     {
         hItem = TreeView_GetChild(hTreeView, hChildItem[1]);
@@ -1697,10 +1696,10 @@ static int OnSetSecurity(HWND hDlg)
         }
     }
 
-    // 
+    //
     // Put DACL into the security descriptor
-    // 
-    
+    //
+
     if(WantedSecInfo & DACL_SECURITY_INFORMATION)
     {
         hItem = TreeView_GetChild(hTreeView, hChildItem[2]);
@@ -1714,10 +1713,10 @@ static int OnSetSecurity(HWND hDlg)
         }
     }
 
-    // 
+    //
     // Put SACL into the security descriptor
     // Note: We have to combine SACL from two tree items
-    // 
+    //
 
     if(WantedSecInfo & (SACL_SECURITY_INFORMATION | LABEL_SECURITY_INFORMATION))
     {
@@ -1850,7 +1849,7 @@ static BOOL OnEditSidItemInPlace(HWND /* hDlg */, HWND hTreeView, HTREEITEM hIte
     TCHAR szItemText[128];
     HWND hEdit = TreeView_GetEditControl(hTreeView);
     PSID pSid = NULL;
-    
+
     if(hEdit != NULL)
     {
         if(TreeView_ItemToSid(hTreeView, hItem, &pSid, true))
@@ -1869,6 +1868,7 @@ static BOOL OnEditSidItemInPlace(HWND /* hDlg */, HWND hTreeView, HTREEITEM hIte
 static void OnEditAceTypeModal(HWND hDlg, HWND hTreeView, HTREEITEM hItem)
 {
     ACE_HELPER AceHelper;
+    LPCSTR szAceTypeString;
     bool bResult = false;
 
     // Get the current ACE type from the item
@@ -1877,7 +1877,7 @@ static void OnEditAceTypeModal(HWND hDlg, HWND hTreeView, HTREEITEM hItem)
         DWORD dwAceType = AceHelper.AceType;
 
         // Run the dialog
-        if(ValuesDialog(hDlg, &dwAceType, IDS_ACE_TYPE, AceHdrTypes) == IDOK && dwAceType != AceHelper.AceType)
+        if(FlagsDialog(hDlg, IDS_ACE_TYPE, AceHdrTypes, dwAceType) == IDOK && dwAceType != AceHelper.AceType)
         {
             // Put the ACE type
             if(AceHelper.SetAceType(dwAceType))
@@ -1886,7 +1886,8 @@ static void OnEditAceTypeModal(HWND hDlg, HWND hTreeView, HTREEITEM hItem)
                 AceHelper.SetAllocatedSid(Sid_CreateNew((BYTE)AceHelper.AceType));
 
                 // Set the item text
-                TreeView_SetTreeItem(hTreeView, hItem, GetAceTypeString(AceHelper.AceType), (TREE_ITEM_ACE | AceHelper.AceType));
+                szAceTypeString = GetAceTypeString(AceHelper.AceType);
+                TreeView_SetTreeItem(hTreeView, hItem, TWideString(szAceTypeString), (TREE_ITEM_ACE | AceHelper.AceType));
 
                 // Fill the sub-item
                 bResult = (TreeView_AceToItem(hTreeView, hItem, AceHelper) != NULL);
@@ -1905,7 +1906,7 @@ static void OnEditNumericItemModal(
     HWND hDlg,
     HWND hTreeView,
     HTREEITEM hItem,                // Item to be edited
-    TFlagInfo * pFlags,             // Flags array
+    TFlagInfo * pFlags,         // Flags array
     LPCTSTR szFormat,               // Format of the flags to be inserted back
     UINT nIDTitle)                  // Title for the flags dialog
 {
@@ -1934,21 +1935,10 @@ static void OnEditNumericItemModal(
         return;
 
     // Either invoke the values dialog or the flags dialog
-    if(nIDTitle & FLAG_EDIT_VALUES)
+    if(FlagsDialog(hDlg, nIDTitle, pFlags, dwFlags32) == IDOK)
     {
-        if(ValuesDialog(hDlg, &dwFlags32, nIDTitle, pFlags) == IDOK)
-        {
-            StringCchPrintf(szItemText, _countof(szItemText), szFormat, dwFlags32);
-            TreeView_SetItem(hTreeView, &tvi);
-        }
-    }
-    else
-    {
-        if(FlagsDialog(hDlg, &dwFlags32, nIDTitle, pFlags) == IDOK)
-        {
-            NamedValueToString(pFlags, szItemText, _countof(szItemText), szFormat, dwFlags32);
-            TreeView_SetItem(hTreeView, &tvi);
-        }
+        NamedValueToString(pFlags, szItemText, _countof(szItemText), szFormat, dwFlags32);
+        TreeView_SetItem(hTreeView, &tvi);
     }
 }
 
@@ -2105,7 +2095,7 @@ static int OnTVContextMenu(HWND hDlg, LPARAM lParam)
             // If we don't have the coords, make them from the tree item
             if(lParam == 0xFFFFFFFF)
             {
-                TreeView_GetItemRect(hTreeView, hItem, &rect, TRUE); 
+                TreeView_GetItemRect(hTreeView, hItem, &rect, TRUE);
                 pt.x = rect.left;
                 pt.y = rect.bottom;
                 ClientToScreen(hTreeView, &pt);
@@ -2133,7 +2123,7 @@ static int OnTVRightClick(HWND hDlg)
     hti.pt = pt;
     hti.flags = TVHT_ONITEMLABEL;
     hItem = TreeView_HitTest(hTreeView, &hti);
-    
+
     // If there is an item clicked, select it
     if(hItem != NULL)
         TreeView_Select(hTreeView, hItem, TVGN_CARET);
@@ -2199,7 +2189,7 @@ static int OnTVDoubleClick(HWND hDlg)
             break;
 
         case TREE_ITEM_MANDATORY_LABEL:
-            OnEditNumericItemModal(hDlg, hTreeView, hSelItem, IntegrityLevels, szIntLevelFmt, IDS_INTEGRITY_LEVEL | FLAG_EDIT_VALUES);
+            OnEditNumericItemModal(hDlg, hTreeView, hSelItem, IntegrityLevels, szIntLevelFmt, IDS_INTEGRITY_LEVEL);
             break;
     }
 
@@ -2276,7 +2266,7 @@ static int OnNotify(HWND hDlg, NMHDR * pNMHDR)
             if(pNMHDR->idFrom == IDC_SECURITY)
                 return OnTVRightClick(hDlg);
             break;
-    
+
         case NM_DBLCLK:
             if(pNMHDR->idFrom == IDC_SECURITY)
                 return OnTVDoubleClick(hDlg);
@@ -2285,7 +2275,7 @@ static int OnNotify(HWND hDlg, NMHDR * pNMHDR)
         case TVN_KEYDOWN:
             OnTVKeyDown(hDlg, (NMTVKEYDOWN *)pNMHDR);
             break;
-    
+
         case TVN_BEGINLABELEDIT:
             return OnBeginLabelEdit(hDlg, (LPNMTVDISPINFO)pNMHDR);
 

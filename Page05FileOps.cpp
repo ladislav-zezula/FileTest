@@ -16,35 +16,35 @@
 
 static TFlagInfo CopyFileFlags[] =
 {
-    FLAG_INFO_ENTRY(COPY_FILE_FAIL_IF_EXISTS),
-    FLAG_INFO_ENTRY(COPY_FILE_RESTARTABLE),
-    FLAG_INFO_ENTRY(COPY_FILE_OPEN_SOURCE_FOR_WRITE),
-    FLAG_INFO_ENTRY(COPY_FILE_ALLOW_DECRYPTED_DESTINATION),
-    FLAG_INFO_SEPARATOR(),
-    {{_T("Use Manual Copy (ReadFile+WriteFile)")}, COPY_FILE_USE_READ_WRITE, COPY_FILE_USE_READ_WRITE},
-    {{_T("Manual Copy: Skip Read Errors")},        COPY_FILE_SKIP_IO_ERRORS, COPY_FILE_SKIP_IO_ERRORS},
-    {{_T("Manual Copy: Log Read Errors")},         COPY_FILE_LOG_IO_ERRORS,  COPY_FILE_LOG_IO_ERRORS},
-    {{_T("Manual Copy: Copy per sector")},         COPY_FILE_PER_SECTOR,     COPY_FILE_PER_SECTOR},
-    FLAG_INFO_END
+    FLAGINFO_BITV(COPY_FILE_FAIL_IF_EXISTS),
+    FLAGINFO_BITV(COPY_FILE_RESTARTABLE),
+    FLAGINFO_BITV(COPY_FILE_OPEN_SOURCE_FOR_WRITE),
+    FLAGINFO_BITV(COPY_FILE_ALLOW_DECRYPTED_DESTINATION),
+    FLAGINFO_SEPARATOR(),
+    {{"Use Manual Copy (ReadFile+WriteFile)"}, COPY_FILE_USE_READ_WRITE, COPY_FILE_USE_READ_WRITE},
+    {{"Manual Copy: Skip Read Errors"},        COPY_FILE_SKIP_IO_ERRORS, COPY_FILE_SKIP_IO_ERRORS},
+    {{"Manual Copy: Log Read Errors"},         COPY_FILE_LOG_IO_ERRORS,  COPY_FILE_LOG_IO_ERRORS},
+    {{"Manual Copy: Copy per sector"},         COPY_FILE_PER_SECTOR,     COPY_FILE_PER_SECTOR},
+    FLAGINFO_END()
 };
 
 static TFlagInfo MoveFileFlags[] =
 {
-    FLAG_INFO_ENTRY(MOVEFILE_REPLACE_EXISTING),
-    FLAG_INFO_ENTRY(MOVEFILE_COPY_ALLOWED),
-    FLAG_INFO_ENTRY(MOVEFILE_DELAY_UNTIL_REBOOT),
-    FLAG_INFO_ENTRY(MOVEFILE_WRITE_THROUGH),
-    FLAG_INFO_ENTRY(MOVEFILE_CREATE_HARDLINK),
-    FLAG_INFO_ENTRY(MOVEFILE_FAIL_IF_NOT_TRACKABLE),
-    FLAG_INFO_END
+    FLAGINFO_BITV(MOVEFILE_REPLACE_EXISTING),
+    FLAGINFO_BITV(MOVEFILE_COPY_ALLOWED),
+    FLAGINFO_BITV(MOVEFILE_DELAY_UNTIL_REBOOT),
+    FLAGINFO_BITV(MOVEFILE_WRITE_THROUGH),
+    FLAGINFO_BITV(MOVEFILE_CREATE_HARDLINK),
+    FLAGINFO_BITV(MOVEFILE_FAIL_IF_NOT_TRACKABLE),
+    FLAGINFO_END()
 };
 
 static TFlagInfo Win7OplockFlags[] =
 {
-    FLAG_INFO_ENTRY(OPLOCK_LEVEL_CACHE_READ),
-    FLAG_INFO_ENTRY(OPLOCK_LEVEL_CACHE_HANDLE),
-    FLAG_INFO_ENTRY(OPLOCK_LEVEL_CACHE_WRITE),
-    FLAG_INFO_END
+    FLAGINFO_BITV(OPLOCK_LEVEL_CACHE_READ),
+    FLAGINFO_BITV(OPLOCK_LEVEL_CACHE_HANDLE),
+    FLAGINFO_BITV(OPLOCK_LEVEL_CACHE_WRITE),
+    FLAGINFO_END()
 };
 
 //-----------------------------------------------------------------------------
@@ -758,7 +758,7 @@ static int OnCopyOptions(HWND hDlg)
 {
     TFileTestData * pData = GetDialogData(hDlg);
 
-    FlagsDialog(hDlg, &pData->dwCopyFileFlags, IDS_COPYFILE_FLAGS, CopyFileFlags);
+    FlagsDialog(hDlg, IDS_COPYFILE_FLAGS, CopyFileFlags, pData->dwCopyFileFlags);
     return TRUE;
 }
 
@@ -766,7 +766,7 @@ static int OnMoveOptions(HWND hDlg)
 {
     TFileTestData * pData = GetDialogData(hDlg);
 
-    FlagsDialog(hDlg, &pData->dwMoveFileFlags, IDS_MOVEFILE_FLAGS, MoveFileFlags);
+    FlagsDialog(hDlg, IDS_MOVEFILE_FLAGS, MoveFileFlags, pData->dwMoveFileFlags);
     return TRUE;
 }
 
@@ -1038,33 +1038,20 @@ static int OnObjectIdMoreClick(HWND hDlg)
 static int OnGetFileAttributes(HWND hDlg)
 {
     TFileTestData * pData = GetDialogData(hDlg);
-    TFlagInfo * pFlags = FileAttributesValues;
-    TCHAR szFileAttributes[512] = _T("");
-    DWORD dwAttr;
-    DWORD dwErrCode = ERROR_SUCCESS;
+    FILE_BASIC_INFORMATION BasicInfo;
 
+    // Save the current state of the dialog
     SaveDialog(hDlg);
-    dwAttr = GetFileAttributes(pData->szFileName1);
-    if(dwAttr != INVALID_FILE_ATTRIBUTES)
+
+    // Retrieve the file attributes
+    BasicInfo.FileAttributes = GetFileAttributes(pData->szFileName1);
+    if(BasicInfo.FileAttributes != INVALID_FILE_ATTRIBUTES)
     {
-        for(int i = 0; pFlags->dwValue != 0; i++, pFlags++)
-        {
-            if(IS_FLAG_SET(pFlags, dwAttr))
-            {
-                if(szFileAttributes[0] != 0)
-                    StringCchCat(szFileAttributes, _countof(szFileAttributes), _T("\n"));
-                StringCchCat(szFileAttributes, _countof(szFileAttributes), pFlags->szFlagText);
-            }
-        }
-
-        if(szFileAttributes[0] == 0)
-            StringCchCopy(szFileAttributes, _countof(szFileAttributes), _T("0"));
-        MessageBoxRc(hDlg, IDS_FILE_ATTRIBUTES, (UINT_PTR)szFileAttributes);
+        FileAttributesDialog(hDlg, &BasicInfo);
+        return TRUE;
     }
-    else
-        dwErrCode = GetLastError();
 
-    SetResultInfo(hDlg, RSI_LAST_ERROR, dwErrCode);
+    SetResultInfo(hDlg, RSI_LAST_ERROR, GetLastError());
     return TRUE;
 }
 
@@ -1075,7 +1062,6 @@ static int OnNtQueryAttributesFile(HWND hDlg)
     TFileTestData * pData = GetDialogData(hDlg);
     UNICODE_STRING FileName = {0, 0, NULL};
     NTSTATUS Status;
-    TCHAR szMsgText[512] = _T("");
 
     // Save the current state of the dialog
     SaveDialog(hDlg);
@@ -1090,23 +1076,13 @@ static int OnNtQueryAttributesFile(HWND hDlg)
         Status = NtQueryAttributesFile(&ObjAttr, &BasicInfo);
         if(NT_SUCCESS(Status))
         {
-            StringCchPrintf(szMsgText, _countof(szMsgText),
-                                 _T("CreationTime: %08X-%08X\n")
-                                 _T("LastAccessTime: %08X-%08X\n")
-                                 _T("LastWriteTime: %08X-%08X\n")
-                                 _T("ChangeTime: %08X-%08X\n")
-                                 _T("FileAttributes: %08X"),
-                                 BasicInfo.CreationTime.HighPart, BasicInfo.CreationTime.LowPart, 
-                                 BasicInfo.LastAccessTime.HighPart, BasicInfo.LastAccessTime.LowPart, 
-                                 BasicInfo.LastWriteTime.HighPart, BasicInfo.LastWriteTime.LowPart, 
-                                 BasicInfo.ChangeTime.HighPart, BasicInfo.ChangeTime.LowPart, 
-                                 BasicInfo.FileAttributes);
-            MessageBoxRc(hDlg, IDS_FILE_BASIC_INFORMATION, (UINT_PTR)szMsgText);
+            NtAttributesDialog(hDlg, &BasicInfo);
         }
     }
 
     // Set the result information
-    SetResultInfo(hDlg, RSI_NTSTATUS, Status);
+    if(!NT_SUCCESS(Status))
+        SetResultInfo(hDlg, RSI_NTSTATUS, Status);
     FreeFileNameString(&FileName);
     return TRUE;
 }
@@ -1208,7 +1184,7 @@ static int OnSendRequestOplock(HWND hDlg, bool bRequestOplock)
     if(bRequestOplock)
     {
         // Ask the user for flags
-        if(FlagsDialog(hDlg, &pData->dwOplockLevel, IDS_OPLOCK_FLAGS, Win7OplockFlags) != IDOK)
+        if(FlagsDialog(hDlg, IDS_OPLOCK_FLAGS, Win7OplockFlags, pData->dwOplockLevel) != IDOK)
             return TRUE;
         RequestedOplockLevel = pData->dwOplockLevel;
         InputFlags = REQUEST_OPLOCK_INPUT_FLAG_REQUEST;

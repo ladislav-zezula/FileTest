@@ -1632,63 +1632,25 @@ int ConvertToWin32Name(HWND hDlg, UINT nIDEdit)
 //-----------------------------------------------------------------------------
 // Conversion flags to the text value
 
-LPTSTR FlagsToString(TFlagInfo * pFlags, LPTSTR szBuffer, size_t cchBuffer, DWORD dwFlags, bool bNewLineSeparated)
+LPTSTR FlagsToString(TFlagInfo * pFlags, LPTSTR szBuffer, size_t cchBuffer, DWORD dwBitMask, bool bNewLineSeparated)
 {
-    LPCTSTR szSeparator = (bNewLineSeparated == false) ? _T(" | ") : _T(" |\r\n");
-    LPTSTR szSaveBuffer = szBuffer;
-    LPTSTR szBufferEnd = szBuffer + cchBuffer;
+    TFlagString fs(pFlags, dwBitMask, (bNewLineSeparated) ? GetBitSeparatorNewLine() : NULL);
 
-    // As long as we are not at the end, or as long as there are some flags
-    while(pFlags->szFlagText && dwFlags)
-    {
-        // Is that flag set?
-        if(IS_FLAG_SET(pFlags, dwFlags))
-        {
-            // Append the appropriate separator
-            if(szBuffer > szSaveBuffer)
-                StringCchCopyEx(szBuffer, (szBufferEnd - szBuffer), szSeparator, &szBuffer, NULL, 0);
-
-            // Append the flag
-            StringCchCopyEx(szBuffer, (szBufferEnd - szBuffer), pFlags->szFlagText, &szBuffer, NULL, 0);
-
-            // Clear the flag from the flags list
-            dwFlags &= ~pFlags->dwValue;
-        }
-
-        // Move to the next flag
-        pFlags++;
-    }
-
-    // Are there some flags left?
-    if(dwFlags != 0)
-    {
-        // Append the appropriate separator and the hexa value
-        if(szBuffer > szSaveBuffer)
-            StringCchCopyEx(szBuffer, (szBufferEnd - szBuffer), szSeparator, &szBuffer, NULL, 0);
-        StringCchPrintfEx(szBuffer, (szBufferEnd - szBuffer), &szBuffer, NULL, 0, _T("%08X"), dwFlags);
-    }
-
-    // If there is nothing, append simple zero
-    if(szBuffer == szSaveBuffer && (szBuffer + 1) < szBufferEnd)
-    {
-        *szBuffer++ = _T('0');
-        *szBuffer = 0;
-    }
-
-    return szSaveBuffer;
+    StringCchCopy(szBuffer, cchBuffer, fs);
+    return szBuffer;
 }
 
-LPTSTR NamedValueToString(TFlagInfo * pFlags, LPTSTR szBuffer, size_t cchBuffer, LPCTSTR szFormat, DWORD dwFlags)
+LPTSTR NamedValueToString(TFlagInfo * pFlags, LPTSTR szBuffer, size_t cchBuffer, LPCTSTR szFormat, DWORD dwBitMask)
 {
     LPTSTR szSaveBuffer = szBuffer;
     LPTSTR szBufferEnd = szBuffer + cchBuffer;
 
     // Print the format and value
-    StringCchPrintfEx(szBuffer, cchBuffer, &szBuffer, NULL, 0, szFormat, dwFlags);
+    StringCchPrintfEx(szBuffer, cchBuffer, &szBuffer, NULL, 0, szFormat, dwBitMask);
 
     // Format the flags as user-friendly value
-    if(dwFlags != 0)
-        FlagsToString(pFlags, szBuffer, (szBufferEnd - szBuffer), dwFlags, false);
+    if(dwBitMask != 0)
+        FlagsToString(pFlags, szBuffer, (szBufferEnd - szBuffer), dwBitMask, false);
 
     // Return the start of the buffer
     return szSaveBuffer;
@@ -1703,7 +1665,6 @@ LPTSTR GuidValueToString(LPTSTR szBuffer, size_t cchBuffer, LPCTSTR szFormat, LP
     StringCchPrintf(szBuffer, cchBuffer, szFormat, szGuidText);
     return szSaveBuffer;
 }
-
 
 //-----------------------------------------------------------------------------
 // File ID and object ID support

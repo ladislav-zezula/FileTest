@@ -14,8 +14,6 @@
 //-----------------------------------------------------------------------------
 // Definition of the TTooltip class
 
-struct TFlagInfo;
-
 class TToolTip
 {
     public:
@@ -36,7 +34,7 @@ class TToolTip
 
     protected:
 
-    BOOL AddToolTipInternal(HWND hDlg, UINT nIDCtrl, LPCTSTR szTip, LPARAM lParam);
+    BOOL AddToolTipInternal(HWND hDlg, UINT nIDCtrl, LPCTSTR szTip, TFlagInfo * pFlags);
     void OnGetTooltipText(LPNMTTDISPINFO pTTDispInfo);
 
     LPTSTR szToolTipText;       // Text for preparing the buffer

@@ -32,11 +32,16 @@
 #include "ntstatus.h"
 #include "ntdll.h"
 #include "Utils.h"
+#include "TFastString.h"
+#include "TFlagString.h"
 #include "TAceHelper.h"
 #include "TAnchors.h"
 #include "TToolTip.h"
 #include "TDataEditor.h"
 #include "WinSDK.h"
+
+#pragma warning(disable:4995)       // cstdio(49) : warning C4995: 'gets': name was marked as #pragma deprecated
+#include <vector>
 
 //-----------------------------------------------------------------------------
 // Defines
@@ -98,26 +103,6 @@
 
 //-----------------------------------------------------------------------------
 // Structures
-
-#define FLAG_SEPARATOR                  0xFFFFFFFF
-#define FLAG_INFO_CTRLID(flag)          {{(LPCTSTR)IDC_##flag}, flag, flag}
-#define FLAG_INFO_ENTRY(flag)           {{_T(#flag)}, flag, flag}
-#define FLAG_INFO_MASK(mask, flag)      {{(LPCTSTR)IDC_##flag}, mask, flag}
-#define FLAG_INFO_SEPARATOR()           {{_T("")}, FLAG_SEPARATOR, FLAG_SEPARATOR}
-#define FLAG_INFO_END                   {{NULL}, 0, 0}
-#define IS_FLAG_SET(FlagInfo, flag)     ((flag & FlagInfo->dwMask) == FlagInfo->dwValue)
-
-struct TFlagInfo
-{
-    union
-    {
-        LPCTSTR szFlagText;                 // Text of the checkbox/radio button
-        UINT    nIDCtrl;                    // ID of the checkbox/radio button
-    };
-
-    DWORD   dwMask;                         // Item is checked when (dwFlags & dwMask) == dwValue
-    DWORD   dwValue;                        // - || -
-};
 
 // Common structure for context menus
 struct TContextMenu
@@ -400,8 +385,9 @@ extern ADDMANDATORYACE          pfnAddMandatoryAce;
 //-----------------------------------------------------------------------------
 // Flag values, global to the entire project
 
-extern TFlagInfo DesiredAccessValues[];
+extern TFlagInfo AccessMaskValues[];
 extern TFlagInfo FileAttributesValues[];
+extern TFlagInfo ShareAccessValues[];
 
 //-----------------------------------------------------------------------------
 // NTSTATUS conversion
@@ -465,8 +451,8 @@ void     FreeFileNameString(PUNICODE_STRING FileName);
 NTSTATUS ConvertToNtName(HWND hDlg, UINT nIDEdit);
 int      ConvertToWin32Name(HWND hDlg, UINT nIDEdit);
 
-LPTSTR FlagsToString(TFlagInfo * pFlags, LPTSTR szBuffer, size_t cchBuffer, DWORD dwFlags, bool bNewLineSeparated);
-LPTSTR NamedValueToString(TFlagInfo * pFlags, LPTSTR szBuffer, size_t cchBuffer, LPCTSTR szFormat, DWORD dwFlags);
+LPTSTR FlagsToString(TFlagInfo * pFlags, LPTSTR szBuffer, size_t cchBuffer, DWORD dwBitMask, bool bNewLineSeparated);
+LPTSTR NamedValueToString(TFlagInfo * pFlags, LPTSTR szBuffer, size_t cchBuffer, LPCTSTR szFormat, DWORD dwBitMask);
 LPTSTR GuidValueToString(LPTSTR szBuffer, size_t cchBuffer, LPCTSTR szFormat, LPGUID PtrGuid);
 
 void FileIDToString(TFileTestData * pData, ULONGLONG FileId, LPTSTR szBuffer);
@@ -525,6 +511,9 @@ BOOL GetSupportedDateTimeFormats(
 // Dialogs
 
 INT_PTR HelpAboutDialog(HWND hParent);
+INT_PTR FlagsDialog(HWND hWndParent, UINT nIDTitle, TFlagInfo * pFlags, DWORD & dwBitMask);
+INT_PTR FlagsDialog_OnControl(HWND hWndParent, UINT nIDTitle, TFlagInfo * pFlags, UINT nIDCtrl);
+
 INT_PTR ValuesDialog(HWND hWndParent, PDWORD pdwValue, UINT nIDTitle, TFlagInfo * pFlags);
 INT_PTR FlagsDialog(HWND hWndParent, LPDWORD pdwFlags, UINT nIDTitle, TFlagInfo * pFlags);
 INT_PTR FlagsDialog_OnControl(HWND hWndParent, UINT nIDCtrl, UINT nIDTitle, TFlagInfo * pFlags);
@@ -533,6 +522,8 @@ INT_PTR EaEditorDialog(HWND hParent, PFILE_FULL_EA_INFORMATION * pEaInfo);
 INT_PTR PrivilegesDialog(HWND hParent);
 INT_PTR ObjectIDActionDialog(HWND hParent);
 INT_PTR ObjectGuidHelpDialog(HWND hParent);
+INT_PTR FileAttributesDialog(HWND hParent, PFILE_BASIC_INFORMATION pBasicInfo);
+INT_PTR NtAttributesDialog(HWND hParent, PFILE_BASIC_INFORMATION pBasicInfo);
 INT_PTR CopyFileDialog(HWND hParent, TFileTestData * pData);
 
 TApcEntry * CreateApcEntry(TWindowData * pData, UINT ApcType, size_t cbExtraSize = 0);
@@ -571,5 +562,9 @@ INT_PTR CALLBACK PageProc12(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 //-----------------------------------------------------------------------------
 // Debugging functions
+
+#ifdef _DEBUG
+void DebugCode_TEST();
+#endif
 
 #endif // __FILETEST_H__

@@ -16,107 +16,99 @@
 //-----------------------------------------------------------------------------
 // Flags
 
-TFlagInfo DesiredAccessValues[] =
+TFlagInfo AccessMaskValues[] =
 {
-    {{_T("FILE_READ_DATA/FILE_LIST_DIRECTORY")},     FILE_READ_DATA,        FILE_READ_DATA},
-    {{_T("FILE_WRITE_DATA/FILE_ADD_FILE")},          FILE_WRITE_DATA,       FILE_WRITE_DATA},
-    {{_T("FILE_APPEND_DATA/FILE_ADD_SUBDIRECTORY")}, FILE_APPEND_DATA,      FILE_APPEND_DATA},
-    {{_T("FILE_READ_EA")},                           FILE_READ_EA,          FILE_READ_EA},
-    {{_T("FILE_WRITE_EA")},                          FILE_WRITE_EA,         FILE_WRITE_EA},
-    {{_T("FILE_EXECUTE/FILE_TRAVERSE")},             FILE_EXECUTE,          FILE_EXECUTE},
-    {{_T("FILE_DELETE_CHILD")},                      FILE_DELETE_CHILD,     FILE_DELETE_CHILD},
-    {{_T("FILE_READ_ATTRIBUTES")},                   FILE_READ_ATTRIBUTES,  FILE_READ_ATTRIBUTES},
-    {{_T("FILE_WRITE_ATTRIBUTES")},                  FILE_WRITE_ATTRIBUTES, FILE_WRITE_ATTRIBUTES},
+    {{"FILE_READ_DATA/FILE_LIST_DIRECTORY"},     FILE_READ_DATA,        FILE_READ_DATA},
+    {{"FILE_WRITE_DATA/FILE_ADD_FILE"},          FILE_WRITE_DATA,       FILE_WRITE_DATA},
+    {{"FILE_APPEND_DATA/FILE_ADD_SUBDIRECTORY"}, FILE_APPEND_DATA,      FILE_APPEND_DATA},
+    {{"FILE_READ_EA"},                           FILE_READ_EA,          FILE_READ_EA},
+    {{"FILE_WRITE_EA"},                          FILE_WRITE_EA,         FILE_WRITE_EA},
+    {{"FILE_EXECUTE/FILE_TRAVERSE"},             FILE_EXECUTE,          FILE_EXECUTE},
+    {{"FILE_DELETE_CHILD"},                      FILE_DELETE_CHILD,     FILE_DELETE_CHILD},
+    {{"FILE_READ_ATTRIBUTES"},                   FILE_READ_ATTRIBUTES,  FILE_READ_ATTRIBUTES},
+    {{"FILE_WRITE_ATTRIBUTES"},                  FILE_WRITE_ATTRIBUTES, FILE_WRITE_ATTRIBUTES},
 
-    FLAG_INFO_ENTRY(DELETE),
-    FLAG_INFO_ENTRY(READ_CONTROL),
-    FLAG_INFO_ENTRY(WRITE_DAC),
-    FLAG_INFO_ENTRY(WRITE_OWNER),
-    FLAG_INFO_ENTRY(SYNCHRONIZE),
-    FLAG_INFO_ENTRY(ACCESS_SYSTEM_SECURITY),
-    FLAG_INFO_ENTRY(GENERIC_READ),
-    FLAG_INFO_ENTRY(GENERIC_WRITE),
-    FLAG_INFO_ENTRY(GENERIC_EXECUTE),
-    FLAG_INFO_ENTRY(GENERIC_ALL),
-    FLAG_INFO_ENTRY(MAXIMUM_ALLOWED),
-    FLAG_INFO_END
+    FLAGINFO_BITV(DELETE),
+    FLAGINFO_BITV(READ_CONTROL),
+    FLAGINFO_BITV(WRITE_DAC),
+    FLAGINFO_BITV(WRITE_OWNER),
+    FLAGINFO_BITV(SYNCHRONIZE),
+    FLAGINFO_BITV(ACCESS_SYSTEM_SECURITY),
+    FLAGINFO_BITV(GENERIC_READ),
+    FLAGINFO_BITV(GENERIC_WRITE),
+    FLAGINFO_BITV(GENERIC_EXECUTE),
+    FLAGINFO_BITV(GENERIC_ALL),
+    FLAGINFO_BITV(MAXIMUM_ALLOWED),
+    FLAGINFO_END()
 };
 
 // Also necessary in Page04FileOps.cpp
 TFlagInfo FileAttributesValues[] =
 {
-    FLAG_INFO_ENTRY(FILE_ATTRIBUTE_READONLY),
-    FLAG_INFO_ENTRY(FILE_ATTRIBUTE_HIDDEN),
-    FLAG_INFO_ENTRY(FILE_ATTRIBUTE_SYSTEM),
-    FLAG_INFO_ENTRY(OLD_DOS_VOLID),
-    FLAG_INFO_ENTRY(FILE_ATTRIBUTE_DIRECTORY),
-    FLAG_INFO_ENTRY(FILE_ATTRIBUTE_ARCHIVE),
-    FLAG_INFO_ENTRY(FILE_ATTRIBUTE_DEVICE),
-    FLAG_INFO_ENTRY(FILE_ATTRIBUTE_NORMAL),
-    FLAG_INFO_ENTRY(FILE_ATTRIBUTE_TEMPORARY),
-    FLAG_INFO_ENTRY(FILE_ATTRIBUTE_SPARSE_FILE),
-    FLAG_INFO_ENTRY(FILE_ATTRIBUTE_REPARSE_POINT),
-    FLAG_INFO_ENTRY(FILE_ATTRIBUTE_COMPRESSED),
-    FLAG_INFO_ENTRY(FILE_ATTRIBUTE_OFFLINE),
-    FLAG_INFO_ENTRY(FILE_ATTRIBUTE_NOT_CONTENT_INDEXED),
-    FLAG_INFO_ENTRY(FILE_ATTRIBUTE_ENCRYPTED),
-    FLAG_INFO_ENTRY(FILE_ATTRIBUTE_INTEGRITY_STREAM),
-    FLAG_INFO_ENTRY(FILE_ATTRIBUTE_VIRTUAL),
-    FLAG_INFO_ENTRY(FILE_ATTRIBUTE_NO_SCRUB_DATA),
-    FLAG_INFO_ENTRY(FILE_ATTRIBUTE_RECALL_ON_OPEN),
-    FLAG_INFO_ENTRY(FILE_ATTRIBUTE_PINNED),
-    FLAG_INFO_ENTRY(FILE_ATTRIBUTE_UNPINNED),
-    FLAG_INFO_ENTRY(FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS),
-    FLAG_INFO_END
-};
-
-static TFlagInfo ShareAccessValues[] =
-{
-    FLAG_INFO_ENTRY(FILE_SHARE_READ),
-    FLAG_INFO_ENTRY(FILE_SHARE_WRITE),
-    FLAG_INFO_ENTRY(FILE_SHARE_DELETE),
-    FLAG_INFO_END
+    FLAGINFO_BITV(FILE_ATTRIBUTE_READONLY),
+    FLAGINFO_BITV(FILE_ATTRIBUTE_HIDDEN),
+    FLAGINFO_BITV(FILE_ATTRIBUTE_SYSTEM),
+    FLAGINFO_BITV(OLD_DOS_VOLID),
+    FLAGINFO_BITV(FILE_ATTRIBUTE_DIRECTORY),
+    FLAGINFO_BITV(FILE_ATTRIBUTE_ARCHIVE),
+    FLAGINFO_BITV(FILE_ATTRIBUTE_DEVICE),
+    FLAGINFO_BITV(FILE_ATTRIBUTE_NORMAL),
+    FLAGINFO_BITV(FILE_ATTRIBUTE_TEMPORARY),
+    FLAGINFO_BITV(FILE_ATTRIBUTE_SPARSE_FILE),
+    FLAGINFO_BITV(FILE_ATTRIBUTE_REPARSE_POINT),
+    FLAGINFO_BITV(FILE_ATTRIBUTE_COMPRESSED),
+    FLAGINFO_BITV(FILE_ATTRIBUTE_OFFLINE),
+    FLAGINFO_BITV(FILE_ATTRIBUTE_NOT_CONTENT_INDEXED),
+    FLAGINFO_BITV(FILE_ATTRIBUTE_ENCRYPTED),
+    FLAGINFO_BITV(FILE_ATTRIBUTE_INTEGRITY_STREAM),
+    FLAGINFO_BITV(FILE_ATTRIBUTE_VIRTUAL),
+    FLAGINFO_BITV(FILE_ATTRIBUTE_NO_SCRUB_DATA),
+    FLAGINFO_BITV(FILE_ATTRIBUTE_RECALL_ON_OPEN),
+    FLAGINFO_BITV(FILE_ATTRIBUTE_PINNED),
+    FLAGINFO_BITV(FILE_ATTRIBUTE_UNPINNED),
+    FLAGINFO_BITV(FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS),
+    FLAGINFO_END()
 };
 
 static TFlagInfo CreateOptionsValues[] =
 {
-    FLAG_INFO_ENTRY(FILE_DIRECTORY_FILE),
-    FLAG_INFO_ENTRY(FILE_WRITE_THROUGH),
-    FLAG_INFO_ENTRY(FILE_SEQUENTIAL_ONLY),
-    FLAG_INFO_ENTRY(FILE_NO_INTERMEDIATE_BUFFERING),
-    FLAG_INFO_ENTRY(FILE_SYNCHRONOUS_IO_ALERT),
-    FLAG_INFO_ENTRY(FILE_SYNCHRONOUS_IO_NONALERT),
-    FLAG_INFO_ENTRY(FILE_NON_DIRECTORY_FILE),
-    FLAG_INFO_ENTRY(FILE_CREATE_TREE_CONNECTION),
-    FLAG_INFO_ENTRY(FILE_COMPLETE_IF_OPLOCKED),
-    FLAG_INFO_ENTRY(FILE_NO_EA_KNOWLEDGE),
-    FLAG_INFO_ENTRY(FILE_OPEN_FOR_RECOVERY),
-    FLAG_INFO_ENTRY(FILE_RANDOM_ACCESS),
-    FLAG_INFO_ENTRY(FILE_DELETE_ON_CLOSE),
-    FLAG_INFO_ENTRY(FILE_OPEN_BY_FILE_ID),
-    FLAG_INFO_ENTRY(FILE_OPEN_FOR_BACKUP_INTENT),
-    FLAG_INFO_ENTRY(FILE_NO_COMPRESSION),
-    FLAG_INFO_ENTRY(FILE_OPEN_REQUIRING_OPLOCK),
-    FLAG_INFO_ENTRY(FILE_DISALLOW_EXCLUSIVE),
-    FLAG_INFO_ENTRY(FILE_SESSION_AWARE),
-    FLAG_INFO_ENTRY(FILE_RESERVE_OPFILTER),
-    FLAG_INFO_ENTRY(FILE_OPEN_REPARSE_POINT),
-    FLAG_INFO_ENTRY(FILE_OPEN_NO_RECALL),
-    FLAG_INFO_ENTRY(FILE_OPEN_FOR_FREE_SPACE_QUERY),
-    FLAG_INFO_END
+    FLAGINFO_BITV(FILE_DIRECTORY_FILE),
+    FLAGINFO_BITV(FILE_WRITE_THROUGH),
+    FLAGINFO_BITV(FILE_SEQUENTIAL_ONLY),
+    FLAGINFO_BITV(FILE_NO_INTERMEDIATE_BUFFERING),
+    FLAGINFO_BITV(FILE_SYNCHRONOUS_IO_ALERT),
+    FLAGINFO_BITV(FILE_SYNCHRONOUS_IO_NONALERT),
+    FLAGINFO_BITV(FILE_NON_DIRECTORY_FILE),
+    FLAGINFO_BITV(FILE_CREATE_TREE_CONNECTION),
+    FLAGINFO_BITV(FILE_COMPLETE_IF_OPLOCKED),
+    FLAGINFO_BITV(FILE_NO_EA_KNOWLEDGE),
+    FLAGINFO_BITV(FILE_OPEN_FOR_RECOVERY),
+    FLAGINFO_BITV(FILE_RANDOM_ACCESS),
+    FLAGINFO_BITV(FILE_DELETE_ON_CLOSE),
+    FLAGINFO_BITV(FILE_OPEN_BY_FILE_ID),
+    FLAGINFO_BITV(FILE_OPEN_FOR_BACKUP_INTENT),
+    FLAGINFO_BITV(FILE_NO_COMPRESSION),
+    FLAGINFO_BITV(FILE_OPEN_REQUIRING_OPLOCK),
+    FLAGINFO_BITV(FILE_DISALLOW_EXCLUSIVE),
+    FLAGINFO_BITV(FILE_SESSION_AWARE),
+    FLAGINFO_BITV(FILE_RESERVE_OPFILTER),
+    FLAGINFO_BITV(FILE_OPEN_REPARSE_POINT),
+    FLAGINFO_BITV(FILE_OPEN_NO_RECALL),
+    FLAGINFO_BITV(FILE_OPEN_FOR_FREE_SPACE_QUERY),
+    FLAGINFO_END()
 };
 
 static TFlagInfo ObjAttrFlagsValues[] =
 {
-    FLAG_INFO_ENTRY(OBJ_INHERIT),
-    FLAG_INFO_ENTRY(OBJ_PERMANENT),
-    FLAG_INFO_ENTRY(OBJ_EXCLUSIVE),
-    FLAG_INFO_ENTRY(OBJ_CASE_INSENSITIVE),    
-    FLAG_INFO_ENTRY(OBJ_OPENIF),
-    FLAG_INFO_ENTRY(OBJ_OPENLINK),
-    FLAG_INFO_ENTRY(OBJ_KERNEL_HANDLE),
-    FLAG_INFO_ENTRY(OBJ_FORCE_ACCESS_CHECK),
-    FLAG_INFO_END
+    FLAGINFO_BITV(OBJ_INHERIT),
+    FLAGINFO_BITV(OBJ_PERMANENT),
+    FLAGINFO_BITV(OBJ_EXCLUSIVE),
+    FLAGINFO_BITV(OBJ_CASE_INSENSITIVE),    
+    FLAGINFO_BITV(OBJ_OPENIF),
+    FLAGINFO_BITV(OBJ_OPENLINK),
+    FLAGINFO_BITV(OBJ_KERNEL_HANDLE),
+    FLAGINFO_BITV(OBJ_FORCE_ACCESS_CHECK),
+    FLAGINFO_END()
 };
 
 //-----------------------------------------------------------------------------
@@ -283,7 +275,7 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
 
     // If we have a tooltip window, init tooltips 
     g_Tooltip.AddToolTip(hDlg, IDC_OBJ_ATTR_FLAGS, ObjAttrFlagsValues);
-    g_Tooltip.AddToolTip(hDlg, IDC_DESIRED_ACCESS, DesiredAccessValues);
+    g_Tooltip.AddToolTip(hDlg, IDC_DESIRED_ACCESS, AccessMaskValues);
     g_Tooltip.AddToolTip(hDlg, IDC_FILE_ATTRIBUTES, FileAttributesValues);
     g_Tooltip.AddToolTip(hDlg, IDC_SHARE_ACCESS, ShareAccessValues);
     g_Tooltip.AddToolTip(hDlg, IDC_CREATE_OPTIONS, CreateOptionsValues);
@@ -349,7 +341,7 @@ static int OnRelativeFileHelp(HWND hDlg)
 {
     TFileTestData * pData = GetDialogData(hDlg);
     LPTSTR szBuffer;
-    TCHAR szDesiredAccess[0x100];
+    TCHAR szAccessMask[0x100];
     TCHAR szShareAccess[0x100];
     TCHAR szOpenOptions[0x100];
     TCHAR szMsgFormat[512];
@@ -366,7 +358,7 @@ static int OnRelativeFileHelp(HWND hDlg)
         {
             // Format the result string
             StringCchPrintf(szBuffer, cchBuffer, szMsgFormat,
-                            pData->dwDesiredAccessRF, FlagsToString(DesiredAccessValues, szDesiredAccess, _countof(szDesiredAccess), pData->dwDesiredAccessRF, false),
+                            pData->dwDesiredAccessRF, FlagsToString(AccessMaskValues,    szAccessMask,  _countof(szAccessMask),  pData->dwDesiredAccessRF, false),
                             pData->dwShareAccessRF,   FlagsToString(ShareAccessValues,   szShareAccess, _countof(szShareAccess), pData->dwShareAccessRF, false),
                             pData->dwOpenOptionsRF,   FlagsToString(CreateOptionsValues, szOpenOptions, _countof(szOpenOptions), pData->dwOpenOptionsRF, false));
 
@@ -404,7 +396,7 @@ static int OnBrowseFileClick(HWND hDlg)
 
 static int OnObjAtributesFlags(HWND hDlg)
 {
-    FlagsDialog_OnControl(hDlg, IDC_OBJ_ATTR_FLAGS, IDS_OBJECT_ATTRIBUTES_FLAGS, ObjAttrFlagsValues);
+    FlagsDialog_OnControl(hDlg, IDS_OBJECT_ATTRIBUTES_FLAGS, ObjAttrFlagsValues, IDC_OBJ_ATTR_FLAGS);
     return TRUE;
 }
 
@@ -416,18 +408,18 @@ static int OnDesiredAccessClick(HWND hDlg)
     // Shall we edit desired access for relative file?
     if(bRelativeFile)
     {
-        FlagsDialog(hDlg, &pData->dwDesiredAccessRF, IDS_DESIRED_ACCESS_RF, DesiredAccessValues);
+        FlagsDialog(hDlg, IDS_DESIRED_ACCESS_RF, AccessMaskValues, pData->dwDesiredAccessRF);
         return TRUE;
     }
 
     // Show the dialog for desired access
-    FlagsDialog_OnControl(hDlg, IDC_DESIRED_ACCESS, IDS_DESIRED_ACCESS, DesiredAccessValues);
+    FlagsDialog_OnControl(hDlg, IDS_DESIRED_ACCESS, AccessMaskValues, IDC_DESIRED_ACCESS);
     return TRUE;
 }
 
 static int OnFileAttributesClick(HWND hDlg)
 {
-    FlagsDialog_OnControl(hDlg, IDC_FILE_ATTRIBUTES, IDS_FILE_ATTRIBUTES, FileAttributesValues);
+    FlagsDialog_OnControl(hDlg, IDS_FILE_ATTRIBUTES, FileAttributesValues, IDC_FILE_ATTRIBUTES);
     return TRUE;
 }
 
@@ -439,12 +431,12 @@ static int OnShareAccessClick(HWND hDlg)
     // Shall we edit desired access for relative file?
     if(bRelativeFile)
     {
-        FlagsDialog(hDlg, &pData->dwShareAccessRF, IDS_SHARE_ACCESS_RF, ShareAccessValues);
+        FlagsDialog(hDlg, IDS_SHARE_ACCESS_RF, ShareAccessValues, pData->dwShareAccessRF);
         return TRUE;
     }
 
     // Show the dialog for desired access
-    FlagsDialog_OnControl(hDlg, IDC_SHARE_ACCESS, IDS_SHARE_ACCESS, ShareAccessValues);
+    FlagsDialog_OnControl(hDlg, IDS_SHARE_ACCESS, ShareAccessValues, IDC_SHARE_ACCESS);
     return TRUE;
 }
 
@@ -456,12 +448,12 @@ static int OnCreateOptionsClick(HWND hDlg)
     // Shall we edit desired access for relative file?
     if(bRelativeFile)
     {
-        FlagsDialog(hDlg, &pData->dwOpenOptionsRF, IDS_OPEN_OPTIONS_RF, CreateOptionsValues);
+        FlagsDialog(hDlg,IDS_OPEN_OPTIONS_RF, CreateOptionsValues, pData->dwOpenOptionsRF);
         return TRUE;
     }
 
     // Show the dialog for desired access
-    FlagsDialog_OnControl(hDlg, IDC_CREATE_OPTIONS, IDS_CREATE_OPTIONS, CreateOptionsValues);
+    FlagsDialog_OnControl(hDlg, IDS_CREATE_OPTIONS, CreateOptionsValues, IDC_CREATE_OPTIONS);
     return TRUE;
 }
 
@@ -853,3 +845,16 @@ INT_PTR CALLBACK PageProc02(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
     }
     return FALSE;
 }
+
+#ifdef _DEBUG
+void DebugCode_TEST()
+{
+    //DWORD dwBitMask = 0x80030080;
+
+    //FlagsDialog(NULL,
+    //            IDS_FLAGS_AND_ATTRIBUTES,
+    //            FileAttributesValues,
+    //            dwBitMask);
+    //ExitProcess(3);
+}
+#endif

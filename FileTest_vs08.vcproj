@@ -565,6 +565,14 @@
 				>
 			</File>
 			<File
+				RelativePath=".\TFastString.h"
+				>
+			</File>
+			<File
+				RelativePath=".\TFlagString.h"
+				>
+			</File>
+			<File
 				RelativePath=".\TToolTip.h"
 				>
 			</File>

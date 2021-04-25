@@ -71,12 +71,12 @@ void TToolTip::Destroy()
 
 BOOL TToolTip::AddToolTip(HWND hDlg, UINT nIDChild, TFlagInfo * pFlags)
 {
-    return AddToolTipInternal(hDlg, nIDChild, LPSTR_TEXTCALLBACK, (LPARAM)pFlags);
+    return AddToolTipInternal(hDlg, nIDChild, LPSTR_TEXTCALLBACK, pFlags);
 }
 
 BOOL TToolTip::AddToolTip(HWND hDlg, UINT nIDChild, UINT nIDTip)
 {
-    return AddToolTipInternal(hDlg, nIDChild, MAKEINTRESOURCE(nIDTip), 0);
+    return AddToolTipInternal(hDlg, nIDChild, MAKEINTRESOURCE(nIDTip), NULL);
 }
 
 //-----------------------------------------------------------------------------
@@ -107,7 +107,7 @@ LRESULT TToolTip::HandleMessages(HWND /* hDlg */, UINT uMsg, WPARAM /* wParam */
 //-----------------------------------------------------------------------------
 // Protected functions
 
-BOOL TToolTip::AddToolTipInternal(HWND hDlg, UINT nIDCtrl, LPCTSTR szTip, LPARAM lParam)
+BOOL TToolTip::AddToolTipInternal(HWND hDlg, UINT nIDCtrl, LPCTSTR szTip, TFlagInfo * pFlags)
 {
     TTTOOLINFO ti;
     TCHAR szClassName[0x80];
@@ -140,7 +140,7 @@ BOOL TToolTip::AddToolTipInternal(HWND hDlg, UINT nIDCtrl, LPCTSTR szTip, LPARAM
             ti.uId      = (UINT_PTR)hWndChild;
             ti.hinst    = g_hInst;
             ti.lpszText = (LPTSTR)szTip;
-            ti.lParam   = lParam;
+            ti.lParam   = (LPARAM)pFlags;
             bResult = (BOOL)SendMessage(hWndToolTip, TTM_ADDTOOL, 0, (LPARAM)&ti);
         }
     }
@@ -156,7 +156,7 @@ void TToolTip::OnGetTooltipText(LPNMTTDISPINFO pTTDispInfo)
     HWND hWndChild = (HWND)pTTDispInfo->hdr.idFrom;
 
     // Only if the text buffer has been allocated
-    if(pFlags != NULL && szToolTipText != NULL)
+    if(pFlags && szToolTipText)
     {
         // Reset the tooltip info to an empty string
         szToolTipText[0] = 0;

@@ -14,32 +14,53 @@
 //-----------------------------------------------------------------------------
 // Local functions
 
-static void SetWindowModuleVersion(HWND hWndChild, LPCTSTR szModuleName)
+static void SetWindowTextModuleVersion(HWND hWndChild, HMODULE hMod)
 {
     ULARGE_INTEGER Version;
+    TCHAR szModName[MAX_PATH + 1];
     TCHAR szFormat[255];
     TCHAR szText[255];
 
-    // Is such window really there ?
-    if(hWndChild != NULL)
+    if(GetModuleFileName(hMod, szModName, MAX_PATH))
     {
-        GetWindowText(hWndChild, szFormat, _countof(szFormat));
-        GetModuleVersion(szModuleName, &Version);
-        StringCchPrintf(szText, _countof(szText), szFormat,
-                                                  HIWORD(Version.HighPart),
-                                                  LOWORD(Version.HighPart),
-                                                  HIWORD(Version.LowPart),
-                                                  LOWORD(Version.LowPart));
+        // Is such window really there ?
+        if(hWndChild != NULL)
+        {
+            GetWindowText(hWndChild, szFormat, _countof(szFormat));
+            GetModuleVersion(szModName, &Version);
+            StringCchPrintf(szText, _countof(szText), szFormat,
+                                                      HIWORD(Version.HighPart),
+                                                      LOWORD(Version.HighPart),
+                                                      HIWORD(Version.LowPart),
+                                                      LOWORD(Version.LowPart));
+            SetWindowText(hWndChild, szText);
+        }
+    }
+}
+
+static void SetWindowTextFileTime(HWND hWndChild, LARGE_INTEGER & FileTime)
+{
+    TCHAR szText[0x80];
+
+    if(FileTimeToText(szText, &szText[_countof(szText) - 1], (PFILETIME)(&FileTime), FALSE))
+    {
         SetWindowText(hWndChild, szText);
     }
+}
+
+static void SetWindowTextFileAttributes(HWND hWndChild, DWORD dwAttributes)
+{
+    TFlagString fs(FileAttributesValues, dwAttributes, GetNewLineSeparator());
+
+    SetWindowText(hWndChild, fs);
 }
 
 //-----------------------------------------------------------------------------
 // Event handlers
 
-static int OnInitDialog(HWND hDlg, LPARAM /* lParam */)
+static int OnInitDialog(HWND hDlg, LPARAM lParam)
 {
-    TCHAR szMyName[MAX_PATH + 1];
+    PFILE_BASIC_INFORMATION pBasicInfo = (PFILE_BASIC_INFORMATION)lParam;
     HWND hWndChild;
 
     // Set the dialog icon
@@ -54,9 +75,21 @@ static int OnInitDialog(HWND hDlg, LPARAM /* lParam */)
     // If there is IDC_VERSION static text, supply the 4-digit version from resources
     hWndChild = GetDlgItem(hDlg, IDC_VERSION);
     if(hWndChild != NULL)
+        SetWindowTextModuleVersion(hWndChild, NULL);
+
+    // Last write time
+    if(pBasicInfo != NULL)
     {
-        GetModuleFileName(NULL, szMyName, MAX_PATH);
-        SetWindowModuleVersion(hWndChild, szMyName);
+        if((hWndChild = GetDlgItem(hDlg, IDC_CREATION_TIME)) != NULL)
+            SetWindowTextFileTime(hWndChild, pBasicInfo->CreationTime);
+        if((hWndChild = GetDlgItem(hDlg, IDC_LAST_ACCESS_TIME)) != NULL)
+            SetWindowTextFileTime(hWndChild, pBasicInfo->LastAccessTime);
+        if((hWndChild = GetDlgItem(hDlg, IDC_LAST_WRITE_TIME)) != NULL)
+            SetWindowTextFileTime(hWndChild, pBasicInfo->LastWriteTime);
+        if((hWndChild = GetDlgItem(hDlg, IDC_CHANGE_TIME)) != NULL)
+            SetWindowTextFileTime(hWndChild, pBasicInfo->ChangeTime);
+        if((hWndChild = GetDlgItem(hDlg, IDC_FILE_ATTRIBUTES)) != NULL)
+            SetWindowTextFileAttributes(hWndChild, pBasicInfo->FileAttributes);
     }
 
     return TRUE;
@@ -117,4 +150,14 @@ INT_PTR ObjectIDActionDialog(HWND hParent)
 INT_PTR ObjectGuidHelpDialog(HWND hParent)
 {
     return DialogBox(g_hInst, MAKEINTRESOURCE(IDD_OBJECT_GUID_HELP), hParent, DialogProc);
+}
+
+INT_PTR FileAttributesDialog(HWND hParent, PFILE_BASIC_INFORMATION pBasicInfo)
+{
+    return DialogBoxParam(g_hInst, MAKEINTRESOURCE(IDD_FILE_ATTRIBUTES), hParent, DialogProc, (LPARAM)(pBasicInfo));
+}
+
+INT_PTR NtAttributesDialog(HWND hParent, PFILE_BASIC_INFORMATION pBasicInfo)
+{
+    return DialogBoxParam(g_hInst, MAKEINTRESOURCE(IDD_NT_ATTRIBUTES), hParent, DialogProc, (LPARAM)(pBasicInfo));
 }

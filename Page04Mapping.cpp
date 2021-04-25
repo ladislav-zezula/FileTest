@@ -16,73 +16,73 @@
 
 static TFlagInfo SectionAccessValues[] =
 {
-    FLAG_INFO_ENTRY(SECTION_QUERY),
-    FLAG_INFO_ENTRY(SECTION_MAP_WRITE),
-    FLAG_INFO_ENTRY(SECTION_MAP_READ),
-    FLAG_INFO_ENTRY(SECTION_MAP_EXECUTE),
-    FLAG_INFO_ENTRY(SECTION_EXTEND_SIZE),
-    FLAG_INFO_ENTRY(SECTION_MAP_EXECUTE_EXPLICIT),
+    FLAGINFO_BITV(SECTION_QUERY),
+    FLAGINFO_BITV(SECTION_MAP_WRITE),
+    FLAGINFO_BITV(SECTION_MAP_READ),
+    FLAGINFO_BITV(SECTION_MAP_EXECUTE),
+    FLAGINFO_BITV(SECTION_EXTEND_SIZE),
+    FLAGINFO_BITV(SECTION_MAP_EXECUTE_EXPLICIT),
 
-    FLAG_INFO_ENTRY(DELETE),
-    FLAG_INFO_ENTRY(READ_CONTROL),
-    FLAG_INFO_ENTRY(WRITE_DAC),
-    FLAG_INFO_ENTRY(WRITE_OWNER),
-    FLAG_INFO_ENTRY(SYNCHRONIZE),
-    FLAG_INFO_ENTRY(ACCESS_SYSTEM_SECURITY),
-    FLAG_INFO_ENTRY(GENERIC_READ),
-    FLAG_INFO_ENTRY(GENERIC_WRITE),
-    FLAG_INFO_ENTRY(GENERIC_EXECUTE),
-    FLAG_INFO_ENTRY(GENERIC_ALL),
-    FLAG_INFO_END
+    FLAGINFO_BITV(DELETE),
+    FLAGINFO_BITV(READ_CONTROL),
+    FLAGINFO_BITV(WRITE_DAC),
+    FLAGINFO_BITV(WRITE_OWNER),
+    FLAGINFO_BITV(SYNCHRONIZE),
+    FLAGINFO_BITV(ACCESS_SYSTEM_SECURITY),
+    FLAGINFO_BITV(GENERIC_READ),
+    FLAGINFO_BITV(GENERIC_WRITE),
+    FLAGINFO_BITV(GENERIC_EXECUTE),
+    FLAGINFO_BITV(GENERIC_ALL),
+    FLAGINFO_END()
 };
 
 TFlagInfo AllocationAttributesValues[] =
 {
-    FLAG_INFO_ENTRY(SEC_FILE),
-    FLAG_INFO_ENTRY(SEC_IMAGE),
-    FLAG_INFO_ENTRY(SEC_PROTECTED_IMAGE),
-    FLAG_INFO_ENTRY(SEC_RESERVE),
-    FLAG_INFO_ENTRY(SEC_COMMIT),
-    FLAG_INFO_ENTRY(SEC_NOCACHE),
-    FLAG_INFO_ENTRY(SEC_WRITECOMBINE),
-    FLAG_INFO_ENTRY(SEC_LARGE_PAGES),
-    FLAG_INFO_END,
+    FLAGINFO_BITV(SEC_FILE),
+    FLAGINFO_BITV(SEC_IMAGE),
+    FLAGINFO_BITV(SEC_PROTECTED_IMAGE),
+    FLAGINFO_BITV(SEC_RESERVE),
+    FLAGINFO_BITV(SEC_COMMIT),
+    FLAGINFO_BITV(SEC_NOCACHE),
+    FLAGINFO_BITV(SEC_WRITECOMBINE),
+    FLAGINFO_BITV(SEC_LARGE_PAGES),
+    FLAGINFO_END()
 };
 
 
 static TFlagInfo AllocationTypeValues[] =
 {
-    FLAG_INFO_ENTRY(MEM_COMMIT),
-    FLAG_INFO_ENTRY(MEM_RESERVE),
-    FLAG_INFO_ENTRY(MEM_DECOMMIT),
-    FLAG_INFO_ENTRY(MEM_RELEASE),
-    FLAG_INFO_ENTRY(MEM_FREE),
-    FLAG_INFO_ENTRY(MEM_PRIVATE),
-    FLAG_INFO_ENTRY(MEM_MAPPED),
-    FLAG_INFO_ENTRY(MEM_RESET),
-    FLAG_INFO_ENTRY(MEM_TOP_DOWN),
-    FLAG_INFO_ENTRY(MEM_WRITE_WATCH),
-    FLAG_INFO_ENTRY(MEM_PHYSICAL),
-    FLAG_INFO_ENTRY(MEM_ROTATE),
-    FLAG_INFO_ENTRY(MEM_LARGE_PAGES),
-    FLAG_INFO_ENTRY(MEM_4MB_PAGES),
-    FLAG_INFO_END,
+    FLAGINFO_BITV(MEM_COMMIT),
+    FLAGINFO_BITV(MEM_RESERVE),
+    FLAGINFO_BITV(MEM_DECOMMIT),
+    FLAGINFO_BITV(MEM_RELEASE),
+    FLAGINFO_BITV(MEM_FREE),
+    FLAGINFO_BITV(MEM_PRIVATE),
+    FLAGINFO_BITV(MEM_MAPPED),
+    FLAGINFO_BITV(MEM_RESET),
+    FLAGINFO_BITV(MEM_TOP_DOWN),
+    FLAGINFO_BITV(MEM_WRITE_WATCH),
+    FLAGINFO_BITV(MEM_PHYSICAL),
+    FLAGINFO_BITV(MEM_ROTATE),
+    FLAGINFO_BITV(MEM_LARGE_PAGES),
+    FLAGINFO_BITV(MEM_4MB_PAGES),
+    FLAGINFO_END()
 };
 
 static TFlagInfo PageProtectionValues[] =
 {
-    FLAG_INFO_ENTRY(PAGE_NOACCESS),   
-    FLAG_INFO_ENTRY(PAGE_READONLY),   
-    FLAG_INFO_ENTRY(PAGE_READWRITE),   
-    FLAG_INFO_ENTRY(PAGE_WRITECOPY),   
-    FLAG_INFO_ENTRY(PAGE_EXECUTE),   
-    FLAG_INFO_ENTRY(PAGE_EXECUTE_READ),   
-    FLAG_INFO_ENTRY(PAGE_EXECUTE_READWRITE),   
-    FLAG_INFO_ENTRY(PAGE_EXECUTE_WRITECOPY),   
-    FLAG_INFO_ENTRY(PAGE_GUARD),
-    FLAG_INFO_ENTRY(PAGE_NOCACHE),
-    FLAG_INFO_ENTRY(PAGE_WRITECOMBINE),
-    FLAG_INFO_END,
+    FLAGINFO_BITV(PAGE_NOACCESS),   
+    FLAGINFO_BITV(PAGE_READONLY),   
+    FLAGINFO_BITV(PAGE_READWRITE),   
+    FLAGINFO_BITV(PAGE_WRITECOPY),   
+    FLAGINFO_BITV(PAGE_EXECUTE),   
+    FLAGINFO_BITV(PAGE_EXECUTE_READ),   
+    FLAGINFO_BITV(PAGE_EXECUTE_READWRITE),   
+    FLAGINFO_BITV(PAGE_EXECUTE_WRITECOPY),   
+    FLAGINFO_BITV(PAGE_GUARD),
+    FLAGINFO_BITV(PAGE_NOCACHE),
+    FLAGINFO_BITV(PAGE_WRITECOMBINE),
+    FLAGINFO_END()
 };
 
 static TAnchors * pAnchors = NULL;
@@ -97,14 +97,11 @@ static void InitPageProtections(HWND hDlg, UINT nIDCombo, TFlagInfo * pFlags)
 
     if(hWndCombo != NULL)
     {
-        while(pFlags->szFlagText != NULL)
+        for(DWORD i = 0; !pFlags->IsTerminator(); i++, pFlags++)
         {
             // Format and insert the string to the combo box
-            StringCchPrintf(szItemText, _countof(szItemText), _T("[%04X] %s"), pFlags->dwValue, pFlags->szFlagText);
+            StringCchPrintf(szItemText, _countof(szItemText), _T("[%04X] %hs"), pFlags->dwValue, pFlags->szFlagText);
             ComboBox_AddString(hWndCombo, szItemText);
-
-            // Move to the next flag
-            pFlags++;
         }
     }
 }
@@ -120,7 +117,7 @@ static void Hex2PageProtection(HWND hDlg, UINT nIDCombo, DWORD dwProtection)
         // Find the proper page protection
         for(int i = 0; pFlags->szFlagText != NULL; i++, pFlags++)
         {
-            if(IS_FLAG_SET(pFlags, dwProtection))
+            if(pFlags->IsValuePresent(dwProtection))
             {
                 nItemIndex = i;
                 break;
@@ -135,7 +132,7 @@ static void Hex2PageProtection(HWND hDlg, UINT nIDCombo, DWORD dwProtection)
 static DWORD PageProtection2Hex(HWND hDlg, UINT nIDCombo)
 {
     HWND hWndCombo = GetDlgItem(hDlg, nIDCombo);
-    int nMaxItemIndex = (int)(sizeof(PageProtectionValues) / sizeof(TFlagInfo)) - 1;
+    int nMaxItemIndex = _countof(PageProtectionValues) - 1;
     int nItemIndex;
 
     if(hWndCombo != NULL)
@@ -307,19 +304,19 @@ static int OnKillActive(HWND hDlg)
 
 static int OnDesiredAccessBrowse(HWND hDlg)
 {
-    FlagsDialog_OnControl(hDlg, IDC_DESIRED_ACCESS, IDS_DESIRED_ACCESS, SectionAccessValues);
+    FlagsDialog_OnControl(hDlg, IDS_DESIRED_ACCESS, SectionAccessValues, IDC_DESIRED_ACCESS);
     return TRUE;
 }
 
 static int OnAllocAttributesBrowse(HWND hDlg)
 {
-    FlagsDialog_OnControl(hDlg, IDC_ALLOCATION_ATTRIBUTES, IDS_ALLOCATION_ATTRIBUTES, AllocationAttributesValues);
+    FlagsDialog_OnControl(hDlg, IDS_ALLOCATION_ATTRIBUTES, AllocationAttributesValues, IDC_ALLOCATION_ATTRIBUTES);
     return TRUE;
 }
 
 static int OnAllocTypeBrowse(HWND hDlg)
 {
-    FlagsDialog_OnControl(hDlg, IDC_ALLOCATION_TYPE, IDS_ALLOCATION_TYPE, AllocationTypeValues);
+    FlagsDialog_OnControl(hDlg, IDS_ALLOCATION_TYPE, AllocationTypeValues, IDC_ALLOCATION_TYPE);
     return TRUE;
 }
 
