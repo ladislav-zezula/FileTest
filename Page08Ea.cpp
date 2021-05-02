@@ -109,26 +109,24 @@ static int OnQueryEa(HWND hDlg)
                                    NULL,
                                    TRUE);
 
-            switch(Status)
+            if(Status == STATUS_BUFFER_OVERFLOW || Status == STATUS_BUFFER_TOO_SMALL)
             {
-                // We succeeded or not "buffer too small" => break    
-                case STATUS_SUCCESS:    
-                default:
-                    bEndLoop = TRUE;
-                    break;
+                PFILE_FULL_EA_INFORMATION NewEaBuffer;
 
-                // We need to increment buffer size
-                case STATUS_BUFFER_OVERFLOW:
-                case STATUS_BUFFER_TOO_SMALL:
-                    EaBufferSize *= 2;
-                    EaBuffer = (PFILE_FULL_EA_INFORMATION)HeapReAlloc(g_hHeap, 0, EaBuffer, EaBufferSize);
-                    Status = STATUS_SUCCESS;
-                    if(EaBuffer == NULL)
-                    {
-                        Status = STATUS_INSUFFICIENT_RESOURCES;
-                        bEndLoop = TRUE;
-                    }
-                    break;
+                // Allocate new buffer. If succeeded, we try to query again
+                EaBufferSize = EaBufferSize << 1;
+                NewEaBuffer = (PFILE_FULL_EA_INFORMATION)HeapReAlloc(g_hHeap, 0, EaBuffer, EaBufferSize);
+                if(NewEaBuffer != NULL)
+                {
+                    EaBuffer = NewEaBuffer;
+                    continue;
+                }
+
+                // Failed to reallocate - free the buffer and stop
+                HeapFree(g_hHeap, 0, EaBuffer);
+                Status = STATUS_INSUFFICIENT_RESOURCES;
+                EaBuffer = NULL;
+                break;
             }
         }
     }
@@ -137,12 +135,11 @@ static int OnQueryEa(HWND hDlg)
     if(Status == STATUS_SUCCESS)
     {
         ExtendedAttributesToListView(hDlg, EaBuffer);
+        HeapFree(g_hHeap, 0, EaBuffer);
     }
 
     // Set the result to the dialog
     SetResultInfo(hDlg, RSI_NTSTATUS | RSI_INFORMATION, Status, &IoStatus);
-    if(EaBuffer != NULL)
-        HeapFree(g_hHeap, 0, EaBuffer);
     return TRUE;
 }
 

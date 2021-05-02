@@ -95,7 +95,7 @@ class TFastString
 
     virtual ~TFastString()
     {
-        if (m_pBuffer != m_StaticBuff)
+        if(m_pBuffer != m_StaticBuff)
             HeapFree(g_hHeap, 0, m_pBuffer);
         m_pBuffer = m_StaticBuff;
     }
@@ -120,20 +120,20 @@ class TFastString
                 Reset();
 
                 // Make sure there is enough space for the string
-                if (EnsureSpace(nAnsiLength))
+                if(EnsureSpace(nAnsiLength))
                 {
                     // Convert the WIDE string to ANSI string
                     nAnsiLength = WideCharToMultiByte(CP_ACP, WC_COMPOSITECHECK, szStringW, (int)nWideLength, (LPSTR)m_pBuffer, (int)nAnsiLength, NULL, NULL);
-                    if (nAnsiLength != 0)
+                    if(nAnsiLength != 0)
                     {
                         m_pBufferPtr = m_pBuffer + nAnsiLength;
                     }
 
                     // If failed, we check whether this is a buffer overflow
-                    else if (GetLastError() == ERROR_INSUFFICIENT_BUFFER)
+                    else if(GetLastError() == ERROR_INSUFFICIENT_BUFFER)
                     {
                         nAnsiLength = WideCharToMultiByte(CP_ACP, WC_COMPOSITECHECK, szStringW, (int)nWideLength, NULL, 0, NULL, NULL);
-                        if (nTryCount++ == 0)
+                        if(nTryCount++ == 0)
                         {
                             goto __TryAgain;
                         }
@@ -178,20 +178,20 @@ class TFastString
                 Reset();
 
                 // Make sure there is enough space for the string
-                if (EnsureSpace(nWideLength))
+                if(EnsureSpace(nWideLength))
                 {
                     // Convert the WIDE string to ANSI string
                     nWideLength = MultiByteToWideChar(CP_ACP, 0, szStringA, (int)nAnsiLength, (LPWSTR)m_pBuffer, (int)nWideLength);
-                    if (nWideLength != 0)
+                    if(nWideLength != 0)
                     {
                         m_pBufferPtr = m_pBuffer + nWideLength;
                     }
 
                     // If failed, we check whether this is a buffer overflow
-                    else if (GetLastError() == ERROR_INSUFFICIENT_BUFFER)
+                    else if(GetLastError() == ERROR_INSUFFICIENT_BUFFER)
                     {
                         nAnsiLength = MultiByteToWideChar(CP_ACP, 0, szStringA, (int)nAnsiLength, NULL, 0);
-                        if (nTryCount++ == 0)
+                        if(nTryCount++ == 0)
                         {
                             goto __TryAgain;
                         }
@@ -219,7 +219,7 @@ class TFastString
     bool AppendChar(XCHAR chOneChar)
     {
         // Ensure that there is space for one character
-        if (!EnsureSpace(1))
+        if(!EnsureSpace(1))
             return false;
 
         // Insert the character
@@ -230,7 +230,7 @@ class TFastString
     bool AppendChars(XCHAR chOneChar, size_t nCount)
     {
         // Ensure that there is space for one character
-        if (!EnsureSpace(nCount))
+        if(!EnsureSpace(nCount))
             return false;
 
         // Insert the character
@@ -243,7 +243,7 @@ class TFastString
     bool AppendString(LPCXSTR szString, size_t nLength)
     {
         // Ensure that there is enough space in the buffers
-        if (!EnsureSpace(nLength))
+        if(!EnsureSpace(nLength))
             return false;
 
         memcpy(m_pBufferPtr, szString, nLength * sizeof(XCHAR));
@@ -260,7 +260,7 @@ class TFastString
     {
         LPXSTR szBufferPos = (LPXSTR)(szPosition);
 
-        if (m_pBuffer <= szBufferPos && szBufferPos <= m_pBufferPtr)
+        if(m_pBuffer <= szBufferPos && szBufferPos <= m_pBufferPtr)
             szBufferPos[0] = 0;
         return m_pBuffer;
     }
@@ -293,7 +293,7 @@ class TFastString
 
     bool CutLastChar()
     {
-        if (m_pBufferPtr > m_pBuffer)
+        if(m_pBufferPtr > m_pBuffer)
         {
             m_pBufferPtr--;
             return true;
@@ -378,9 +378,9 @@ class TFastString
     bool SetLength(size_t nLength)
     {
         // Make sure there is enough space in the bufer
-        if (nLength > (size_t)(m_pBufferEnd - m_pBuffer))
+        if(nLength > (size_t)(m_pBufferEnd - m_pBuffer))
         {
-            if (!EnsureSpace(nLength - Length()))
+            if(!EnsureSpace(nLength - Length()))
             {
                 return false;
             }
@@ -409,7 +409,7 @@ class TFastString
 
     XCHAR operator[](size_t nIndex) const
     {
-        if ((m_pBuffer + nIndex) > m_pBufferPtr)
+        if((m_pBuffer + nIndex) > m_pBufferPtr)
             return 0;
         return m_pBuffer[nIndex];
     }
@@ -419,7 +419,7 @@ class TFastString
     bool EnsureSpace(size_t nReserve)
     {
         // Would we go beyond the buffer if we added that number of chars?
-        if ((m_pBufferPtr + nReserve) > m_pBufferEnd)
+        if((m_pBufferPtr + nReserve) > m_pBufferEnd)
         {
             size_t nMaxLength = (m_pBufferEnd - m_pBuffer);
             size_t nLength = (m_pBufferPtr - m_pBuffer);
@@ -429,11 +429,11 @@ class TFastString
                 nMaxLength <<= 1;
 
             // Allocate new buffer
-            if (m_pBuffer == m_StaticBuff)
+            if(m_pBuffer == m_StaticBuff)
             {
                 // First reallocation: Allocate brand new.
                 m_pBuffer = (LPXSTR)HeapAlloc(g_hHeap, 0, ((nMaxLength + 1) * sizeof(XCHAR)));
-                if (m_pBuffer == NULL)
+                if(m_pBuffer == NULL)
                 {
                     SetLastError(ERROR_NOT_ENOUGH_MEMORY);
                     return false;
@@ -446,12 +446,18 @@ class TFastString
             else
             {
                 // Second reallocation: Use HeapReAlloc
-                m_pBuffer = (LPXSTR)HeapReAlloc(g_hHeap, 0, m_pBuffer, ((nMaxLength + 1) * sizeof(XCHAR)));
-                if (m_pBuffer == NULL)
+                LPXSTR pNewBuffer = (LPXSTR)HeapReAlloc(g_hHeap, 0, m_pBuffer, ((nMaxLength + 1) * sizeof(XCHAR)));
+
+                // Failed - the old buffer is still allocated
+                if(pNewBuffer == NULL)
                 {
+                    HeapFree(g_hHeap, 0, m_pBuffer);
                     SetLastError(ERROR_NOT_ENOUGH_MEMORY);
                     return false;
                 }
+
+                // Remember the new buffer
+                m_pBuffer = pNewBuffer;
             }
 
             // Adjust buffers

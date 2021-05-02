@@ -184,6 +184,19 @@ static void GetFileTestAppTitle(LPTSTR szTitle, int nMaxChars)
 //-----------------------------------------------------------------------------
 // Local functions
 
+static NTSTATUS SafeInitializeCriticalSection(CRITICAL_SECTION & Section)
+{
+    __try
+    {
+        InitializeCriticalSection(&Section);
+        return STATUS_SUCCESS;
+    }
+    __except(EXCEPTION_EXECUTE_HANDLER)
+    {
+        return STATUS_NO_MEMORY;
+    }
+}
+
 static void InitializeTabControl(HWND hDlg, TWindowData * pData)
 {
     PROPSHEETHEADER psh;
@@ -531,7 +544,7 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
 
     // Initialize dialog data
     ZeroMemory(pData, sizeof(TWindowData));
-    InitializeCriticalSection(&pData->ApcLock);
+    SafeInitializeCriticalSection(pData->ApcLock);
     InitializeListHead(&pData->ApcList);
     pData->hDlg = hDlg;
     SetDialogData(hDlg, pData);

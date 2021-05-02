@@ -23,16 +23,16 @@ echo.
 :BUILD_EXE_32
 echo Building %EXE_NAME%.exe (32-bit) ...
 set DDKBUILDENV=
-call %WDKDIR%\bin\setenv.bat %WDKDIR%\ fre w2k
+call %WDKDIR%\bin\setenv.bat %WDKDIR%\ fre wxp
 cd %PROJECT_DIR%
 set USER_LIB_PATH=..\aaa\lib32
 build.exe -czgw
-del buildfre_w2k_x86.log
+del buildfre_wxp_x86.log
 echo.
 
 :COPY_EXE
 PostBuild.exe .\objfre_wlh_amd64\amd64\%EXE_NAME%.exe %EXE_NAME%.rc /subsystem4 /tools
-PostBuild.exe .\objfre_w2k_x86\i386\%EXE_NAME%.exe /subsystem4 /tools
+PostBuild.exe .\objfre_wxp_x86\i386\%EXE_NAME%.exe /subsystem4 /tools
 
 :CLEANUP
 if exist build.bat del build.bat

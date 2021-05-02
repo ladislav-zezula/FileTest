@@ -969,15 +969,26 @@ static int OnImportStreams(HWND hDlg)
     // Now reallocate the buffer so we have enough space
     if(NT_SUCCESS(Status))
     {
+        PWSTR NewBuffer;
         ULONG NewMaxLengh = (ULONG)FileName.MaximumLength + 255;
 
+        // Don't exceet the maximum file name length
         if(NewMaxLengh > 0xFFFE)
             NewMaxLengh = 0xFFFE;
-        
-        FileName.MaximumLength = (USHORT)NewMaxLengh;
-        FileName.Buffer = (PWSTR)RtlReAllocateHeap(RtlProcessHeap(), 0, FileName.Buffer, FileName.MaximumLength);
-        if(FileName.Buffer == NULL)
+        NewBuffer = (PWSTR)RtlReAllocateHeap(RtlProcessHeap(), 0, FileName.Buffer, NewMaxLengh);
+
+        // If the allocation failed, we need to free the old buffer
+        if(NewBuffer != NULL)
+        {
+            FileName.MaximumLength = (USHORT)NewMaxLengh;
+            FileName.Buffer = NewBuffer;
+        }
+        else
+        {
+            RtlFreeHeap(RtlProcessHeap(), 0, FileName.Buffer);
             Status = STATUS_INSUFFICIENT_RESOURCES;
+            FileName.Buffer = NULL;
+        }
     }
 
     // Query the directory and load all streams from all files
@@ -1062,6 +1073,7 @@ static int OnImportStreams(HWND hDlg)
     // Close the file
     if(FileHandle != NULL)
         NtClose(FileHandle);
+    FreeFileNameString(&FileName);
 
     // Set the result of the operation
     SetResultInfo(hDlg, RSI_NTSTATUS | RSI_NOINFO, Status);
