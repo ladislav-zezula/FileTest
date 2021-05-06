@@ -109,8 +109,8 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 2,7,0,598
- PRODUCTVERSION 2,7,0,598
+ FILEVERSION 2,7,0,601
+ PRODUCTVERSION 2,7,0,601
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -127,13 +127,13 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Ladislav Zezula"
             VALUE "FileDescription", "Interactive File System API Test"
-            VALUE "FileVersion", "2, 7, 0, 598"
+            VALUE "FileVersion", "2, 7, 0, 601"
             VALUE "InternalName", "FileTest"
             VALUE "LegalCopyright", "Copyright © 2004 - 2018 Ladislav Zezula"
             VALUE "LegalTrademarks", "http://www.zezula.net"
             VALUE "OriginalFilename", "FileTest.exe"
             VALUE "ProductName", "FileTest"
-            VALUE "ProductVersion", "2, 7, 0, 598"
+            VALUE "ProductVersion", "2, 7, 0, 601"
         END
     END
     BLOCK "VarFileInfo"
@@ -323,13 +323,13 @@ BEGIN
     LTEXT           "Allocation size:",IDC_STATIC,12,91,60,14,SS_CENTERIMAGE
     EDITTEXT        IDC_ALLOCATION_SIZE,73,91,200,14,ES_AUTOHSCROLL
     CONTROL         "Spin1",IDC_ALLOCATION_SIZE_UPDOWN,"msctls_updown32",UDS_ARROWKEYS | UDS_HOTTRACK,278,91,15,14
-    LTEXT           "File attributes:",IDC_STATIC,11,109,60,14,SS_CENTERIMAGE
+    LTEXT           "File attributes:",IDC_STATIC,12,109,60,14,SS_CENTERIMAGE
     EDITTEXT        IDC_FILE_ATTRIBUTES,73,109,200,14,ES_AUTOHSCROLL
     PUSHBUTTON      "...",IDC_FILE_ATTRIBUTES_BROWSE,278,109,15,14
-    LTEXT           "Share access:",IDC_STATIC,11,128,60,14,SS_CENTERIMAGE
+    LTEXT           "Share access:",IDC_STATIC,12,128,60,14,SS_CENTERIMAGE
     EDITTEXT        IDC_SHARE_ACCESS,73,128,200,14,ES_AUTOHSCROLL
     PUSHBUTTON      "...",IDC_SHARE_ACCESS_BROWSE,278,128,15,14
-    LTEXT           "Create disposition:",IDC_STATIC,11,146,60,12,SS_CENTERIMAGE
+    LTEXT           "Create disposition:",IDC_STATIC,12,146,60,12,SS_CENTERIMAGE
     COMBOBOX        IDC_CREATE_DISPOSITION,73,146,200,57,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
     LTEXT           "Create options:",IDC_STATIC,12,162,60,14,SS_CENTERIMAGE
     EDITTEXT        IDC_CREATE_OPTIONS,73,162,200,14,ES_AUTOHSCROLL

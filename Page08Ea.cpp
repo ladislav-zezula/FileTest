@@ -63,6 +63,7 @@ static int OnSetActive(HWND hDlg)
 
 static int OnQueryEa(HWND hDlg)
 {
+    PFILE_FULL_EA_INFORMATION NewEaBuffer;
     PFILE_FULL_EA_INFORMATION EaBuffer = NULL;
     FILE_EA_INFORMATION FileEaInfo;
     TFileTestData * pData = GetDialogData(hDlg);
@@ -95,23 +96,24 @@ static int OnQueryEa(HWND hDlg)
     // double its size and try again
     if(Status == STATUS_SUCCESS && EaBufferSize > 0)
     {
-        BOOL bEndLoop = FALSE;
+        __TryQueryEA:
 
-        while(bEndLoop == FALSE)
+        // Retrieve the extended attributes
+        Status = NtQueryEaFile(pData->hFile,
+                                &IoStatus,
+                                EaBuffer,
+                                EaBufferSize,
+                                FALSE,
+                                NULL,
+                                0,
+                                NULL,
+                                TRUE);
+
+        switch(Status)
         {
-            Status = NtQueryEaFile(pData->hFile,
-                                  &IoStatus,
-                                   EaBuffer,
-                                   EaBufferSize,
-                                   FALSE,
-                                   NULL,
-                                   0,
-                                   NULL,
-                                   TRUE);
-
-            if(Status == STATUS_BUFFER_OVERFLOW || Status == STATUS_BUFFER_TOO_SMALL)
-            {
-                PFILE_FULL_EA_INFORMATION NewEaBuffer;
+            // If not enough memory, then reallocate buffer
+            case STATUS_BUFFER_OVERFLOW:
+            case STATUS_BUFFER_TOO_SMALL:
 
                 // Allocate new buffer. If succeeded, we try to query again
                 EaBufferSize = EaBufferSize << 1;
@@ -119,7 +121,7 @@ static int OnQueryEa(HWND hDlg)
                 if(NewEaBuffer != NULL)
                 {
                     EaBuffer = NewEaBuffer;
-                    continue;
+                    goto __TryQueryEA;
                 }
 
                 // Failed to reallocate - free the buffer and stop
@@ -127,22 +129,19 @@ static int OnQueryEa(HWND hDlg)
                 Status = STATUS_INSUFFICIENT_RESOURCES;
                 EaBuffer = NULL;
                 break;
-            }
-        }
-    }
 
-    // If we got something, fill the listview
-    if(Status == STATUS_SUCCESS)
-    {
-        ExtendedAttributesToListView(hDlg, EaBuffer);
-        HeapFree(g_hHeap, 0, EaBuffer);
+            // If OK, format the list view with extended attributes
+            case STATUS_SUCCESS:
+                ExtendedAttributesToListView(hDlg, EaBuffer);
+                HeapFree(g_hHeap, 0, EaBuffer);
+                break;
+        }
     }
 
     // Set the result to the dialog
     SetResultInfo(hDlg, RSI_NTSTATUS | RSI_INFORMATION, Status, &IoStatus);
     return TRUE;
 }
-
 
 static int OnSetEa(HWND hDlg)
 {
@@ -154,19 +153,18 @@ static int OnSetEa(HWND hDlg)
 
     // Get the EA buffer and size
     pFileEa = ListViewToExtendedAttributes(hDlg, dwEaLength);
-
-    // Set the extended attributes to the file
-    Status = NtSetEaFile(pData->hFile,
-                        &IoStatus,
-                         pFileEa,
-                         dwEaLength);
-
-    // Set the result to the dialog
-    SetResultInfo(hDlg, RSI_NTSTATUS | RSI_INFORMATION, Status, &IoStatus);
-
-    // Delete buffers and exit
     if(pFileEa != NULL)
-        delete [] pFileEa;
+    {
+        // Set the extended attributes to the file
+        Status = NtSetEaFile(pData->hFile,
+                            &IoStatus,
+                             pFileEa,
+                             dwEaLength);
+
+        // Set the result to the dialog
+        SetResultInfo(hDlg, RSI_NTSTATUS | RSI_INFORMATION, Status, &IoStatus);
+        HeapFree(g_hHeap, 0, pFileEa);
+    }
     return TRUE;
 }
 

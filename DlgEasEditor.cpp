@@ -25,6 +25,24 @@ static TListViewColumns Columns[] =
 //-----------------------------------------------------------------------------
 // Local functions
 
+static ULONG CopyEaItem(PFILE_FULL_EA_INFORMATION pTrg, PFILE_FULL_EA_INFORMATION pSrc, bool bSetNextOffset)
+{
+    // Things checked by nt!IoCheckEaBufferValidity:
+    // 1) There must be zero after the EA name
+    // 2) NextEntryOffset must be aligned to DWORD boundary
+    ULONG EntryLength = FIELD_OFFSET(FILE_FULL_EA_INFORMATION, EaName) + pSrc->EaNameLength + sizeof(CHAR) + pSrc->EaValueLength;
+
+    // Copy the entire entry
+    memcpy(pTrg, pSrc, EntryLength);
+    pTrg->EaName[pTrg->EaNameLength] = 0;
+    pTrg->NextEntryOffset = 0;
+
+    // Set the offset of the next entry, if needed
+    if(bSetNextOffset)
+        pTrg->NextEntryOffset = ALIGN_TO_SIZE(EntryLength, sizeof(DWORD));
+    return EntryLength;
+}
+
 static BOOL UpdateDialogButtons(HWND hDlg)
 {
     HWND hListView = GetDlgItem(hDlg, IDC_EA_LIST);
@@ -245,7 +263,7 @@ static int OnEditEa(HWND hDlg)
 static int OnDeleteEa(HWND hDlg)
 {
     HWND hListView = GetDlgItem(hDlg, IDC_EA_LIST);
-    int nSelected = ListView_GetNextItem(hListView, -1, LVNI_SELECTED);
+    int nSelected = ListView_GetNextItem(hListView, -1, LVNI_FOCUSED);
 
     // If no item selected, do nothing
     if(nSelected != -1)
@@ -289,7 +307,7 @@ static BOOL OnSaveDialog(HWND hDlg)
     {
         // Delete the existing EAs
         if(pData->pFileEa != NULL)
-            delete [] pData->pFileEa;
+            HeapFree(g_hHeap, 0, pData->pFileEa);
         pData->pFileEa = NULL;
         pData->dwEaSize = 0;
 
@@ -409,7 +427,7 @@ void ExtendedAttributesToListView(HWND hDlg, PFILE_FULL_EA_INFORMATION pFileEa)
 
 PFILE_FULL_EA_INFORMATION ListViewToExtendedAttributes(HWND hDlg, DWORD & dwOutEaLength)
 {
-    PFILE_FULL_EA_INFORMATION pEaItemCopy;
+    PFILE_FULL_EA_INFORMATION pFileEaPtr;
     PFILE_FULL_EA_INFORMATION pEaItem;
     PFILE_FULL_EA_INFORMATION pFileEa = NULL;
     DWORD dwEaLength = 0;
@@ -423,12 +441,14 @@ PFILE_FULL_EA_INFORMATION ListViewToExtendedAttributes(HWND hDlg, DWORD & dwOutE
         pEaItem = (PFILE_FULL_EA_INFORMATION)ListView_GetItemParam(hListView, nIndex);
         if(pEaItem != NULL)
         {
-            dwEaLength += pEaItem->NextEntryOffset;
+            // The size of the previous EA item must be aligned to 4 bytes
+            dwEaLength = ALIGN_TO_SIZE(dwEaLength, sizeof(DWORD));
+            dwEaLength = dwEaLength + FIELD_OFFSET(FILE_FULL_EA_INFORMATION, EaName) + pEaItem->EaNameLength + 1 + pEaItem->EaValueLength;
         }
     }
 
     // Allocate buffer for the complete EA list and copy the EAs to that buffer
-    pEaItemCopy = pFileEa = (PFILE_FULL_EA_INFORMATION)(new BYTE[dwEaLength]);
+    pFileEaPtr = pFileEa = (PFILE_FULL_EA_INFORMATION)HeapAlloc(g_hHeap, HEAP_ZERO_MEMORY, dwEaLength);
     if(pFileEa != NULL)
     {
         for(nIndex = 0; nIndex < nItemCount; nIndex++)
@@ -436,12 +456,11 @@ PFILE_FULL_EA_INFORMATION ListViewToExtendedAttributes(HWND hDlg, DWORD & dwOutE
             pEaItem = (PFILE_FULL_EA_INFORMATION)ListView_GetItemParam(hListView, nIndex);
             if(pEaItem != NULL)
             {
-                memcpy(pEaItemCopy, pEaItem, pEaItem->NextEntryOffset);
+                // Copy the EA item to the list. If this is the last item, we want NextEntryOffset to be zero
+                CopyEaItem(pFileEaPtr, pEaItem, (nIndex < (nItemCount - 1)));
 
                 // If this is the last item, we have to set zero as NextEntryOffset
-                if(nIndex == nItemCount - 1)
-                    pEaItemCopy->NextEntryOffset = 0;
-                pEaItemCopy = (PFILE_FULL_EA_INFORMATION)((LPBYTE)pEaItemCopy + pEaItemCopy->NextEntryOffset);
+                pFileEaPtr = (PFILE_FULL_EA_INFORMATION)((LPBYTE)pFileEaPtr + pFileEaPtr->NextEntryOffset);
             }
         }
     }

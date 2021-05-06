@@ -60,12 +60,12 @@
 #endif
 
 #ifndef FILE_ATTRIBUTE_RECALL_ON_OPEN
-#define FILE_ATTRIBUTE_RECALL_ON_OPEN       0x00040000  
+#define FILE_ATTRIBUTE_RECALL_ON_OPEN       0x00040000
 #endif
 
 #ifndef FILE_ATTRIBUTE_PINNED
-#define FILE_ATTRIBUTE_PINNED               0x00080000  
-#define FILE_ATTRIBUTE_UNPINNED             0x00100000  
+#define FILE_ATTRIBUTE_PINNED               0x00080000
+#define FILE_ATTRIBUTE_UNPINNED             0x00100000
 #endif
 
 #ifndef FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS
@@ -73,15 +73,27 @@
 #endif
 
 #ifndef MEM_ROTATE
-#define MEM_ROTATE         0x800000     
+#define MEM_ROTATE                  0x800000
+#endif
+
+#ifndef MEM_RESET_UNDO
+#define MEM_RESET_UNDO              0x01000000
+#endif
+
+#ifndef SEC_PARTITION_OWNER_HANDLE
+#define SEC_PARTITION_OWNER_HANDLE  0x00040000
+#endif
+
+#ifndef SEC_64K_PAGES
+#define SEC_64K_PAGES               0x00080000
 #endif
 
 #ifndef SEC_PROTECTED_IMAGE
-#define SEC_PROTECTED_IMAGE  0x2000000     
+#define SEC_PROTECTED_IMAGE         0x2000000
 #endif
 
 #ifndef SEC_WRITECOMBINE
-#define SEC_WRITECOMBINE 0x40000000     
+#define SEC_WRITECOMBINE            0x40000000
 #endif
 
 #ifndef SECURITY_VALUE_MASK
@@ -603,7 +615,7 @@ typedef struct _REPARSE_DATA_BUFFER
             ULONG Flags;
             WCHAR PathBuffer[1];
         } SymbolicLinkReparseBuffer;
-        
+
         // Structure for IO_REPARSE_TAG_MOUNT_POINT
         // Handled by nt!IoCompleteRequest
         struct

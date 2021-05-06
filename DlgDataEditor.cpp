@@ -34,8 +34,11 @@ static void OnInitDialog(HWND hDlg, LPARAM lParam)
 
     // Initialize dialog data
     SetDialogIcon(hDlg, IDI_FILE_TEST);
-    pData->hDlg = hDlg;
     SetDialogData(hDlg, pData);
+    pData->hDlg = hDlg;
+
+    // Center the dialog to parent
+    CenterWindowToParent(hDlg);
 
     // Configure the anchors
     pData->pAnchors = pAnchors = new TAnchors();

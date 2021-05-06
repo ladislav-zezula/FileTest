@@ -39,7 +39,7 @@ inline const char * GetNewLineSeparator()
 #define FLAGINFO_SEPARATOR()        { (LPCSTR)1, 0, 0 }
 #define FLAGINFO_END()              { (LPCSTR)0, 0, 0 }
 
-typedef struct TFlagInfo
+struct TFlagInfo
 {
     bool IsValuePresent(unsigned int dwBitMask)
     {

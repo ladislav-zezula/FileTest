@@ -32,6 +32,11 @@ typedef std::vector<TDlgFlagInfo> TFlagList;
 
 struct TFlagDialogData
 {
+    TFlagDialogData()
+    {
+        ZeroMemory(&pFlags, sizeof(TFlagDialogData) - FIELD_OFFSET(TFlagDialogData, pFlags));
+    }
+
     TFlagList   FlagList;
     TFlagInfo * pFlags;                     // Flags (structure array)
     HWND        hWndParent;                 // Parent of the dialog
@@ -176,7 +181,7 @@ static HWND CreateButtonItem(
     else
     {
         // Set the child type to radio button, if needed
-        SetWindowLong(hWndChild, GWL_STYLE, pData->dwStyle | FlagInfo.dwButtonType | WS_VISIBLE);
+        SetWindowLong(hWndChild, GWL_STYLE, pData->dwStyle | FlagInfo.dwButtonType | WS_VISIBLE | WS_GROUP | WS_TABSTOP);
     }
 
     // Set the button text and user data, if not a separator
@@ -288,7 +293,7 @@ static void CreateDialogLayout(TFlagDialogData * pData)
     // If 20 flags or more, we split the dialog into more columns
     pData->nColumn1 = pData->FlagList.size();
     pData->nColumns = 1;
-    while(pData->nColumn1 > 20)
+    while(pData->nColumn1 > 23)
     {
         pData->nColumns++;
         pData->nColumn1 = (dwFlagCount / pData->nColumns) + ((dwFlagCount % pData->nColumns) ? 1 : 0);
@@ -455,7 +460,6 @@ INT_PTR FlagsDialog(HWND hWndParent, UINT nIDTitle, TFlagInfo * pFlags, DWORD & 
     INT_PTR Result;
 
     // Retrieve the flags
-    ZeroMemory(&fdd, sizeof(TFlagDialogData));
     fdd.hWndParent = hWndParent;
     fdd.pFlags     = pFlags;
     fdd.dwBitMask  = dwBitMask;
