@@ -1780,35 +1780,71 @@ static int InsertTreeItemFlags32(
     return pMember->nMemberSize;
 }
 
+static NTSTATUS GetProcessImageFileNameByProcessId(HANDLE ProcessId, PBYTE Buffer, ULONG BufferSize, PUNICODE_STRING FileName)
+{
+    NTSTATUS Status = STATUS_NOT_FOUND;
+    ZeroMemory(Buffer, BufferSize);
+    FileName->Length = FileName->MaximumLength = 0;
+    FileName->Buffer = NULL;
+
+    if (g_dwWinVer >= OSVER_WINDOWS_VISTA)
+    {
+        // Try to retrieve the process image file name by PID. This does not require an open process handle
+        SYSTEM_PROCESS_ID_INFORMATION processIdInfo;
+        processIdInfo.UniqueProcessId = ProcessId;
+        processIdInfo.ImageName.Length = 0;
+        processIdInfo.ImageName.MaximumLength = (USHORT)BufferSize;
+        processIdInfo.ImageName.Buffer = (PWSTR)Buffer;
+
+        Status = NtQuerySystemInformation(SystemProcessIdInformation, &processIdInfo, sizeof(processIdInfo), NULL);
+        *FileName = processIdInfo.ImageName;
+    }
+    else
+    {
+        HANDLE hProcess;
+        ULONG dwProcessId = (DWORD)(DWORD_PTR)ProcessId;
+        
+        // Try to open the process
+        hProcess = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, dwProcessId);
+        if (hProcess == NULL && GetLastError() == ERROR_ACCESS_DENIED)
+            hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, dwProcessId);
+
+        // Try to retrieve the process image file name
+        if (hProcess != NULL)
+        {
+            // Retrieve the process information
+            PUNICODE_STRING pBuffer = (PUNICODE_STRING)Buffer;
+            Status = NtQueryInformationProcess(hProcess, ProcessImageFileName, Buffer, BufferSize, NULL);
+            *FileName = *pBuffer;
+            CloseHandle(hProcess);
+        }
+    }
+
+    return Status;
+}
+
 static size_t InsertTreeItemProcess(HWND hTreeView, HTREEITEM hSubItem, HANDLE ProcessId, int nIndex)
 {
-    NTSTATUS Status;
     LPCWSTR szPlainName = NULL;
     LPCWSTR szFormat;
+    UNICODE_STRING ImageName;
     TCHAR szBuffer[0x200];
     BYTE InfoBuff[0x200];
-    HANDLE hProcess;
     ULONG dwProcessId = (DWORD)(DWORD_PTR)ProcessId;
-    ULONG ReturnLength = 0;
-
-    // Try to open the process
-    hProcess = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, dwProcessId);
-    if (hProcess == NULL && GetLastError() == ERROR_ACCESS_DENIED)
-        hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, dwProcessId);
 
     // Try to retrieve the process image file name
-    if (hProcess != NULL)
+    if (NT_SUCCESS(GetProcessImageFileNameByProcessId(ProcessId, InfoBuff, sizeof(InfoBuff), &ImageName)) && ImageName.Length > 0 && ImageName.Buffer != NULL)
     {
-        // Retrieve the process information
-        Status = NtQueryInformationProcess(hProcess, ProcessImageFileName, InfoBuff, sizeof(InfoBuff)-sizeof(WCHAR), &ReturnLength);
-        if (NT_SUCCESS(Status))
-        {
-            PUNICODE_STRING ImageName = (PUNICODE_STRING)InfoBuff;
-
-            ImageName->Buffer[ImageName->Length / sizeof(WCHAR)] = 0;
-            szPlainName = GetPlainName(ImageName->Buffer);
-        }
-        CloseHandle(hProcess);
+        ImageName.Buffer[ImageName.Length / sizeof(WCHAR)] = L'\0';
+        szPlainName = GetPlainName(ImageName.Buffer);
+    }
+    else if (dwProcessId == 0)
+    {
+        szPlainName = L"System Idle Process";
+    }
+    else if (dwProcessId == 4)
+    {
+        szPlainName = L"System";
     }
 
     // Construct the image name
