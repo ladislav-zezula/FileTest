@@ -1780,43 +1780,69 @@ static int InsertTreeItemFlags32(
     return pMember->nMemberSize;
 }
 
-static NTSTATUS GetProcessImageFileNameByProcessId(HANDLE ProcessId, PBYTE Buffer, ULONG BufferSize, PUNICODE_STRING FileName)
+static NTSTATUS OpenProcessAnyMethod(PHANDLE ProcessHandle, HANDLE ProcessId)
 {
-    NTSTATUS Status = STATUS_NOT_FOUND;
-    ZeroMemory(Buffer, BufferSize);
-    FileName->Length = FileName->MaximumLength = 0;
-    FileName->Buffer = NULL;
+    ULONG dwProcessId = (DWORD)(DWORD_PTR)ProcessId;
+    HANDLE hProcess;
 
-    if (g_dwWinVer >= OSVER_WINDOWS_VISTA)
+    // Try normal access
+    hProcess = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, dwProcessId);
+    if(hProcess != NULL)
     {
-        // Try to retrieve the process image file name by PID. This does not require an open process handle
-        SYSTEM_PROCESS_ID_INFORMATION processIdInfo;
-        processIdInfo.UniqueProcessId = ProcessId;
-        processIdInfo.ImageName.Length = 0;
-        processIdInfo.ImageName.MaximumLength = (USHORT)BufferSize;
-        processIdInfo.ImageName.Buffer = (PWSTR)Buffer;
-
-        Status = NtQuerySystemInformation(SystemProcessIdInformation, &processIdInfo, sizeof(processIdInfo), NULL);
-        *FileName = processIdInfo.ImageName;
+        ProcessHandle[0] = hProcess;
+        return STATUS_SUCCESS;
     }
-    else
-    {
-        HANDLE hProcess;
-        ULONG dwProcessId = (DWORD)(DWORD_PTR)ProcessId;
-        
-        // Try to open the process
-        hProcess = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, dwProcessId);
-        if (hProcess == NULL && GetLastError() == ERROR_ACCESS_DENIED)
-            hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, dwProcessId);
 
-        // Try to retrieve the process image file name
-        if (hProcess != NULL)
+    // Try with limited access
+    hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, dwProcessId);
+    if(hProcess != NULL)
+    {
+        ProcessHandle[0] = hProcess;
+        return STATUS_SUCCESS;
+    }
+
+    return STATUS_ACCESS_DENIED;
+}
+
+static NTSTATUS GetProcessImageFileNameByProcessId(HANDLE ProcessId, UNICODE_STRING & ImageName)
+{
+    SYSTEM_PROCESS_ID_INFORMATION processIdInfo;
+    NTSTATUS Status;
+    HANDLE hProcess;
+    BYTE NameBuff[0x200] = {0};
+
+    // Method 1 (Vista+): Try to retrieve the process image file name by PID.
+    // This does not require an open process handle. Credit: Matthijs Lavrijsen
+    processIdInfo.UniqueProcessId = ProcessId;
+    processIdInfo.ImageName = ImageName;
+    Status = NtQuerySystemInformation(SystemProcessIdInformation, &processIdInfo, sizeof(processIdInfo), NULL);
+    if(NT_SUCCESS(Status))
+    {
+        ImageName.Length = processIdInfo.ImageName.Length;
+        return Status;
+    }
+
+    // Method 2) Use OpenProcess and query the image name
+    Status = OpenProcessAnyMethod(&hProcess, ProcessId);
+    if(NT_SUCCESS(Status))
+    {
+        // Retrieve the process information
+        Status = NtQueryInformationProcess(hProcess, ProcessImageFileName, NameBuff, sizeof(NameBuff), NULL);
+        CloseHandle(hProcess);
+
+        // If succeeded, copy the name
+        if(NT_SUCCESS(Status))
         {
-            // Retrieve the process information
-            PUNICODE_STRING pBuffer = (PUNICODE_STRING)Buffer;
-            Status = NtQueryInformationProcess(hProcess, ProcessImageFileName, Buffer, BufferSize, NULL);
-            *FileName = *pBuffer;
-            CloseHandle(hProcess);
+            PUNICODE_STRING TempName = (PUNICODE_STRING)NameBuff;
+            size_t CopyLength;
+
+            // For "System" process (PID = 0x04), the function succeeds but doesn't return anything
+            if(TempName->Buffer && TempName->Length)
+            {
+                CopyLength = min(ImageName.MaximumLength, TempName->Length);
+                memcpy(ImageName.Buffer, TempName->Buffer, CopyLength);
+                ImageName.Length = (USHORT)CopyLength;
+            }
         }
     }
 
@@ -1825,24 +1851,30 @@ static NTSTATUS GetProcessImageFileNameByProcessId(HANDLE ProcessId, PBYTE Buffe
 
 static size_t InsertTreeItemProcess(HWND hTreeView, HTREEITEM hSubItem, HANDLE ProcessId, int nIndex)
 {
+    UNICODE_STRING ImageName;
     LPCWSTR szPlainName = NULL;
     LPCWSTR szFormat;
-    UNICODE_STRING ImageName;
-    TCHAR szBuffer[0x200];
-    BYTE InfoBuff[0x200];
+    NTSTATUS Status;
+    WCHAR szBuffer[0x200] = {0};
     ULONG dwProcessId = (DWORD)(DWORD_PTR)ProcessId;
 
+    // Initialize the UNICODE_STRING holding the file name
+    ImageName.MaximumLength = (USHORT)(sizeof(szBuffer) - sizeof(WCHAR));
+    ImageName.Length = 0;
+    ImageName.Buffer = szBuffer;
+
     // Try to retrieve the process image file name
-    if (NT_SUCCESS(GetProcessImageFileNameByProcessId(ProcessId, InfoBuff, sizeof(InfoBuff), &ImageName)) && ImageName.Length > 0 && ImageName.Buffer != NULL)
+    Status = GetProcessImageFileNameByProcessId(ProcessId, ImageName);
+    if(NT_SUCCESS(Status) && ImageName.Length)
     {
         ImageName.Buffer[ImageName.Length / sizeof(WCHAR)] = L'\0';
         szPlainName = GetPlainName(ImageName.Buffer);
     }
-    else if (dwProcessId == 0)
+    else if(dwProcessId == 0)
     {
         szPlainName = L"System Idle Process";
     }
-    else if (dwProcessId == 4)
+    else if(dwProcessId == 4)
     {
         szPlainName = L"System";
     }
@@ -2044,7 +2076,7 @@ static size_t FillStructureMembers(
     size_t nTotalLength = 0;            // Length, in bytes, of the structure member
 
     // Hack: In Windows 10, the FILE_STANDARD_INFORMATION becomes FILE_STANDARD_INFORMATION_EX
-    if (pMembers == FileStandardInformationMembers && g_dwWinVer >= 0x0A00)
+    if(pMembers == FileStandardInformationMembers && g_dwWinVer >= 0x0A00)
         pMembers = FileStandardInformationMembersEx;
 
     // Parse the members and fill them
@@ -2101,7 +2133,7 @@ static size_t FillStructureMembers(
                 nDataLength = InsertTreeItemFlags32(hTreeView, hParentItem, pMembers, pbData, pbDataEnd);
 
 				// If there is an alignment following the data member, do a proper alignment
-				if (pMembers[1].nDataType == TYPE_PADDING)
+				if(pMembers[1].nDataType == TYPE_PADDING)
 				{
 					nDataLength = GetAlignedDataLength(pbStructPtr, pbData, pMembers[0].nMemberSize, pMembers[1].nMemberSize);
 					pMembers++;
