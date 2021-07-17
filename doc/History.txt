@@ -2,28 +2,33 @@
   FileTest history
   ================
 
- Version 2.6.1.563  
- 
+ Version 2.6.1.601
+
+ - Fixed crash when querying image name on System PID (4)
+ - Improved flag dialogs
+
+ Version 2.6.1.563
+
  - DebugBreak() replaced by the inline version
-  
+
  Version 2.6.1.561
- 
+
  - Added support of Ctrl+C into all tree views.
-  
+
  Version 2.6.1.559
 
  - Added support for IO_REPARSE_TAG_APPEXECLINK
 
  Version 2.6.1.556
- 
+
  - Added support for CreateHardLink
  - Deleting directory tree improved: Now uses Win10's FILE_DISPOSITION_INFORMATION_EX if necessary.
-  
+
  Version 2.6.1.555
- 
+
  - Added new FILE_INFORMATION_CLASSes for newer Win10
  - The user can now enter some structure flags by flag (i.e. FILE_ATTRIBUTE_READONLY)
-  
+
  Version 2.6.1.553
 
  - The user can now specify a search mask for NtQueryDirectoryFile
@@ -39,11 +44,11 @@
  - Improved editor of the reparse point
 
  Version 2.6.0.524
- 
+
  - Fixed dialog cleanup
 
  Version 2.6.0.523
- 
+
  - Byte counts are space separated in copy dialog
  - Date/Time fields can now accept 64-bit hexa value without separators
 
@@ -85,7 +90,7 @@
  - Fixed background color of the "Relative File" link button on the "NtCreate" page
 
  Version 2.5.0.458
- 
+
  - Bugfixes in the data editor
 
  Version 2.5.0.455
@@ -228,22 +233,22 @@
  - Removed the check if a handle is a Win32 or not.
  - Changed the font to "MS Shell Dlg", so now the GUI shows correct UNICODE
    file names.
- - Added GetFileAttributes 
+ - Added GetFileAttributes
  - The "File operations" contains "Use CopyFile() API" instead of "Don't use CopyFile"
  - Added the "NtQueryInfo" page with possibility to call NtQueryInformationFile
- 
+
 
  Version 1.1.1.24
- 
- - Completed open flags for the CreateFile "Flags & attributes" 
+
+ - Completed open flags for the CreateFile "Flags & attributes"
  - Reworked the DlgFlags dialog
 
 
  Version 1.1.1.20
- 
+
  - Added possibility to get file name using NtQueryInformationFile
  - Added possibility to set the file size using Win32 API
- - Added possibility to get file ID using native API 
+ - Added possibility to get file ID using native API
  - Added possibility to open the file by ID using NtCreateFile
  - Various create parameters are now better carried between
    CreateFile and NtCreateFile pages when changed
