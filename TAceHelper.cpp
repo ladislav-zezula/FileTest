@@ -27,12 +27,12 @@ static DWORD AceLayouts[] =
     ACE_LAYOUT_OBJECT,                      // SYSTEM_AUDIT_OBJECT_ACE = {Header-AdsMask-Flags-ObjectType-InheritedObjectType-SidStart}
     ACE_LAYOUT_OBJECT,                      // SYSTEM_ALARM_OBJECT_ACE = {Header-AdsMask-Flags-ObjectType-InheritedObjectType-SidStart}
 
-    ACE_LAYOUT_SIMPLE2,                     // ACCESS_ALLOWED_CALLBACK_ACE = {Header-AdsMask-SidStart-OpaqueResMgrData}
-    ACE_LAYOUT_SIMPLE2,                     // ACCESS_DENIED_CALLBACK_ACE = {Header-AdsMask-SidStart-OpaqueResMgrData}
+    ACE_LAYOUT_SIMPLE2,                     // ACCESS_ALLOWED_CALLBACK_ACE = {Header-Mask-SidStart-OpaqueResMgrData}
+    ACE_LAYOUT_SIMPLE2,                     // ACCESS_DENIED_CALLBACK_ACE = {Header-Mask-SidStart-OpaqueResMgrData}
     ACE_LAYOUT_OBJECT2,                     // ACCESS_ALLOWED_CALLBACK_OBJECT_ACE = {Header-AdsMask-Flags-ObjectType-InheritedObjectType-SidStart-OpaqueResMgrData}
     ACE_LAYOUT_OBJECT2,                     // ACCESS_DENIED_CALLBACK_OBJECT_ACE = {Header-AdsMask-Flags-ObjectType-InheritedObjectType-SidStart-OpaqueResMgrData}
-    ACE_LAYOUT_SIMPLE2,                     // SYSTEM_AUDIT_CALLBACK_ACE = {Header-AdsMask-SidStart-OpaqueResMgrData}
-    ACE_LAYOUT_SIMPLE2,                     // SYSTEM_ALARM_CALLBACK_ACE = {Header-AdsMask-SidStart-OpaqueResMgrData}
+    ACE_LAYOUT_SIMPLE2,                     // SYSTEM_AUDIT_CALLBACK_ACE = {Header-Mask-SidStart-OpaqueResMgrData}
+    ACE_LAYOUT_SIMPLE2,                     // SYSTEM_ALARM_CALLBACK_ACE = {Header-Mask-SidStart-OpaqueResMgrData}
     ACE_LAYOUT_OBJECT2,                     // SYSTEM_AUDIT_CALLBACK_OBJECT_ACE = {Header-AdsMask-Flags-ObjectType-InheritedObjectType-SidStart-OpaqueResMgrData}
     ACE_LAYOUT_OBJECT2,                     // SYSTEM_ALARM_CALLBACK_OBJECT_ACE = {Header-AdsMask-Flags-ObjectType-InheritedObjectType-SidStart-OpaqueResMgrData}
 
