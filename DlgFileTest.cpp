@@ -630,25 +630,6 @@ static void OnGetMinMaxInfo(HWND /* hDlg */, LPARAM lParam)
     pmmi->ptMinTrackSize.y = 700;
 }
 
-static void OnNextTab(HWND hDlg, BOOL bNextTab)
-{
-    HWND hTabCtrl = GetDlgItem(hDlg, IDC_TAB);
-    int nPageCount = TabCtrl_GetItemCount(hTabCtrl);
-    int nPageIndex = TabCtrl_GetCurSel(hTabCtrl);
-
-    UNREFERENCED_PARAMETER(hDlg);
-
-    // Determine index of the page to be selected next
-    if(bNextTab == FALSE)
-        nPageIndex += (nPageCount - 1);
-    else
-        nPageIndex++;
-    nPageIndex %= nPageCount;
-
-    // Select the given tab
-    TabCtrl_SelectPageByIndex(hTabCtrl, nPageIndex);
-}
-
 static void OnTimerCheckMouse(HWND hDlg)
 {
     TWindowData * pData = GetDialogData(hDlg);
@@ -806,34 +787,13 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM l
     return FALSE;
 }
 
-static BOOL IsMyDialogMessage(HWND hDlg, LPMSG pMsg)
+static BOOL IsMyDialogMessage(HWND hDlg, HWND hTabCtrl, LPMSG pMsg)
 {
     // Support for navigation keys
     if(pMsg->message == WM_KEYDOWN)
     {
-        BOOL bNextTab;
-
         switch(pMsg->wParam)
         {
-            case VK_TAB:        // Ctrl+(Shift)+Tab: select (prev)next
-                if(GetAsyncKeyState(VK_CONTROL) & 0x8000)
-                {
-                    bNextTab = (GetAsyncKeyState(VK_SHIFT) & 0x8000) ? FALSE : TRUE;
-                    OnNextTab(hDlg, bNextTab);
-                    return FALSE;
-                }
-                break;
-
-            case VK_PRIOR:      // Ctrl+PgUp: Select previous page
-            case VK_NEXT:       // Ctrl+PgDown: Select next page
-                if(GetAsyncKeyState(VK_CONTROL) & 0x8000)
-                {
-                    bNextTab = (pMsg->wParam == VK_NEXT) ? TRUE : FALSE;
-                    OnNextTab(hDlg, bNextTab);
-                    return FALSE;
-                }
-                break;
-
             case VK_F2:         // Allow tree item editing using F2 accelerator
                 return FALSE;
 
@@ -848,7 +808,7 @@ static BOOL IsMyDialogMessage(HWND hDlg, LPMSG pMsg)
         }
     }
 
-    return IsDialogMessage(hDlg, pMsg);
+    return TabCtrl_IsDialogMessage(hDlg, hTabCtrl, pMsg);
 }
 
 //-----------------------------------------------------------------------------
@@ -971,6 +931,7 @@ void DisableCloseDialog(HWND hDlg, BOOL bDisable)
 INT_PTR FileTestDialog(HWND hParent, TFileTestData * pData)
 {
     HACCEL hAccelTable = LoadAccelerators(g_hInst, MAKEINTRESOURCE(IDR_ACCELERATORS));
+    HWND hTabCtrl;
     HWND hDlg;
     MSG msg;
 
@@ -986,6 +947,7 @@ INT_PTR FileTestDialog(HWND hParent, TFileTestData * pData)
     if(hDlg != NULL)
     {
         // Show the dialog
+        hTabCtrl = GetDlgItem(hDlg, IDC_TAB);
         ShowWindow(hDlg, SW_SHOW);
 
         // Get the message. Stop processing if WM_QUIT has arrived
@@ -1000,7 +962,7 @@ INT_PTR FileTestDialog(HWND hParent, TFileTestData * pData)
 //                                      QS_ALLEVENTS | QS_ALLINPUT | QS_ALLPOSTMESSAGE,
 //                                      MWMO_WAITALL | MWMO_ALERTABLE | MWMO_INPUTAVAILABLE);
 
-            if(!IsMyDialogMessage(hDlg, &msg))
+            if(!IsMyDialogMessage(hDlg, hTabCtrl, &msg))
             {
                 // Process the accelerator table
                 if(!TranslateAccelerator(hDlg, hAccelTable, &msg))
