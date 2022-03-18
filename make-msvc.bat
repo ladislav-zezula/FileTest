@@ -2,10 +2,15 @@
 @echo off
 
 :: Save the values of INCLUDE, LIB and PATH
+set PROJECT_DIR=%~dp0
 set SAVE_INCLUDE=%INCLUDE%
 set SAVE_LIB=%LIB%
 set SAVE_PATH=%PATH%
 set PROJECT_NAME=FileTest
+set PROJECT_ZIP_NAME=filetest
+
+:: Remember whether we shall publish the project
+if "x%1" == "x/web" set PUBLISH_PROJECT=1
 
 :: Determine where the program files are, both for 64-bit and 32-bit Windows
 if exist "%ProgramFiles%"      set PROGRAM_FILES_DIR=%ProgramFiles%
@@ -18,11 +23,18 @@ if exist "%PROGRAM_FILES_DIR%\Microsoft Visual Studio\2017\Enterprise\VC\Auxilia
 if exist "%PROGRAM_FILES_DIR%\Microsoft Visual Studio\2019\Professional\VC\Auxiliary\Build\vcvarsall.bat" set VCVARS_2019=%PROGRAM_FILES_DIR%\Microsoft Visual Studio\2019\Professional\VC\Auxiliary\Build\vcvarsall.bat
 if exist "%PROGRAM_FILES_DIR%\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat"   set VCVARS_2019=%PROGRAM_FILES_DIR%\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat
 
-::Build the project using Visual Studio 2008 and 2017
-rem call :BuildProject "%VCVARS_2008%" x86 %PROJECT_NAME%_vs08.sln
-rem call :BuildProject "%VCVARS_2008%" x64 %PROJECT_NAME%_vs08.sln
-call :BuildProject "%VCVARS_2019%" x86 %PROJECT_NAME%_vs17.sln
-call :BuildProject "%VCVARS_2019%" x64 %PROJECT_NAME%_vs17.sln
+:: Build the project using Visual Studio 2008 and 2017
+:: call :BuildProject "%VCVARS_2008%" %PROJECT_NAME%_vs08.sln
+call :BuildProject "%VCVARS_2019%" %PROJECT_NAME%_vs17.sln En en x86 Win32
+call :BuildProject "%VCVARS_2019%" %PROJECT_NAME%_vs17.sln En en x64 x64
+echo [*] Build complete.
+
+:: Update web pages
+if not "x%PUBLISH_PROJECT%" == "x1" goto:eof
+echo [*] Updating web pages ...
+pushd ..\..\WWW
+MakeWeb.exe /nologo
+popd
 goto:eof
 
 ::-----------------------------------------------------------------------------
@@ -31,21 +43,38 @@ goto:eof
 :: Parameters:
 ::
 ::   %1     Full path to the VCVARS.BAT file
-::   %2     Target build platform (x86 or x64)
-::   %3     Plain name of the .sln solution file
+::   %2     Plain name of the .sln solution file
+::   %3     Language version (Cn, En, Ko, Pl, Ru)
+::   %4     Language version lowercase (cn, en, ko, pl, ru)
+::   %5     x86 or x64
+::   %6     Win32 or x64
 ::
 
 :BuildProject
-call %1 %2
-if "%2" == "x86" set SLN_TRG=Win32
-if "%2" == "x64" set SLN_TRG=x64
-devenv.com %3 /project "%PROJECT_NAME%" /rebuild "Release|%SLN_TRG%"
+echo [*] Building %PROJECT_NAME% (%3, %5) ...
+call %1 %5 >nul
+devenv.com %2 /project "%PROJECT_NAME%" /rebuild "Release|%6" >nul
+::if "%5" == "x64" PostBuild.exe %PROJECT_NAME%.rc /nologo
+
+:PublishProject
+if not "x%PUBLISH_PROJECT%" == "x1" goto RestoreEnvironment
+if not exist .\bin\%6\Release\%PROJECT_NAME%.exe goto RestoreEnvironment
+echo [*] Updating %PROJECT_NAME% in ZIP ...
+pushd .\bin
+copy .\%6\Release\%PROJECT_NAME%.exe .\%6\%PROJECT_NAME%.exe >nul
+zip.exe -u9  ..\..\..\WWW\web\download\%PROJECT_ZIP_NAME%.zip .\%6\%PROJECT_NAME%.exe >nul
+zip.exe -ju9 ..\..\..\WWW\web\download\%PROJECT_ZIP_NAME%.zip ..\doc\History.txt >nul
+zip.exe -ju9 ..\..\..\WWW\web\download\%PROJECT_ZIP_NAME%.zip ..\doc\ReadMe.txt >nul
+del .\%6\%PROJECT_NAME%.exe
+popd
 
 :: Restore environment variables to the old level
+:RestoreEnvironment
 set INCLUDE=%SAVE_INCLUDE%
 set LIB=%SAVE_LIB%
 set PATH=%SAVE_PATH%
 set VSINSTALLDIR=
 set VCINSTALLDIR=
 set DevEnvDir=
+set LIBPATH=
 goto:eof
