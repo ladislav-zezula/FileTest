@@ -840,7 +840,7 @@ TInfoData FileInfoData[] =
     FILE_INFO_READONLY(FileIdBothDirectoryInformation,          FILE_ID_BOTH_DIR_INFORMATION,                TRUE),
     FILE_INFO_READONLY(FileIdFullDirectoryInformation,          FILE_ID_FULL_DIR_INFORMATION,                TRUE),
     FILE_INFO_EDITABLE(FileValidDataLengthInformation,          FILE_VALID_DATA_LENGTH_INFORMATION,          FALSE),
-    FILE_INFO_READONLY(FileShortNameInformation,                FILE_NAME_INFORMATION,                       FALSE),
+    FILE_INFO_EDITABLE(FileShortNameInformation,                FILE_NAME_INFORMATION,                       FALSE),
     FILE_INFO_READONLY(FileIoCompletionNotificationInformation, FILE_IO_COMPLETION_NOTIFICATION_INFORMATION, FALSE),
     FILE_INFO_READONLY(FileIoStatusBlockRangeInformation,       FILE_IOSTATUSBLOCK_RANGE_INFORMATION,        FALSE),
     FILE_INFO_READONLY(FileIoPriorityHintInformation,           FILE_IO_PRIORITY_HINT_INFORMATION,           FALSE),
