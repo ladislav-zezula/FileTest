@@ -1029,7 +1029,7 @@ static int OnObjectIdMoreClick(HWND hDlg)
 
             case IDC_DELETE_OBJECT_ID:
 
-                if (!DeviceIoControl(hFile, FSCTL_DELETE_OBJECT_ID,
+                if(!DeviceIoControl(hFile, FSCTL_DELETE_OBJECT_ID,
                                             NULL,
                                             0,
                                             NULL,
