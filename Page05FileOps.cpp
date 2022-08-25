@@ -968,7 +968,7 @@ static int OnObjectIdMoreClick(HWND hDlg)
     
     // Use the proper desired access
     // Note that we also need restore privilege in order to succeed
-    if(nAction == IDC_SET_OBJECT_ID)
+    if(nAction == IDC_SET_OBJECT_ID || nAction == IDC_DELETE_OBJECT_ID)
     {
         dwFlagsAndAttributes = FILE_FLAG_BACKUP_SEMANTICS;
         dwDesiredAccess = FILE_WRITE_DATA;
@@ -1022,6 +1022,20 @@ static int OnObjectIdMoreClick(HWND hDlg)
                                            0,
                                           &dwBytesReturned,
                                            NULL))
+                {
+                    dwErrCode = GetLastError();
+                }
+                break;
+
+            case IDC_DELETE_OBJECT_ID:
+
+                if(!DeviceIoControl(hFile, FSCTL_DELETE_OBJECT_ID,
+                                            NULL,
+                                            0,
+                                            NULL,
+                                            0,
+                                           &dwBytesReturned,
+                                            NULL))
                 {
                     dwErrCode = GetLastError();
                 }

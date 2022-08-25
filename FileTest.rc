@@ -109,8 +109,8 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 2,7,0,615
- PRODUCTVERSION 2,7,0,615
+ FILEVERSION 2,7,0,618
+ PRODUCTVERSION 2,7,0,618
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -127,13 +127,13 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Ladislav Zezula"
             VALUE "FileDescription", "Interactive File System API Test"
-            VALUE "FileVersion", "2, 7, 0, 615\0"
+            VALUE "FileVersion", "2, 7, 0, 618\0"
             VALUE "InternalName", "FileTest"
             VALUE "LegalCopyright", "Copyright © 2004 - 2018 Ladislav Zezula"
             VALUE "LegalTrademarks", "http://www.zezula.net"
             VALUE "OriginalFilename", "FileTest.exe"
             VALUE "ProductName", "FileTest"
-            VALUE "ProductVersion", "2, 7, 0, 615\0"
+            VALUE "ProductVersion", "2, 7, 0, 618\0"
         END
     END
     BLOCK "VarFileInfo"
@@ -615,15 +615,16 @@ BEGIN
     PUSHBUTTON      "Cancel",IDCANCEL,225,271,50,14
 END
 
-IDD_OBJECT_ID_MORE DIALOGEX 0, 0, 265, 111
+IDD_OBJECT_ID_MORE DIALOGEX 0, 0, 265, 138
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Object ID Options"
 FONT 8, "MS Shell Dlg", 0, 0, 0x1
 BEGIN
-    GROUPBOX        " Choose an action to do ",IDC_STATIC,7,7,251,97,WS_GROUP
+    GROUPBOX        " Choose an action to do ",IDC_STATIC,7,7,251,124,WS_GROUP
     PUSHBUTTON      "Create or Get Object ID (FSCTL_CREATE_OR_GET_OBJECT_ID)",IDC_CREATE_OR_GET,16,22,234,19,WS_GROUP
     PUSHBUTTON      "Get Object ID (FSCTL_GET_OBJECT_ID)",IDC_GET_OBJECT_ID,16,49,234,19
     PUSHBUTTON      "Set Object ID (FSCTL_SET_OBJECT_ID)",IDC_SET_OBJECT_ID,16,76,234,19
+    PUSHBUTTON      "Delete Object ID (FSCTL_DELETE_OBJECT_ID)",IDC_DELETE_OBJECT_ID,16,103,234,19
 END
 
 IDD_PAGE04_MAPPING DIALOGEX 0, 0, 308, 340
@@ -960,7 +961,7 @@ BEGIN
         LEFTMARGIN, 7
         RIGHTMARGIN, 258
         TOPMARGIN, 7
-        BOTTOMMARGIN, 104
+        BOTTOMMARGIN, 131
     END
 
     IDD_PAGE04_MAPPING, DIALOG

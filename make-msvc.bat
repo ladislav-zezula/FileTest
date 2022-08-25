@@ -23,10 +23,10 @@ if exist "%PROGRAM_FILES_DIR%\Microsoft Visual Studio\2017\Enterprise\VC\Auxilia
 if exist "%PROGRAM_FILES_DIR%\Microsoft Visual Studio\2019\Professional\VC\Auxiliary\Build\vcvarsall.bat" set VCVARS_2019=%PROGRAM_FILES_DIR%\Microsoft Visual Studio\2019\Professional\VC\Auxiliary\Build\vcvarsall.bat
 if exist "%PROGRAM_FILES_DIR%\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat"   set VCVARS_2019=%PROGRAM_FILES_DIR%\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat
 
-:: Build the project using Visual Studio 2008 and 2017
+:: Build the project using Visual Studio 2019
 :: call :BuildProject "%VCVARS_2008%" %PROJECT_NAME%_vs08.sln
-call :BuildProject "%VCVARS_2019%" %PROJECT_NAME%_vs17.sln En en x86 Win32
-call :BuildProject "%VCVARS_2019%" %PROJECT_NAME%_vs17.sln En en x64 x64
+call :BuildProject "%VCVARS_2019%" %PROJECT_NAME%_vs19.sln En en x86 Win32
+call :BuildProject "%VCVARS_2019%" %PROJECT_NAME%_vs19.sln En en x64 x64
 echo [*] Build complete.
 
 :: Update web pages
