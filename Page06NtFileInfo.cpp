@@ -2977,14 +2977,15 @@ static int OnDoubleClick(HWND hDlg, LPNMHDR pNMHDR)
     // Doubleclick on TYPE_FLAG32 opens a dialog with flags
     if(pMemberInfo->nDataType == TYPE_FLAG32)
     {
-        PDWORD PtrFlags = (PDWORD)pMemberInfo->pbStructPtr;
+        DWORD Flags = *(PDWORD)pMemberInfo->pbStructPtr;
 
-        if(FlagsDialog(hDlg, IDS_ENTER_FLAGS, pMemberInfo->pFlags, *PtrFlags))
+        if(FlagsDialog(hDlg, IDS_ENTER_FLAGS, pMemberInfo->pFlags, Flags))
         {
             // Only change the item if editable
             pInfoData = GetSelectedInfoClass(hDlg, IDC_FILE_INFO_CLASS, FileInfoData);
             if(pInfoData != NULL && pInfoData->bIsEditable)
             {
+                *(PDWORD)pMemberInfo->pbStructPtr = Flags;
                 hParentItem = TreeView_GetNextItem(hTreeView, hItem, TVGN_PARENT);
                 PostMessage(hDlg, WM_RELOADITEMS, (WPARAM)hTreeView, (LPARAM)hParentItem);
             }

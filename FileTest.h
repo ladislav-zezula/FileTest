@@ -295,7 +295,7 @@ struct TInfoData
                                             // (NULL = not implemented)
     BOOL                   bIsChain;        // if TRUE, it is a chain of structures
                                             // (with ULONG NextEntryOffset as first member)
-    BOOL                   bIsEditable;     // If TRUE, the structu is editable
+    BOOL                   bIsEditable;     // If TRUE, the structure is editable
                                             // and able to send to NtSetInfo
 };
 
