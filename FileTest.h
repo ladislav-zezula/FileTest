@@ -264,6 +264,7 @@ struct TFileTestData : public TWindowData
 #define TYPE_FILEID128       20             // 16-byte file ID
 #define TYPE_DIR_HANDLE      21             // Directory handle for certain file operations
 #define TYPE_FLAG32          22             // A 32-bit flag value
+#define TYPE_GUID            23             // A GUID value
 #define TYPE_STRUCT         100             // Sub-structure, nMemberSize must be sizeof(structure) !!!
 #define TYPE_CHAINED_STRUCT 101             // Chain of structures first 32-bit number is "NextEntryOffset"
 #define TYPE_ARRAY_PROCESS  102             // Array of process IDs, variable length, length is 32-bit number
@@ -387,6 +388,7 @@ extern ADDMANDATORYACE          pfnAddMandatoryAce;
 
 extern TFlagInfo AccessMaskValues[];
 extern TFlagInfo FileAttributesValues[];
+extern TFlagInfo CreateOptionsValues[];
 extern TFlagInfo ShareAccessValues[];
 
 //-----------------------------------------------------------------------------
