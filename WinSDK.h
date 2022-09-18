@@ -72,12 +72,20 @@
 #define FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS 0x00400000
 #endif
 
+#ifndef FILE_ATTRIBUTE_STRICTLY_SEQUENTIAL
+#define FILE_ATTRIBUTE_STRICTLY_SEQUENTIAL  0x20000000  
+#endif
+
 #ifndef MEM_ROTATE
 #define MEM_ROTATE                  0x800000
 #endif
 
 #ifndef MEM_RESET_UNDO
 #define MEM_RESET_UNDO              0x01000000
+#endif
+
+#ifndef SEC_HUGE_PAGES
+#define SEC_HUGE_PAGES              0x00020000  
 #endif
 
 #ifndef SEC_PARTITION_OWNER_HANDLE
@@ -152,6 +160,18 @@
 #define FILE_SUPPORTS_POSIX_UNLINK_RENAME   0x00000400
 #endif
 
+#ifndef FILE_SUPPORTS_BYPASS_IO
+#define FILE_SUPPORTS_BYPASS_IO             0x00000800
+#endif
+
+#ifndef FILE_SUPPORTS_STREAM_SNAPSHOTS
+#define FILE_SUPPORTS_STREAM_SNAPSHOTS      0x00001000
+#endif
+
+#ifndef FILE_SUPPORTS_CASE_SENSITIVE_DIRS
+#define FILE_SUPPORTS_CASE_SENSITIVE_DIRS   0x00002000
+#endif
+
 #ifndef FILE_SUPPORTS_HARD_LINKS
 #define FILE_SUPPORTS_HARD_LINKS            0x00400000
 #endif
@@ -166,6 +186,26 @@
 
 #ifndef FILE_SUPPORTS_USN_JOURNAL
 #define FILE_SUPPORTS_USN_JOURNAL           0x02000000
+#endif
+
+#ifndef FILE_SUPPORTS_INTEGRITY_STREAMS
+#define FILE_SUPPORTS_INTEGRITY_STREAMS     0x04000000
+#endif
+
+#ifndef FILE_SUPPORTS_BLOCK_REFCOUNTING
+#define FILE_SUPPORTS_BLOCK_REFCOUNTING     0x08000000
+#endif
+
+#ifndef FILE_SUPPORTS_SPARSE_VDL
+#define FILE_SUPPORTS_SPARSE_VDL            0x10000000
+#endif
+
+#ifndef FILE_DAX_VOLUME
+#define FILE_DAX_VOLUME                     0x20000000
+#endif
+
+#ifndef FILE_SUPPORTS_GHOSTING
+#define FILE_SUPPORTS_GHOSTING              0x40000000
 #endif
 
 //-----------------------------------------------------------------------------

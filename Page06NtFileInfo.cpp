@@ -45,6 +45,9 @@ TFlagInfo FileSystemAttributesValues[] =
     FLAGINFO_BITV(FILE_SUPPORTS_REMOTE_STORAGE),
     FLAGINFO_BITV(FILE_RETURNS_CLEANUP_RESULT_INFO),
     FLAGINFO_BITV(FILE_SUPPORTS_POSIX_UNLINK_RENAME),
+    FLAGINFO_BITV(FILE_SUPPORTS_BYPASS_IO),
+    FLAGINFO_BITV(FILE_SUPPORTS_STREAM_SNAPSHOTS),
+    FLAGINFO_BITV(FILE_SUPPORTS_CASE_SENSITIVE_DIRS),
     FLAGINFO_BITV(FILE_VOLUME_IS_COMPRESSED),
     FLAGINFO_BITV(FILE_SUPPORTS_OBJECT_IDS),
     FLAGINFO_BITV(FILE_SUPPORTS_ENCRYPTION),
@@ -56,6 +59,11 @@ TFlagInfo FileSystemAttributesValues[] =
     FLAGINFO_BITV(FILE_SUPPORTS_EXTENDED_ATTRIBUTES),
     FLAGINFO_BITV(FILE_SUPPORTS_OPEN_BY_FILE_ID),
     FLAGINFO_BITV(FILE_SUPPORTS_USN_JOURNAL),
+    FLAGINFO_BITV(FILE_SUPPORTS_INTEGRITY_STREAMS),
+    FLAGINFO_BITV(FILE_SUPPORTS_BLOCK_REFCOUNTING),
+    FLAGINFO_BITV(FILE_SUPPORTS_SPARSE_VDL),
+    FLAGINFO_BITV(FILE_DAX_VOLUME),
+    FLAGINFO_BITV(FILE_SUPPORTS_GHOSTING),
     FLAGINFO_END()
 };
 
@@ -164,7 +172,7 @@ TStructMember FileEaInformationMembers[] =
 
 TStructMember FileAccessInformationMembers[] =
 {
-    {_T("AccessFlags"),     TYPE_UINT32, sizeof(ACCESS_MASK)},
+    {_T("AccessFlags"),     TYPE_FLAG32, sizeof(ACCESS_MASK), NULL, {(TStructMember *)AccessMaskValues}},
     {NULL, TYPE_NONE, 0}
 };
 
@@ -238,13 +246,28 @@ TStructMember FileFullEaInformationMembers[] =
 
 TStructMember FileModeInformationMembers[] =
 {
-    {_T("Mode"),            TYPE_UINT32, sizeof(ULONG)},
+    {_T("Mode"),            TYPE_FLAG32, sizeof(ULONG), NULL, {(TStructMember *)CreateOptionsValues}},
     {NULL, TYPE_NONE, 0}
+};
+
+static TFlagInfo FileAlignmentValues[] =
+{
+    FLAGINFO_NUMV(FILE_BYTE_ALIGNMENT),
+    FLAGINFO_NUMV(FILE_WORD_ALIGNMENT),
+    FLAGINFO_NUMV(FILE_LONG_ALIGNMENT),
+    FLAGINFO_NUMV(FILE_QUAD_ALIGNMENT),
+    FLAGINFO_NUMV(FILE_OCTA_ALIGNMENT),
+    FLAGINFO_NUMV(FILE_32_BYTE_ALIGNMENT),
+    FLAGINFO_NUMV(FILE_64_BYTE_ALIGNMENT),
+    FLAGINFO_NUMV(FILE_128_BYTE_ALIGNMENT),
+    FLAGINFO_NUMV(FILE_256_BYTE_ALIGNMENT),
+    FLAGINFO_NUMV(FILE_512_BYTE_ALIGNMENT),
+    FLAGINFO_END()
 };
 
 TStructMember FileAlignmentInformationMembers[] =
 {
-    {_T("AlignmentRequirement"), TYPE_UINT32, sizeof(ULONG)},
+    {_T("AlignmentRequirement"), TYPE_FLAG32, sizeof(ULONG), NULL, {(TStructMember *)FileAlignmentValues}},
     {NULL, TYPE_NONE, 0}
 };
 
@@ -477,9 +500,19 @@ TStructMember FileIoStatusBlockRangeInformationMembers[] =
     {NULL, TYPE_NONE, 0}
 };
 
+static TFlagInfo IoPriorityHintValues[] =
+{
+    FLAGINFO_NUMV(IoPriorityVeryLow),
+    FLAGINFO_NUMV(IoPriorityLow),
+    FLAGINFO_NUMV(IoPriorityNormal),
+    FLAGINFO_NUMV(IoPriorityHigh),
+    FLAGINFO_NUMV(IoPriorityCritical),
+    FLAGINFO_END()
+};
+
 TStructMember FileIoPriorityHintInformationMembers[] =
 {
-    {_T("PriorityHint"),    TYPE_UINT32,  sizeof(IO_PRIORITY_HINT)},
+    {_T("PriorityHint"),    TYPE_FLAG32,  sizeof(IO_PRIORITY_HINT), NULL, {(TStructMember *)IoPriorityHintValues}},
     {NULL, TYPE_NONE, 0}
 };
 
@@ -533,6 +566,14 @@ TStructMember FileNormalizedNameInformationMembers[] =
     {NULL, TYPE_NONE, 0}
 };
 
+TFlagInfo FileTxFlagsValues[] =
+{
+    FLAGINFO_BITV(FILE_ID_GLOBAL_TX_DIR_INFO_FLAG_WRITELOCKED),
+    FLAGINFO_BITV(FILE_ID_GLOBAL_TX_DIR_INFO_FLAG_VISIBLE_TO_TX),
+    FLAGINFO_BITV(FILE_ID_GLOBAL_TX_DIR_INFO_FLAG_VISIBLE_OUTSIDE_TX),
+    FLAGINFO_END()
+};
+
 TStructMember FileIdGlobalTxDirectoryInformationMembers[] =
 {
     {_T("NextEntryOffset"), TYPE_UINT32,   sizeof(ULONG)},
@@ -546,8 +587,8 @@ TStructMember FileIdGlobalTxDirectoryInformationMembers[] =
     {_T("FileAttributes"),  TYPE_FLAG32,   sizeof(ULONG), NULL, {(TStructMember *)FileAttributesValues}},
     {_T("FileNameLength"),  TYPE_UINT32,   sizeof(ULONG)},
     {_T("FileId"),          TYPE_FILEID64, sizeof(LARGE_INTEGER)},
-    {_T("LockingTransactionId"), TYPE_ARRAY8_FIXED, sizeof(GUID)},
-    {_T("TxInfoFlags"),     TYPE_UINT32,   sizeof(ULONG)},
+    {_T("LockingTransactionId"), TYPE_GUID, sizeof(GUID)},
+    {_T("TxInfoFlags"),     TYPE_FLAG32,   sizeof(ULONG), NULL, {(TStructMember *)FileTxFlagsValues}},
     {_T("FileName"),        TYPE_WNAME_L32B, FIELD_OFFSET(FILE_ID_GLOBAL_TX_DIR_INFORMATION, FileNameLength)},
     {NULL, TYPE_NONE, 0}
 };
@@ -680,6 +721,7 @@ TFlagInfo FileDispositionInformationExValues[] =
     FLAGINFO_BITV(FILE_DISPOSITION_POSIX_SEMANTICS),
     FLAGINFO_BITV(FILE_DISPOSITION_FORCE_IMAGE_SECTION_CHECK),
     FLAGINFO_BITV(FILE_DISPOSITION_ON_CLOSE),
+    FLAGINFO_BITV(FILE_DISPOSITION_IGNORE_READONLY_ATTRIBUTE),
     FLAGINFO_END()
 };
 
@@ -693,6 +735,13 @@ TFlagInfo FileRenameInformationExValues[] =
 {
     FLAGINFO_BITV(FILE_RENAME_REPLACE_IF_EXISTS),
     FLAGINFO_BITV(FILE_RENAME_POSIX_SEMANTICS),
+    FLAGINFO_BITV(FILE_RENAME_SUPPRESS_PIN_STATE_INHERITANCE),
+    FLAGINFO_BITV(FILE_RENAME_SUPPRESS_STORAGE_RESERVE_INHERITANCE),
+    FLAGINFO_BITV(FILE_RENAME_NO_INCREASE_AVAILABLE_SPACE),
+    FLAGINFO_BITV(FILE_RENAME_NO_DECREASE_AVAILABLE_SPACE),
+    FLAGINFO_BITV(FILE_RENAME_IGNORE_READONLY_ATTRIBUTE),
+    FLAGINFO_BITV(FILE_RENAME_FORCE_RESIZE_TARGET_SR),
+    FLAGINFO_BITV(FILE_RENAME_FORCE_RESIZE_SOURCE_SR),
     FLAGINFO_END()
 };
 
@@ -725,7 +774,7 @@ TStructMember FileStatInformationMembers[] =
     {_T("FileAttributes"),  TYPE_FLAG32,   sizeof(ULONG), NULL, {(TStructMember *)FileAttributesValues}},
     {_T("ReparseTag"),      TYPE_UINT32,   sizeof(ULONG)},
     {_T("NumberOfLinks"),   TYPE_UINT32,   sizeof(ULONG)},
-    {_T("EffectiveAccess"), TYPE_FLAG32,   sizeof(ULONG), NULL, {(TStructMember *)AccessMaskValues}},
+    {_T("EffectiveAccess"), TYPE_FLAG32,   sizeof(ACCESS_MASK), NULL, {(TStructMember *)AccessMaskValues}},
     { NULL, TYPE_NONE, 0 }                                
 };
 
@@ -734,6 +783,16 @@ TStructMember FileMemoryPartitionInformationMembers[] =
     {_T("OwnerPartitionHandle"), TYPE_HANDLE, sizeof(TYPE_HANDLE)},
     {_T("AllFlags"),        TYPE_UINT32,      sizeof(UINT32)},
     { NULL, TYPE_NONE, 0 }
+};
+
+TFlagInfo FileLxFlagsValues[] =
+{
+    FLAGINFO_BITV(LX_FILE_METADATA_HAS_UID),
+    FLAGINFO_BITV(LX_FILE_METADATA_HAS_GID),
+    FLAGINFO_BITV(LX_FILE_METADATA_HAS_MODE),
+    FLAGINFO_BITV(LX_FILE_METADATA_HAS_DEVICE_ID),
+    FLAGINFO_BITV(LX_FILE_CASE_SENSITIVE_DIR),
+    FLAGINFO_END()
 };
 
 TStructMember FileStatLxInformationMembers[] =
@@ -745,12 +804,12 @@ TStructMember FileStatLxInformationMembers[] =
     {_T("ChangeTime"),      TYPE_FILETIME, sizeof(LARGE_INTEGER)},
     {_T("AllocationSize"),  TYPE_UINT64,   sizeof(LARGE_INTEGER)},
     {_T("EndOfFile"),       TYPE_UINT64,   sizeof(LARGE_INTEGER)},
-    {_T("FileAttributes"),  TYPE_UINT32,   sizeof(ULONG)},
+    {_T("FileAttributes"),  TYPE_FLAG32,   sizeof(ULONG), NULL, {(TStructMember *)FileAttributesValues}},
     {_T("ReparseTag"),      TYPE_UINT32,   sizeof(ULONG)},
     {_T("NumberOfLinks"),   TYPE_UINT32,   sizeof(ULONG)},
     {_T("AccessMask"),      TYPE_FLAG32,   sizeof(ULONG), NULL, {(TStructMember *)AccessMaskValues}},
     {_T("EffectiveAccess"), TYPE_FLAG32,   sizeof(ULONG), NULL, {(TStructMember *)AccessMaskValues}},
-    {_T("LxFlags"),         TYPE_UINT32,   sizeof(ULONG)},
+    {_T("LxFlags"),         TYPE_FLAG32,   sizeof(ULONG), NULL, {(TStructMember *)FileLxFlagsValues}},
     {_T("LxUid"),           TYPE_UINT32,   sizeof(ULONG)},
     {_T("LxGid"),           TYPE_UINT32,   sizeof(ULONG)},
     {_T("LxMode"),          TYPE_UINT32,   sizeof(ULONG)},
@@ -774,6 +833,8 @@ TFlagInfo FileLinkInformationExValues[] =
     FLAGINFO_BITV(FILE_LINK_NO_DECREASE_AVAILABLE_SPACE),
     FLAGINFO_BITV(FILE_LINK_PRESERVE_AVAILABLE_SPACE),
     FLAGINFO_BITV(FILE_LINK_IGNORE_READONLY_ATTRIBUTE),
+    FLAGINFO_BITV(FILE_LINK_FORCE_RESIZE_TARGET_SR),
+    FLAGINFO_BITV(FILE_LINK_FORCE_RESIZE_SOURCE_SR),
     FLAGINFO_END()
 };
 
@@ -787,16 +848,37 @@ TStructMember FileLinkInformationExMembers[] =
     {NULL, TYPE_NONE, 0}
 };
 
+TStructMember FileStorageReserveIdInformationMembers[] =
+{
+    {_T("StorageReserveId"),    TYPE_UINT32,    sizeof(ULONG)},
+    {NULL, TYPE_NONE, 0}
+};
+
+TFlagInfo FileKnownFolderValues[] =
+{
+    FLAGINFO_NUMV(KnownFolderNone),
+    FLAGINFO_NUMV(KnownFolderDesktop),
+    FLAGINFO_NUMV(KnownFolderDocuments),
+    FLAGINFO_NUMV(KnownFolderDownloads),
+    FLAGINFO_NUMV(KnownFolderMusic),
+    FLAGINFO_NUMV(KnownFolderPictures),
+    FLAGINFO_NUMV(KnownFolderVideos),
+    FLAGINFO_END()
+};
+
+TStructMember FileKnownFolderInformationMembers[] =
+{
+    {_T("Type"),    TYPE_FLAG32,   sizeof(ULONG), NULL, {(TStructMember *)FileKnownFolderValues}},
+    {NULL, TYPE_NONE, 0}
+};
+
 #define FileAttributeCacheInformationMembers            FileUnknownInformationMembers
 #define FileRenameInformationBypassAccessCheckMembers   FileRenameInformationMembers
-#define FileLinkInformationBypassAccessCheckMembers     FileLinkInformationExMembers
+#define FileLinkInformationBypassAccessCheckMembers     FileLinkInformationMembers
 #define FileReplaceCompletionInformationMembers         FileCompletionInformationMembers
-#define FileRenameInformationExMembers                  FileRenameInformationExMembers
 #define FileRenameInformationExBypassAccessCheckMembers FileRenameInformationExMembers
 #define FileCaseSensitiveInformationBypassAccessCheckMembers FileCaseSensitiveInformationMembers
 #define FileLinkInformationExBypassAccessCheckMembers   FileLinkInformationExMembers
-#define FileStorageReserveIdInformationMembers          FileUnknownInformationMembers
-#define FileStorageReserveIdInformationMembers          FileUnknownInformationMembers
 #define FileCaseSensitiveInformationForceAccessCheckMembers  FileCaseSensitiveInformationMembers
 
 TInfoData FileInfoData[] =                                                  
@@ -856,8 +938,8 @@ TInfoData FileInfoData[] =
     FILE_INFO_READONLY(FileNumaNodeInformation,                 FILE_NUMA_NODE_INFORMATION,                  FALSE),
     FILE_INFO_READONLY(FileStandardLinkInformation,             FILE_STANDARD_LINK_INFORMATION,              FALSE),
     FILE_INFO_READONLY(FileRemoteProtocolInformation,           FILE_REMOTE_PROTOCOL_INFORMATION,            FALSE),
-    FILE_INFO_READONLY(FileRenameInformationBypassAccessCheck,  FILE_RENAME_INFORMATION,                     TRUE),
-    FILE_INFO_READONLY(FileLinkInformationBypassAccessCheck,    FILE_LINK_INFORMATION,                       FALSE),
+    FILE_INFO_EDITABLE(FileRenameInformationBypassAccessCheck,  FILE_RENAME_INFORMATION,                     FALSE),
+    FILE_INFO_EDITABLE(FileLinkInformationBypassAccessCheck,    FILE_LINK_INFORMATION,                       FALSE),
     FILE_INFO_READONLY(FileVolumeNameInformation,               FILE_VOLUME_NAME_INFORMATION,                FALSE),
     FILE_INFO_READONLY(FileIdInformation,                       FILE_ID_INFORMATION,                         FALSE),
     FILE_INFO_READONLY(FileIdExtdDirectoryInformation,          FILE_ID_EXTD_DIR_INFORMATION,                TRUE),
@@ -866,17 +948,17 @@ TInfoData FileInfoData[] =
     FILE_INFO_READONLY(FileIdExtdBothDirectoryInformation,      FILE_ID_EXTD_BOTH_DIR_INFORMATION,           TRUE),
     FILE_INFO_EDITABLE(FileDispositionInformationEx,            FILE_DISPOSITION_INFORMATION_EX,             FALSE),
     FILE_INFO_EDITABLE(FileRenameInformationEx,                 FILE_RENAME_INFORMATION_EX,                  FALSE),
-    FILE_INFO_READONLY(FileRenameInformationExBypassAccessCheck,FILE_RENAME_INFORMATION_EX,                  FALSE),
+    FILE_INFO_EDITABLE(FileRenameInformationExBypassAccessCheck,FILE_RENAME_INFORMATION_EX,                  FALSE),
     FILE_INFO_READONLY(FileDesiredStorageClassInformation,      FILE_STORAGE_TIER_CLASS,                     FALSE),
     FILE_INFO_READONLY(FileStatInformation,                     FILE_STAT_INFORMATION,                       FALSE),
     FILE_INFO_READONLY(FileMemoryPartitionInformation,          FILE_MEMORY_PARTITION_INFORMATION,           FALSE),
     FILE_INFO_READONLY(FileStatLxInformation,                   FILE_STAT_LX_INFORMATION,                    FALSE),
     FILE_INFO_EDITABLE(FileCaseSensitiveInformation,            FILE_CASE_SENSITIVE_INFORMATION,             FALSE),
-
     FILE_INFO_EDITABLE(FileLinkInformationEx,                   FILE_LINK_INFORMATION_EX,                    FALSE),
     FILE_INFO_EDITABLE(FileLinkInformationExBypassAccessCheck,  FILE_LINK_INFORMATION_EX,                    FALSE),
-    FILE_INFO_READONLY(FileStorageReserveIdInformation,         FILE_CASE_SENSITIVE_INFORMATION,             FALSE),
-    FILE_INFO_EDITABLE(FileCaseSensitiveInformationForceAccessCheck, FILE_CASE_SENSITIVE_INFORMATION,       FALSE),
+    FILE_INFO_EDITABLE(FileStorageReserveIdInformation,         FILE_SET_STORAGE_RESERVE_ID_INFORMATION,     FALSE),
+    FILE_INFO_EDITABLE(FileCaseSensitiveInformationForceAccessCheck, FILE_CASE_SENSITIVE_INFORMATION,        FALSE),
+    FILE_INFO_EDITABLE(FileKnownFolderInformation,              FILE_KNOWN_FOLDER_INFORMATION,               FALSE),
 
     {FileMaximumInformation}                                                                                 
 };
@@ -905,18 +987,39 @@ TStructMember FileFsLabelInformationMembers[] =
 
 TStructMember FileFsSizeInformationMembers[] =
 {   
-    {_T("TotalAllocationUnits"), TYPE_UINT64, sizeof(LARGE_INTEGER)},
-    {_T("AvailableAllocationUnits"), TYPE_UINT64, sizeof(LARGE_INTEGER)},
-    {_T("SectorsPerAllocationUnit"),  TYPE_UINT32, sizeof(ULONG)},
-    {_T("BytesPerSector"),      TYPE_UINT32, sizeof(ULONG)},
+    {_T("TotalAllocationUnits"),        TYPE_UINT64, sizeof(LARGE_INTEGER)},
+    {_T("AvailableAllocationUnits"),    TYPE_UINT64, sizeof(LARGE_INTEGER)},
+    {_T("SectorsPerAllocationUnit"),    TYPE_UINT32, sizeof(ULONG)},
+    {_T("BytesPerSector"),              TYPE_UINT32, sizeof(ULONG)},
     {NULL, TYPE_NONE, 0}
 };
 
+TFlagInfo FileDeviceCharacteristicsValues[] =
+{
+    FLAGINFO_BITV(FILE_REMOVABLE_MEDIA),
+    FLAGINFO_BITV(FILE_READ_ONLY_DEVICE),
+    FLAGINFO_BITV(FILE_FLOPPY_DISKETTE),
+    FLAGINFO_BITV(FILE_WRITE_ONCE_MEDIA),
+    FLAGINFO_BITV(FILE_REMOTE_DEVICE),
+    FLAGINFO_BITV(FILE_DEVICE_IS_MOUNTED),
+    FLAGINFO_BITV(FILE_VIRTUAL_VOLUME),
+    FLAGINFO_BITV(FILE_AUTOGENERATED_DEVICE_NAME),
+    FLAGINFO_BITV(FILE_DEVICE_SECURE_OPEN),
+    FLAGINFO_BITV(FILE_CHARACTERISTIC_PNP_DEVICE),
+    FLAGINFO_BITV(FILE_CHARACTERISTIC_TS_DEVICE),
+    FLAGINFO_BITV(FILE_CHARACTERISTIC_WEBDAV_DEVICE),
+    FLAGINFO_BITV(FILE_CHARACTERISTIC_CSV),
+    FLAGINFO_BITV(FILE_DEVICE_ALLOW_APPCONTAINER_TRAVERSAL),
+    FLAGINFO_BITV(FILE_PORTABLE_DEVICE),
+    FLAGINFO_BITV(FILE_REMOTE_DEVICE_VSMB),
+    FLAGINFO_BITV(FILE_DEVICE_REQUIRE_SECURITY_CHECK),
+    FLAGINFO_END()
+};
 
 TStructMember FileFsDeviceInformationMembers[] =
 {   
     {_T("DeviceType"),           TYPE_UINT32, sizeof(ULONG)},
-    {_T("Characteristics"),      TYPE_UINT32, sizeof(ULONG)},
+    {_T("Characteristics"),      TYPE_FLAG32, sizeof(ULONG), NULL, {(TStructMember *)FileDeviceCharacteristicsValues}},
     {NULL, TYPE_NONE, 0}
 };
 
@@ -929,6 +1032,19 @@ TStructMember FileFsAttributeInformationMembers[] =
     {NULL, TYPE_NONE, 0}
 };
 
+TFlagInfo FileSystemControlFlagValues[] =
+{
+    FLAGINFO_BITV(FILE_VC_QUOTA_TRACK),
+    FLAGINFO_BITV(FILE_VC_QUOTA_ENFORCE),
+    FLAGINFO_BITV(FILE_VC_CONTENT_INDEX_DISABLED),
+    FLAGINFO_BITV(FILE_VC_LOG_QUOTA_THRESHOLD),
+    FLAGINFO_BITV(FILE_VC_LOG_QUOTA_LIMIT),
+    FLAGINFO_BITV(FILE_VC_LOG_VOLUME_THRESHOLD),
+    FLAGINFO_BITV(FILE_VC_LOG_VOLUME_LIMIT),
+    FLAGINFO_BITV(FILE_VC_QUOTAS_INCOMPLETE),
+    FLAGINFO_BITV(FILE_VC_QUOTAS_REBUILDING),
+    FLAGINFO_END()
+};
 
 TStructMember FileFsControlInformationMembers[] =
 {   
@@ -937,18 +1053,18 @@ TStructMember FileFsControlInformationMembers[] =
     {_T("FreeSpaceStopFiltering"),     TYPE_UINT64, sizeof(LARGE_INTEGER)},
     {_T("DefaultQuotaThreshold"),      TYPE_UINT64, sizeof(LARGE_INTEGER)},
     {_T("DefaultQuotaLimit"),          TYPE_UINT64, sizeof(LARGE_INTEGER)},
-    {_T("FileSystemControlFlags"),     TYPE_UINT32, sizeof(ULONG)},
+    {_T("FileSystemControlFlags"),     TYPE_FLAG32, sizeof(ULONG), NULL, {(TStructMember *)FileSystemControlFlagValues}},
     {NULL, TYPE_NONE, 0}
 };
 
 
 TStructMember FileFsFullSizeInformationMembers[] =
 {   
-    {_T("TotalAllocationUnits"),    TYPE_UINT64, sizeof(LARGE_INTEGER)},
+    {_T("TotalAllocationUnits"),           TYPE_UINT64, sizeof(LARGE_INTEGER)},
     {_T("CallerAvailableAllocationUnits"), TYPE_UINT64, sizeof(LARGE_INTEGER)},
-    {_T("ActualAvailableAllocationUnits"),     TYPE_UINT64, sizeof(LARGE_INTEGER)},
-    {_T("SectorsPerAllocationUnit"),     TYPE_UINT32, sizeof(ULONG)},
-    {_T("BytesPerSector"),              TYPE_UINT32, sizeof(ULONG)},
+    {_T("ActualAvailableAllocationUnits"), TYPE_UINT64, sizeof(LARGE_INTEGER)},
+    {_T("SectorsPerAllocationUnit"),       TYPE_UINT32, sizeof(ULONG)},
+    {_T("BytesPerSector"),                 TYPE_UINT32, sizeof(ULONG)},
     {NULL, TYPE_NONE, 0}
 };
 
@@ -976,19 +1092,59 @@ TStructMember FileFsVolumeFlagsInformationMembers[] =
     {NULL, TYPE_NONE, 0}
 };
 
+TFlagInfo FileSystemSectorFlagValues[] =
+{
+    FLAGINFO_BITV(SSINFO_FLAGS_ALIGNED_DEVICE),
+    FLAGINFO_BITV(SSINFO_FLAGS_PARTITION_ALIGNED_ON_DEVICE),
+    FLAGINFO_BITV(SSINFO_FLAGS_NO_SEEK_PENALTY),
+    FLAGINFO_BITV(SSINFO_FLAGS_TRIM_ENABLED),
+    FLAGINFO_BITV(SSINFO_FLAGS_BYTE_ADDRESSABLE),
+    FLAGINFO_END()
+};
+
 TStructMember FileFsSectorSizeInformationMembers[] =
 {   
     {_T("LogicalBytesPerSector"),               TYPE_UINT32, sizeof(ULONG)},
     {_T("PhysicalBytesPerSectorForAtomicity"),  TYPE_UINT32, sizeof(ULONG)},
     {_T("PhysicalBytesPerSectorForPerformance"), TYPE_UINT32, sizeof(ULONG)},
     {_T("FileSystemEffectivePhysicalBytesPerSectorForAtomicity"), TYPE_UINT32, sizeof(ULONG)},
-    {_T("Flags"),                               TYPE_UINT32, sizeof(ULONG)},
+    {_T("Flags"),                               TYPE_FLAG32, sizeof(ULONG), NULL, {(TStructMember *)FileSystemSectorFlagValues}},
     {_T("ByteOffsetForSectorAlignment"),        TYPE_UINT32, sizeof(ULONG)},
     {_T("ByteOffsetForPartitionAlignment"),     TYPE_UINT32, sizeof(ULONG)},
     {NULL, TYPE_NONE, 0}
 };
 
-#define FileFsDataCopyInformationMembers FileUnknownInformationMembers
+TStructMember FileFsDataCopyInformationMembers[] =
+{
+    {_T("NumberOfCopies"),               TYPE_UINT32, sizeof(ULONG)},
+    {NULL, TYPE_NONE, 0}
+};
+
+TStructMember FileFsMetadataSizeInformationMembers[] =
+{
+    {_T("TotalMetadataAllocationUnits"), TYPE_UINT64, sizeof(LARGE_INTEGER)},
+    {_T("SectorsPerAllocationUnit"),     TYPE_UINT32, sizeof(ULONG)},
+    {_T("BytesPerSector"),               TYPE_UINT32, sizeof(ULONG)},
+    {NULL, TYPE_NONE, 0}
+};
+
+TStructMember FileFsFullSizeInformationExMembers[] =
+{
+    {_T("ActualTotalAllocationUnits"),           TYPE_UINT64, sizeof(LARGE_INTEGER)},
+    {_T("ActualAvailableAllocationUnits"),       TYPE_UINT64, sizeof(LARGE_INTEGER)},
+    {_T("ActualPoolUnavailableAllocationUnits"), TYPE_UINT64, sizeof(LARGE_INTEGER)},
+    {_T("CallerTotalAllocationUnits"),           TYPE_UINT64, sizeof(LARGE_INTEGER)},
+    {_T("CallerAvailableAllocationUnits"),       TYPE_UINT64, sizeof(LARGE_INTEGER)},
+    {_T("CallerPoolUnavailableAllocationUnits"), TYPE_UINT64, sizeof(LARGE_INTEGER)},
+    {_T("UsedAllocationUnits"),                  TYPE_UINT64, sizeof(LARGE_INTEGER)},
+    {_T("TotalReservedAllocationUnits"),         TYPE_UINT64, sizeof(LARGE_INTEGER)},
+    {_T("VolumeStorageReserveAllocationUnits"),  TYPE_UINT64, sizeof(LARGE_INTEGER)},
+    {_T("AvailableCommittedAllocationUnits"),    TYPE_UINT64, sizeof(LARGE_INTEGER)},
+    {_T("PoolAvailableAllocationUnits"),         TYPE_UINT64, sizeof(LARGE_INTEGER)},
+    {_T("SectorsPerAllocationUnit"),             TYPE_UINT32, sizeof(ULONG)},
+    {_T("BytesPerSector"),                       TYPE_UINT32, sizeof(ULONG)},
+    {NULL, TYPE_NONE, 0}
+};
 
 TInfoData FsInfoData[] = 
 {
@@ -1003,7 +1159,9 @@ TInfoData FsInfoData[] =
     FILE_INFO_EDITABLE(FileFsDriverPathInformation,    FILE_FS_DRIVER_PATH_INFORMATION,      FALSE),
     FILE_INFO_EDITABLE(FileFsVolumeFlagsInformation,   FILE_FS_VOLUME_FLAGS_INFORMATION,     FALSE),
     FILE_INFO_EDITABLE(FileFsSectorSizeInformation,    FILE_FS_SECTOR_SIZE_INFORMATION,      FALSE),
-    FILE_INFO_EDITABLE(FileFsDataCopyInformation,      FILE_UNKNOWN_INFORMATION,             FALSE),
+    FILE_INFO_EDITABLE(FileFsDataCopyInformation,      FILE_FS_DATA_COPY_INFORMATION,        FALSE),
+    FILE_INFO_EDITABLE(FileFsMetadataSizeInformation,  FILE_FS_METADATA_SIZE_INFORMATION,    FALSE),
+    FILE_INFO_EDITABLE(FileFsFullSizeInformationEx,    FILE_FS_FULL_SIZE_INFORMATION_EX,     FALSE),
     {FileFsMaximumInformation}
 };
 
@@ -1584,6 +1742,16 @@ static int DataToItemText(TStructMember * pMember, LPTSTR szBuffer, size_t nMaxC
             PLARGE_INTEGER pFileId = (PLARGE_INTEGER)pMember->pbDataPtr;
 
             StringCchPrintfEx(szBuffer, (szEndChar - szBuffer), &szBuffer, NULL, 0, _T("%08lX-%08lX"), pFileId->HighPart, pFileId->LowPart);
+            break;
+        }
+
+        case TYPE_GUID:
+        {
+            LPGUID pGuid = (LPGUID)pMember->pbDataPtr;
+            TCHAR szGuidText[0x40];
+
+            GuidToString(pGuid, szGuidText, _countof(szGuidText));
+            StringCchPrintfEx(szBuffer, (szEndChar - szBuffer), &szBuffer, NULL, 0, _T("%s"), szGuidText);
             break;
         }
 
@@ -2809,14 +2977,15 @@ static int OnDoubleClick(HWND hDlg, LPNMHDR pNMHDR)
     // Doubleclick on TYPE_FLAG32 opens a dialog with flags
     if(pMemberInfo->nDataType == TYPE_FLAG32)
     {
-        PDWORD PtrFlags = (PDWORD)pMemberInfo->pbStructPtr;
+        DWORD Flags = *(PDWORD)pMemberInfo->pbStructPtr;
 
-        if(FlagsDialog(hDlg, IDS_ENTER_FLAGS, pMemberInfo->pFlags, *PtrFlags))
+        if(FlagsDialog(hDlg, IDS_ENTER_FLAGS, pMemberInfo->pFlags, Flags))
         {
             // Only change the item if editable
             pInfoData = GetSelectedInfoClass(hDlg, IDC_FILE_INFO_CLASS, FileInfoData);
             if(pInfoData != NULL && pInfoData->bIsEditable)
             {
+                *(PDWORD)pMemberInfo->pbStructPtr = Flags;
                 hParentItem = TreeView_GetNextItem(hTreeView, hItem, TVGN_PARENT);
                 PostMessage(hDlg, WM_RELOADITEMS, (WPARAM)hTreeView, (LPARAM)hParentItem);
             }

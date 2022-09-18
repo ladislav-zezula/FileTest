@@ -38,6 +38,7 @@ static TFlagInfo SectionAccessValues[] =
 
 TFlagInfo AllocationAttributesValues[] =
 {
+    FLAGINFO_BITV(SEC_HUGE_PAGES),
     FLAGINFO_BITV(SEC_PARTITION_OWNER_HANDLE),
     FLAGINFO_BITV(SEC_64K_PAGES),
     FLAGINFO_BITV(SEC_FILE),
