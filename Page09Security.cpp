@@ -26,7 +26,7 @@
 #define TREE_ITEM_ACE               0x20000000      // An ACE. Lower 8 bits indicate the ACE type
 #define TREE_ITEM_ACE_HEADER_TYPE   0x30000005      // ACE_HEADER::AceType
 #define TREE_ITEM_ACE_HEADER_FLAGS  0x30000006      // ACE_HEADER::AceFlags
-#define TREE_ITEM_ACE_HEADER_SIZE   0x30000007      // ACE_HEADER::AceFlags
+#define TREE_ITEM_ACE_HEADER_SIZE   0x30000007      // ACE_HEADER::AceSize
 #define TREE_ITEM_ACE_MASK          0x30000008      // ACE::Mask
 #define TREE_ITEM_ADS_ACE_MASK      0x30000009      // ACE::Mask for ADS ACEs
 #define TREE_ITEM_MANDATORY_MASK    0x3000000A      // ACE::Mask for SYSTEM_MANDATORY_LABEL_ACE
@@ -1079,15 +1079,15 @@ static bool TreeView_ItemToAcl_Add(
         switch(lParam & TREE_ITEM_VALUE_MASK)
         {
             case ACCESS_ALLOWED_ACE_TYPE:
-                bResult = AddAccessAllowedAce(pAcl, ACL_REVISION, AceHelper.Mask, AceHelper.Sid);
+                bResult = AddAccessAllowedAceEx(pAcl, ACL_REVISION, AceHelper.AceFlags, AceHelper.Mask, AceHelper.Sid);
                 break;
 
             case ACCESS_DENIED_ACE_TYPE:
-                bResult = AddAccessDeniedAce(pAcl, ACL_REVISION, AceHelper.Mask, AceHelper.Sid);
+                bResult = AddAccessDeniedAceEx(pAcl, ACL_REVISION, AceHelper.AceFlags, AceHelper.Mask, AceHelper.Sid);
                 break;
 
             case SYSTEM_AUDIT_ACE_TYPE:
-                bResult = AddAuditAccessAce(pAcl, ACL_REVISION, AceHelper.Mask, AceHelper.Sid, TRUE, TRUE);
+                bResult = AddAuditAccessAceEx(pAcl, ACL_REVISION, AceHelper.AceFlags, AceHelper.Mask, AceHelper.Sid, FALSE, FALSE);
                 break;
 
             default:    // Let our helper to add the ACE
