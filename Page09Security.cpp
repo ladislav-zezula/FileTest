@@ -26,7 +26,7 @@
 #define TREE_ITEM_ACE               0x20000000      // An ACE. Lower 8 bits indicate the ACE type
 #define TREE_ITEM_ACE_HEADER_TYPE   0x30000005      // ACE_HEADER::AceType
 #define TREE_ITEM_ACE_HEADER_FLAGS  0x30000006      // ACE_HEADER::AceFlags
-#define TREE_ITEM_ACE_HEADER_SIZE   0x30000007      // ACE_HEADER::AceFlags
+#define TREE_ITEM_ACE_HEADER_SIZE   0x30000007      // ACE_HEADER::AceSize
 #define TREE_ITEM_ACE_MASK          0x30000008      // ACE::Mask
 #define TREE_ITEM_ADS_ACE_MASK      0x30000009      // ACE::Mask for ADS ACEs
 #define TREE_ITEM_MANDATORY_MASK    0x3000000A      // ACE::Mask for SYSTEM_MANDATORY_LABEL_ACE
@@ -237,42 +237,30 @@ void Sid_Free(PSID pSid)
 static PSID Sid_AllocateAndInitialize(
     IN PSID_IDENTIFIER_AUTHORITY pIdentifierAuthority,
     IN BYTE nSubAuthorityCount,
-    IN DWORD nSubAuthority0,
-    IN DWORD nSubAuthority1 = 0,
-    IN DWORD nSubAuthority2 = 0,
-    IN DWORD nSubAuthority3 = 0,
-    IN DWORD nSubAuthority4 = 0,
-    IN DWORD nSubAuthority5 = 0,
-    IN DWORD nSubAuthority6 = 0,
-    IN DWORD nSubAuthority7 = 0)
+    IN PDWORD pnSubAuthorities)
 {
-    PSID pSidToFree = NULL;
-    PSID pSid = NULL;
-    DWORD dwLength;
+    PSID pSid;
 
-    // Call the native SID initializing function
-    if(AllocateAndInitializeSid(pIdentifierAuthority,
-                                nSubAuthorityCount,
-                                nSubAuthority0,
-                                nSubAuthority1,
-                                nSubAuthority2,
-                                nSubAuthority3,
-                                nSubAuthority4,
-                                nSubAuthority5,
-                                nSubAuthority6,
-                                nSubAuthority7,
-                               &pSidToFree))
+    // Prepare a buffer of a sufficient size
+    pSid = Sid_Allocate(GetSidLengthRequired(nSubAuthorityCount));
+
+    if (pSid == NULL)
+        return NULL;
+
+    // Fill in the identifier authority and sub-authority count
+    if (InitializeSid(pSid, pIdentifierAuthority, nSubAuthorityCount))
     {
-        // Retrieve the length of the SID
-        dwLength = GetLengthSid(pSidToFree);
-
-        // Now re-allocate the SID to have it in heap memory
-        pSid = Sid_Allocate(dwLength);
-        if(pSid != NULL)
-            CopySid(dwLength, pSid, pSidToFree);
-
-        // Free the original SID
-        FreeSid(pSidToFree);
+        for (BYTE i = 0; i < nSubAuthorityCount; i++)
+        {
+            // Fill in the sub-authorities
+            *GetSidSubAuthority(pSid, i) = pnSubAuthorities[i];
+        }
+    }
+    else
+    {
+        // Failed initialization; cleanup
+        Sid_Free(pSid);
+        pSid = NULL;
     }
 
     // Return our new SID
@@ -286,11 +274,13 @@ static PSID Sid_CreateNew(BYTE AceType)
     // We only create two types of SID - "Everyone" and "Mandatory Medium"
     if(AceType == SYSTEM_MANDATORY_LABEL_ACE_TYPE)
     {
-        return Sid_AllocateAndInitialize(&SiaLabel, 1, SECURITY_MANDATORY_MEDIUM_RID);
+        DWORD nSubAuthorities[] = { SECURITY_MANDATORY_MEDIUM_RID };
+        return Sid_AllocateAndInitialize(&SiaLabel, RTL_NUMBER_OF(nSubAuthorities), nSubAuthorities);
     }
     else
     {
-        return Sid_AllocateAndInitialize(&SiaWorld, 1, SECURITY_WORLD_RID);
+        DWORD nSubAuthorities[] = { SECURITY_WORLD_RID };
+        return Sid_AllocateAndInitialize(&SiaWorld, RTL_NUMBER_OF(nSubAuthorities), nSubAuthorities);
     }
 }
 
@@ -370,7 +360,7 @@ static bool StringToSid(LPTSTR szSid, PSID * ppSid)
     PSID  pNewSid = NULL;
     TCHAR szDomainName[128] = _T("");
     DWORD dwSubAuthCount = 0;
-    DWORD dwSubAuth[8];
+    DWORD dwSubAuth[SID_MAX_SUB_AUTHORITIES];
     DWORD dwDomainName = _countof(szDomainName);
     DWORD dwRevision = SID_REVISION;
     DWORD dwLength = 0;
@@ -394,7 +384,7 @@ static bool StringToSid(LPTSTR szSid, PSID * ppSid)
 
         // Get the subauthorities
         memset(dwSubAuth, 0, sizeof(dwSubAuth));
-        while(szSid[0] == _T('-') && dwSubAuthCount < 8)
+        while(szSid[0] == _T('-') && dwSubAuthCount < SID_MAX_SUB_AUTHORITIES)
         {
             dwSubAuth[dwSubAuthCount++] = StrToInt(szSid + 1, &szSid, 10);
         }
@@ -403,15 +393,7 @@ static bool StringToSid(LPTSTR szSid, PSID * ppSid)
         if(szSid[0] == 0 || szSid[0] == _T(' '))
         {
             // Create the SID
-            *ppSid = Sid_AllocateAndInitialize(&Sia, (BYTE)dwSubAuthCount,
-                                                           dwSubAuth[0],
-                                                           dwSubAuth[1],
-                                                           dwSubAuth[2],
-                                                           dwSubAuth[3],
-                                                           dwSubAuth[4],
-                                                           dwSubAuth[5],
-                                                           dwSubAuth[6],
-                                                           dwSubAuth[7]);
+            *ppSid = Sid_AllocateAndInitialize(&Sia, (BYTE)dwSubAuthCount, dwSubAuth);
             return (*ppSid != NULL);
         }
 
@@ -811,7 +793,8 @@ static bool TreeView_ItemToMandatorySid(HWND hTreeView, HTREEITEM hItem, ACE_HEL
     if(TreeView_ItemToValue32(hTreeView, hItem, &dwIntLevel))
     {
         // Create new mandatory label SID
-        pSid = Sid_AllocateAndInitialize(&SiaLabel, 1, dwIntLevel);
+        DWORD nSubAuthorities[] = { dwIntLevel };
+        pSid = Sid_AllocateAndInitialize(&SiaLabel, RTL_NUMBER_OF(nSubAuthorities), nSubAuthorities);
         if(pSid != NULL)
         {
             // Store the SID to the ACE_HELPER structure
@@ -1096,15 +1079,15 @@ static bool TreeView_ItemToAcl_Add(
         switch(lParam & TREE_ITEM_VALUE_MASK)
         {
             case ACCESS_ALLOWED_ACE_TYPE:
-                bResult = AddAccessAllowedAce(pAcl, ACL_REVISION, AceHelper.Mask, AceHelper.Sid);
+                bResult = AddAccessAllowedAceEx(pAcl, ACL_REVISION, AceHelper.AceFlags, AceHelper.Mask, AceHelper.Sid);
                 break;
 
             case ACCESS_DENIED_ACE_TYPE:
-                bResult = AddAccessDeniedAce(pAcl, ACL_REVISION, AceHelper.Mask, AceHelper.Sid);
+                bResult = AddAccessDeniedAceEx(pAcl, ACL_REVISION, AceHelper.AceFlags, AceHelper.Mask, AceHelper.Sid);
                 break;
 
             case SYSTEM_AUDIT_ACE_TYPE:
-                bResult = AddAuditAccessAce(pAcl, ACL_REVISION, AceHelper.Mask, AceHelper.Sid, TRUE, TRUE);
+                bResult = AddAuditAccessAceEx(pAcl, ACL_REVISION, AceHelper.AceFlags, AceHelper.Mask, AceHelper.Sid, FALSE, FALSE);
                 break;
 
             default:    // Let our helper to add the ACE
