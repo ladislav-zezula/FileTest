@@ -243,16 +243,15 @@ static PSID Sid_AllocateAndInitialize(
 
     // Prepare a buffer of a sufficient size
     pSid = Sid_Allocate(GetSidLengthRequired(nSubAuthorityCount));
-
     if (pSid == NULL)
         return NULL;
 
     // Fill in the identifier authority and sub-authority count
     if (InitializeSid(pSid, pIdentifierAuthority, nSubAuthorityCount))
     {
+        // Fill in the sub-authorities
         for (BYTE i = 0; i < nSubAuthorityCount; i++)
         {
-            // Fill in the sub-authorities
             *GetSidSubAuthority(pSid, i) = pnSubAuthorities[i];
         }
     }
@@ -1413,22 +1412,6 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
     return TRUE;
 }
 
-static int OnEditLabel(HWND hDlg)
-{
-    HTREEITEM hItem;
-    HWND hTreeView = GetDlgItem(hDlg, IDC_SECURITY);
-
-    // Only start editing if the tree view has focus
-    if(GetFocus() == hTreeView)
-    {
-        hItem = TreeView_GetSelection(hTreeView);
-        if(hItem != NULL)
-            TreeView_EditLabel(hTreeView, hItem);
-    }
-
-    return TRUE;
-}
-
 static int OnSetAclType(HWND hDlg, LPCTSTR szItemText, UINT AclType)
 {
     HTREEITEM hItem;
@@ -2195,45 +2178,48 @@ static void OnTVKeyDown(HWND hDlg, NMTVKEYDOWN * pNMTVKeyDown)
     }
 }
 
-static int OnCommand(HWND hDlg, UINT /* nNotify */, UINT nIDCtrl)
+static int OnCommand(HWND hDlg, UINT nNotify, UINT nIDCtrl)
 {
-    switch(nIDCtrl)
+    if(nNotify == BN_CLICKED || nNotify == 1)
     {
-        case ID_DOUBLE_CLICK:
-            return OnTVDoubleClick(hDlg);
+        switch(nIDCtrl)
+        {
+            case ID_EDIT_LABEL:
+                return TreeView_EditLabel_ID(hDlg, IDC_SECURITY);
 
-        case ID_EDIT_LABEL:
-            return OnEditLabel(hDlg);
+            case ID_DOUBLE_CLICK:
+                return OnTVDoubleClick(hDlg);
 
-        case IDC_SET_NULL_ACL:
-            return OnSetAclType(hDlg, szNullAcl, TREE_ITEM_NULL_ACL);
+            case IDC_SET_NULL_ACL:
+                return OnSetAclType(hDlg, szNullAcl, TREE_ITEM_NULL_ACL);
 
-        case IDC_SET_EMPTY_ACL:
-            return OnSetAclType(hDlg, szEmptyAcl, TREE_ITEM_EMPTY_ACL);
+            case IDC_SET_EMPTY_ACL:
+                return OnSetAclType(hDlg, szEmptyAcl, TREE_ITEM_EMPTY_ACL);
 
-        case IDC_NEW_ACE_BEFORE:
-            return OnInsertAceBefore(hDlg, TRUE);
+            case IDC_NEW_ACE_BEFORE:
+                return OnInsertAceBefore(hDlg, TRUE);
 
-        case IDC_NEW_ACE_AFTER:
-            return OnInsertAceBefore(hDlg, FALSE);
+            case IDC_NEW_ACE_AFTER:
+                return OnInsertAceBefore(hDlg, FALSE);
 
-        case IDC_MOVE_ACE_UP:
-            return OnSwapAceWith(hDlg, TRUE);
+            case IDC_MOVE_ACE_UP:
+                return OnSwapAceWith(hDlg, TRUE);
 
-        case IDC_MOVE_ACE_DOWN:
-            return OnSwapAceWith(hDlg, FALSE);
+            case IDC_MOVE_ACE_DOWN:
+                return OnSwapAceWith(hDlg, FALSE);
 
-        case IDC_DELETE_ACE:
-            return OnDeleteAce(hDlg);
+            case IDC_DELETE_ACE:
+                return OnDeleteAce(hDlg);
 
-        case IDC_SET_BLANK:
-            return OnSetBlankSecurityDescriptor(hDlg);
+            case IDC_SET_BLANK:
+                return OnSetBlankSecurityDescriptor(hDlg);
 
-        case IDC_QUERY_SECURITY:
-            return OnQuerySecurity(hDlg);
+            case IDC_QUERY_SECURITY:
+                return OnQuerySecurity(hDlg);
 
-        case IDC_SET_SECURITY:
-            return OnSetSecurity(hDlg);
+            case IDC_SET_SECURITY:
+                return OnSetSecurity(hDlg);
+        }
     }
     return FALSE;
 }

@@ -429,6 +429,7 @@ DWORD TreeView_GetChildCount(HWND hTreeView, HTREEITEM hItem);
 LPARAM TreeView_GetItemParam(HWND hTreeView, HTREEITEM hItem);
 LPARAM TreeView_DeferItemText(HWND hTreeView, HTREEITEM hItem);
 HTREEITEM TreeView_SetTreeItem(HWND hTreeView, HTREEITEM hItem, LPCTSTR szText, LPARAM lParam);
+BOOL TreeView_EditLabel_ID(HWND hDlg, UINT nID);
 HTREEITEM InsertTreeItem(HWND hTreeView, HTREEITEM hParent, HTREEITEM hInsertAfter, LPCTSTR szText, PVOID pParam);
 HTREEITEM InsertTreeItem(HWND hTreeView, HTREEITEM hParent, LPCTSTR szText, PVOID pParam);
 HTREEITEM InsertTreeItem(HWND hTreeView, HTREEITEM hParent, LPCTSTR szText, LPARAM lParam = 0);

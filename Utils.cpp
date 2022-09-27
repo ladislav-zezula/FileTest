@@ -522,6 +522,26 @@ HTREEITEM TreeView_SetTreeItem(HWND hTreeView, HTREEITEM hItem, LPCTSTR szText, 
     return hItem;
 }
 
+BOOL TreeView_EditLabel_ID(HWND hDlg, UINT nID)
+{
+    HTREEITEM hItem = NULL;
+    HWND hTreeView = GetDlgItem(hDlg, nID);
+    BOOL bResult = FALSE;
+
+    // Only start editing if the proper tree view has focus
+    if(GetFocus() == hTreeView)
+    {
+        hItem = TreeView_GetSelection(hTreeView);
+        if(hItem != NULL)
+        {
+            TreeView_EditLabel(hTreeView, hItem);
+            bResult = TRUE;
+        }
+    }
+
+    return bResult;
+}
+
 HTREEITEM InsertTreeItem(HWND hTreeView, HTREEITEM hParent, HTREEITEM hInsertAfter, LPCTSTR szText, PVOID pParam)
 {
     TVINSERTSTRUCT tvis;

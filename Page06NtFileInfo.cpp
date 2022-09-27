@@ -2995,22 +2995,6 @@ static int OnDoubleClick(HWND hDlg, LPNMHDR pNMHDR)
     return TRUE;
 }
 
-static int OnEditLabel(HWND hDlg)
-{
-    HTREEITEM hItem;
-    HWND hTreeView = GetDlgItem(hDlg, IDC_FILE_INFO);
-
-    // Only start editing if the tree view has focus
-    if(GetFocus() == hTreeView)
-    {
-        hItem = TreeView_GetSelection(hTreeView);
-        if(hItem != NULL)
-            TreeView_EditLabel(hTreeView, hItem);
-    }
-
-    return TRUE;
-}
-
 //
 // Provides some extension to the default combo box search
 // 
@@ -3346,7 +3330,7 @@ static int OnCommand(HWND hDlg, UINT nNotify, UINT nIDCtrl)
         switch(nIDCtrl)
         {
             case ID_EDIT_LABEL:
-                return OnEditLabel(hDlg);
+                return TreeView_EditLabel_ID(hDlg, IDC_FILE_INFO);
 
             case IDC_DEFAULT_LENGTH:
                 return OnDefaultLengthClick(hDlg);

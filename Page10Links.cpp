@@ -799,48 +799,51 @@ static int OnEndLabelEdit(HWND hDlg, NMTVDISPINFO * pNMDispInfo)
     DWORD IntValue32 = 0;
     int nError = ERROR_NOT_SUPPORTED;
 
-    // Get the pointer to the reparse data
-    if(pNMDispInfo->item.pszText == NULL)
-        return FALSE;
-    ReparseData = pData->ReparseData;
-
-    // Perform the item-specific editing
-    switch(pNMDispInfo->item.lParam)
+    // Only do something when the test has been changed
+    if(pNMDispInfo->item.pszText)
     {
-        case ITEM_TYPE_REPARSE_TAG:
-            nError = Text2Hex32(pNMDispInfo->item.pszText, &IntValue32);
-            if(nError == ERROR_SUCCESS && IntValue32 != ReparseData->ReparseTag)
-                nError = SetReparseDataTag(ReparseData, IntValue32, pData->ReparseDataLength);
-            break;
+        // Get the pointer to the reparse data
+        ReparseData = pData->ReparseData;
 
-        case ITEM_TYPE_SUBSTNAME_MP:
-            if(ReparseData->ReparseTag == IO_REPARSE_TAG_MOUNT_POINT)
-                nError = SetReparseDataSubstName(ReparseData, ReparseData->MountPointReparseBuffer.PathBuffer, pNMDispInfo->item.pszText); 
-            break;
+        // Perform the item-specific editing
+        switch(pNMDispInfo->item.lParam)
+        {
+            case ITEM_TYPE_REPARSE_TAG:
+                nError = Text2Hex32(pNMDispInfo->item.pszText, &IntValue32);
+                if(nError == ERROR_SUCCESS && IntValue32 != ReparseData->ReparseTag)
+                    nError = SetReparseDataTag(ReparseData, IntValue32, pData->ReparseDataLength);
+                break;
 
-        case ITEM_TYPE_PRINTNAME_MP:
-            if(ReparseData->ReparseTag == IO_REPARSE_TAG_MOUNT_POINT)
-                nError = SetReparseDataPrintName(ReparseData, ReparseData->MountPointReparseBuffer.PathBuffer, pNMDispInfo->item.pszText); 
-            break;
+            case ITEM_TYPE_SUBSTNAME_MP:
+                if(ReparseData->ReparseTag == IO_REPARSE_TAG_MOUNT_POINT)
+                    nError = SetReparseDataSubstName(ReparseData, ReparseData->MountPointReparseBuffer.PathBuffer, pNMDispInfo->item.pszText); 
+                break;
 
-        case ITEM_TYPE_SUBSTNAME_LNK:
-            if(ReparseData->ReparseTag == IO_REPARSE_TAG_SYMLINK)
-                nError = SetReparseDataSubstName(ReparseData, ReparseData->SymbolicLinkReparseBuffer.PathBuffer, pNMDispInfo->item.pszText); 
-            break;
+            case ITEM_TYPE_PRINTNAME_MP:
+                if(ReparseData->ReparseTag == IO_REPARSE_TAG_MOUNT_POINT)
+                    nError = SetReparseDataPrintName(ReparseData, ReparseData->MountPointReparseBuffer.PathBuffer, pNMDispInfo->item.pszText); 
+                break;
 
-        case ITEM_TYPE_PRINTNAME_LNK:
-            if(ReparseData->ReparseTag == IO_REPARSE_TAG_SYMLINK)
-                nError = SetReparseDataPrintName(ReparseData, ReparseData->SymbolicLinkReparseBuffer.PathBuffer, pNMDispInfo->item.pszText); 
-            break;
+            case ITEM_TYPE_SUBSTNAME_LNK:
+                if(ReparseData->ReparseTag == IO_REPARSE_TAG_SYMLINK)
+                    nError = SetReparseDataSubstName(ReparseData, ReparseData->SymbolicLinkReparseBuffer.PathBuffer, pNMDispInfo->item.pszText); 
+                break;
+
+            case ITEM_TYPE_PRINTNAME_LNK:
+                if(ReparseData->ReparseTag == IO_REPARSE_TAG_SYMLINK)
+                    nError = SetReparseDataPrintName(ReparseData, ReparseData->SymbolicLinkReparseBuffer.PathBuffer, pNMDispInfo->item.pszText); 
+                break;
+        }
+
+        // If we are going to accept changes, we need to update the view
+        if(nError == ERROR_SUCCESS)
+        {
+            SetWindowLongPtr(hDlg, DWLP_MSGRESULT, TRUE);
+            PostMessage(hDlg, WM_UPDATE_VIEW, 0, 0);
+        }
     }
 
-    // If we are going to accept changes, we need to update the view
-    if(nError == ERROR_SUCCESS)
-    {
-        SetWindowLongPtr(hDlg, DWLP_MSGRESULT, TRUE);
-        PostMessage(hDlg, WM_UPDATE_VIEW, 0, 0);
-    }
-    
+    DisableCloseDialog(hDlg, FALSE);
     return TRUE;
 }
 
@@ -1465,10 +1468,13 @@ static int OnReparseDelete(HWND hDlg)
 
 static int OnCommand(HWND hDlg, UINT nNotify, UINT nIDCtrl)
 {
-    if(nNotify == BN_CLICKED)
+    if(nNotify == BN_CLICKED || nNotify == 1)
     {
         switch(nIDCtrl)
         {
+            case ID_EDIT_LABEL:
+                return TreeView_EditLabel_ID(hDlg, IDC_REPARSE_DATA);
+
             case IDC_SYMLINK_CREATE:
                 return OnSymlinkCreate(hDlg);
 
