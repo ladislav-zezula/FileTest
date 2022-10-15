@@ -13,6 +13,7 @@ set PROJECT_ZIP_NAME=filetest
 if "x%1" == "x/web" set PUBLISH_PROJECT=1
 
 :: Determine where the program files are, both for 64-bit and 32-bit Windows
+if exist "%ProgramFiles%"      set PROGRAM_FILES_X64=%ProgramFiles%
 if exist "%ProgramFiles%"      set PROGRAM_FILES_DIR=%ProgramFiles%
 if exist "%ProgramFiles(x86)%" set PROGRAM_FILES_DIR=%ProgramFiles(x86)%
 
@@ -22,11 +23,16 @@ if exist "%PROGRAM_FILES_DIR%\Microsoft Visual Studio\2017\Professional\VC\Auxil
 if exist "%PROGRAM_FILES_DIR%\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvarsall.bat"   set VCVARS_2017=%PROGRAM_FILES_DIR%\Microsoft Visual Studio\2017\Enterprise\VC\Auxiliary\Build\vcvarsall.bat
 if exist "%PROGRAM_FILES_DIR%\Microsoft Visual Studio\2019\Professional\VC\Auxiliary\Build\vcvarsall.bat" set VCVARS_2019=%PROGRAM_FILES_DIR%\Microsoft Visual Studio\2019\Professional\VC\Auxiliary\Build\vcvarsall.bat
 if exist "%PROGRAM_FILES_DIR%\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat"   set VCVARS_2019=%PROGRAM_FILES_DIR%\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat
+if exist "%PROGRAM_FILES_X64%\Microsoft Visual Studio\2022\Professional\VC\Auxiliary\Build\vcvarsall.bat" set VCVARS_2022=%PROGRAM_FILES_X64%\Microsoft Visual Studio\2022\Professional\VC\Auxiliary\Build\vcvarsall.bat
+if exist "%PROGRAM_FILES_X64%\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat"   set VCVARS_2022=%PROGRAM_FILES_X64%\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat
 
-:: Build the project using Visual Studio 2019
-:: call :BuildProject "%VCVARS_2008%" %PROJECT_NAME%_vs08.sln
-call :BuildProject "%VCVARS_2019%" %PROJECT_NAME%_vs19.sln En en x86 Win32
-call :BuildProject "%VCVARS_2019%" %PROJECT_NAME%_vs19.sln En en x64 x64
+:: Build the project using Visual Studio 2008, 2019 and 2022
+rem if not "x%VCVARS_2008%" == "x" call :BuildProject "%VCVARS_2008%" %PROJECT_NAME%_vs08.sln En en x86 Win32
+rem if not "x%VCVARS_2008%" == "x" call :BuildProject "%VCVARS_2008%" %PROJECT_NAME%_vs08.sln En en x64 x64
+if not "x%VCVARS_2019%" == "x" call :BuildProject "%VCVARS_2019%" %PROJECT_NAME%_vs19.sln En en x86 Win32
+if not "x%VCVARS_2019%" == "x" call :BuildProject "%VCVARS_2019%" %PROJECT_NAME%_vs19.sln En en x64 x64
+if not "x%VCVARS_2022%" == "x" call :BuildProject "%VCVARS_2022%" %PROJECT_NAME%_vs19.sln En en x86 Win32
+if not "x%VCVARS_2022%" == "x" call :BuildProject "%VCVARS_2022%" %PROJECT_NAME%_vs19.sln En en x64 x64
 echo [*] Build complete.
 
 :: Update web pages
