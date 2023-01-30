@@ -1455,7 +1455,7 @@ static NTSTATUS TextToDirHandle(LPCTSTR szText, PHANDLE phHandle)
                              FILE_WRITE_DATA,
                             &ObjAttr,
                             &IoStatus,
-                             FILE_SHARE_READ | FILE_SHARE_WRITE,
+                             FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                              0);
     }
 
@@ -1506,7 +1506,7 @@ static LPTSTR FileIDToFileName(
                               &IoStatus,
                                NULL,
                                FILE_ATTRIBUTE_NORMAL,
-                               FILE_SHARE_READ | FILE_SHARE_WRITE,
+                               FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                                FILE_OPEN,
                                0,
                                NULL,
@@ -1524,19 +1524,8 @@ static LPTSTR FileIDToFileName(
                              FILE_READ_ATTRIBUTES,
                             &ObjAttr,
                             &IoStatus,
-                             FILE_SHARE_READ | FILE_SHARE_WRITE,
-                             FILE_OPEN_BY_FILE_ID);
-
-        // Perhaps it's a reparse point?
-        if(Status == STATUS_INVALID_PARAMETER)
-        {
-            Status = NtOpenFile(&FileHandle,
-                                 FILE_READ_ATTRIBUTES,
-                                &ObjAttr,
-                                &IoStatus,
-                                 FILE_SHARE_READ | FILE_SHARE_WRITE,
-                                 FILE_OPEN_BY_FILE_ID | FILE_OPEN_REPARSE_POINT);
-        }
+                             FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                             FILE_OPEN_BY_FILE_ID | FILE_OPEN_REPARSE_POINT);
     }
 
     // Query the file name

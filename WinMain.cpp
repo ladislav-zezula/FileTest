@@ -113,7 +113,7 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
 {
     TFileTestData * pData;
     DWORD dwDesiredAccess = GENERIC_READ;
-    DWORD dwShareAccess = FILE_SHARE_READ;
+    DWORD dwShareAccess = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
     DWORD dwCreateOptions = 0;
     DWORD dwCopyFileFlags = 0;
     DWORD dwMoveFileFlags = 0;
@@ -235,7 +235,7 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
     // Set default values for opening relative file by NtOpenFile
     pData->dwDesiredAccessRF     = FILE_READ_DATA;
     pData->dwOpenOptionsRF       = 0;
-    pData->dwShareAccessRF       = FILE_SHARE_READ | FILE_SHARE_WRITE;
+    pData->dwShareAccessRF       = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
 
     // Set default values for CreateFile and NtCreateFile
     pData->dwCreateDisposition1  = OPEN_ALWAYS;
@@ -258,7 +258,7 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
     }
 
     // Set default values for NtCreateSection/NtOpenSection
-    pData->dwSectDesiredAccess   = SECTION_MAP_READ;
+    pData->dwSectDesiredAccess   = SECTION_ALL_ACCESS;
     pData->dwSectPageProtection  = PAGE_READONLY;
     pData->dwSectAllocAttributes = SEC_COMMIT;
     pData->dwSectWin32Protect    = PAGE_READONLY;

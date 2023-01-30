@@ -139,7 +139,7 @@ static NTSTATUS MyCreateDirectory(TFileTestData * pData, POBJECT_ATTRIBUTES pObj
                            pIoStatus,
                            NULL,
                            FILE_ATTRIBUTE_DIRECTORY,
-                           FILE_SHARE_READ,
+                           FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                            FILE_OPEN_IF,
                            FILE_DIRECTORY_FILE,
                            NULL,

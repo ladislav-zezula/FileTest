@@ -364,7 +364,7 @@ static NTSTATUS NtDeleteFsObject(
                          FILE_LIST_DIRECTORY | FILE_READ_ATTRIBUTES | FILE_WRITE_ATTRIBUTES | DELETE | SYNCHRONIZE,
                          PtrObjectAttributes,
                         &IoStatus,
-                         FILE_SHARE_READ,
+                         FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                          FILE_SYNCHRONOUS_IO_ALERT | FILE_DELETE_ON_CLOSE | FILE_OPEN_REPARSE_POINT);
     NeedDeleteManually = FALSE;
 
@@ -389,7 +389,7 @@ static NTSTATUS NtDeleteFsObject(
                              FILE_LIST_DIRECTORY | FILE_READ_ATTRIBUTES | FILE_WRITE_ATTRIBUTES | DELETE | SYNCHRONIZE,
                              PtrObjectAttributes,
                             &IoStatus,
-                             FILE_SHARE_READ,
+                             FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                              FILE_SYNCHRONOUS_IO_ALERT | FILE_OPEN_REPARSE_POINT);
 
         // We need the manual delete here
@@ -863,7 +863,7 @@ static int OnFileIdGetClick(HWND hDlg)
                                  FILE_READ_DATA | SYNCHRONIZE,
                                 &ObjAttr,
                                 &IoStatus,
-                                 FILE_SHARE_READ | FILE_SHARE_WRITE,
+                                 FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                                  FILE_SYNCHRONOUS_IO_ALERT);
 
             // If succeeded, we call for query directory on thet file

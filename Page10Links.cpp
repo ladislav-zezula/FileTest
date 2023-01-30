@@ -481,7 +481,7 @@ LPTSTR GetFullHardLinkName(PFILE_LINK_ENTRY_INFORMATION pLinkInfo, LPTSTR szFile
                              SYNCHRONIZE,
                             &ObjAttr,
                             &IoStatus,
-                             FILE_SHARE_READ | FILE_SHARE_WRITE,
+                             FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                              FILE_SYNCHRONOUS_IO_ALERT);
         FreeFileNameString(&FileName);
     }
@@ -497,7 +497,7 @@ LPTSTR GetFullHardLinkName(PFILE_LINK_ENTRY_INFORMATION pLinkInfo, LPTSTR szFile
                              FILE_READ_ATTRIBUTES | SYNCHRONIZE,
                             &ObjAttr,
                             &IoStatus,
-                             FILE_SHARE_READ | FILE_SHARE_WRITE,
+                             FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                              FILE_OPEN_BY_FILE_ID | FILE_SYNCHRONOUS_IO_ALERT);
 
         // Now query name of the directory
@@ -1142,7 +1142,7 @@ static int OnHardlinkCreate(HWND hDlg)
                                  SYNCHRONIZE,
                                 &ObjAttr,
                                 &IoStatus,
-                                 FILE_SHARE_READ | FILE_SHARE_WRITE,
+                                 FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                                  FILE_SYNCHRONOUS_IO_ALERT);
             FreeFileNameString(&FileName);
         }
@@ -1159,7 +1159,7 @@ static int OnHardlinkCreate(HWND hDlg)
                                  MAXIMUM_ALLOWED,
                                 &ObjAttr,
                                 &IoStatus,
-                                 FILE_SHARE_READ | FILE_SHARE_WRITE,
+                                 FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                                  0);
             FreeFileNameString(&FileName);
         }
@@ -1224,7 +1224,7 @@ static int OnHardlinkQuery(HWND hDlg)
                              FILE_READ_ATTRIBUTES,
                             &ObjAttr,
                             &IoStatus,
-                             FILE_SHARE_READ | FILE_SHARE_WRITE,
+                             FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                              0);
         FreeFileNameString(&FileName);
     }
@@ -1352,7 +1352,7 @@ static int OnReparseCreate(HWND hDlg)
                               &IoStatus,
                                NULL,
                                0,
-                               FILE_SHARE_READ | FILE_SHARE_WRITE,
+                               FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                                FILE_OPEN_IF,
                                CreateOptions,
                                NULL,
@@ -1406,7 +1406,7 @@ static int OnReparseQuery(HWND hDlg)
                              FILE_READ_ATTRIBUTES,
                             &ObjAttr,
                             &IoStatus,
-                             FILE_SHARE_READ | FILE_SHARE_WRITE,
+                             FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                              FILE_OPEN_REPARSE_POINT);
         if(NT_SUCCESS(Status))
         {
