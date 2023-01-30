@@ -1984,11 +1984,11 @@ static NTSTATUS ItemTextToData(TStructMember * pMember, LPTSTR szItemText)
             switch (pMember->nDataType)
             {
                 case TYPE_FLAG8:
-                    *(PBYTE)pMember->pbStructPtr = ulValue;
+                    *(PBYTE)pMember->pbStructPtr = (BYTE)ulValue;
                     break;
 
                 case TYPE_FLAG16:
-                    *(PWORD)pMember->pbStructPtr = ulValue;
+                    *(PWORD)pMember->pbStructPtr = (WORD)ulValue;
                     break;
 
                 case TYPE_FLAG32:
@@ -3109,11 +3109,11 @@ static int OnDoubleClick(HWND hDlg, LPNMHDR pNMHDR)
                 switch (pMemberInfo->nDataType)
                 {
                     case TYPE_FLAG8:
-                        *(PBYTE)pMemberInfo->pbStructPtr = Flags;
+                        *(PBYTE)pMemberInfo->pbStructPtr = (BYTE)Flags;
                         break;
 
                     case TYPE_FLAG16:
-                        *(PWORD)pMemberInfo->pbStructPtr = Flags;
+                        *(PWORD)pMemberInfo->pbStructPtr = (WORD)Flags;
                         break;
 
                     case TYPE_FLAG32:
