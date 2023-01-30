@@ -325,6 +325,8 @@
 #define IDC_CHANGE_TIME                 1256
 #define IDC_DELETE_OBJECT_ID            1257
 #define IDC_NT_DELETE_FILE              1258
+#define IDC_ENCRYPT_FILE                1259
+#define IDC_DECRYPT_FILE                1260
 #define IDS_FLUSH_FILE_BUFFERS_TIP      4000
 #define IDS_FLAGS_AND_ATTRIBUTES        4001
 #define IDS_OPLOCK_BROKE                4002

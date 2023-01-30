@@ -630,8 +630,10 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
         pAnchors->AddAnchor(hDlg, IDC_NT_QUERY_ATTRIBUTES_FILE, akLeft | akTop);
         pAnchors->AddAnchor(hDlg, IDC_GET_FILE_ATTRIBUTES, akRight | akTop);
         pAnchors->AddAnchor(hDlg, IDC_FLUSH_FILE_BUFFERS, akLeft | akTop);
-        pAnchors->AddAnchor(hDlg, IDC_NT_DELETE_FILE, akRight | akTop);
+        pAnchors->AddAnchor(hDlg, IDC_NT_DELETE_FILE, akLeft | akTop);
         pAnchors->AddAnchor(hDlg, IDC_CREATE_HARDLINK, akLeft | akTop);
+        pAnchors->AddAnchor(hDlg, IDC_ENCRYPT_FILE, akRight | akTop);
+        pAnchors->AddAnchor(hDlg, IDC_DECRYPT_FILE, akRight | akTop);
 
         pAnchors->AddAnchor(hDlg, IDC_OPLOCKS_FRAME, akAll);
         pAnchors->AddAnchor(hDlg, IDC_REQUEST_OPLOCK_MENU, akLeft | akTop);
@@ -1163,6 +1165,33 @@ static int OnNtDeleteFile(HWND hDlg)
     return TRUE;
 }
 
+static int OnEncryptFile(HWND hDlg, UINT nIDCtrl)
+{
+    TFileTestData* pData = GetDialogData(hDlg);
+    DWORD dwErrCode = ERROR_SUCCESS;
+
+    // Save the current state of the dialog
+    SaveDialog(hDlg);
+
+    switch (nIDCtrl)
+    {
+        case IDC_ENCRYPT_FILE:            
+            // Perform encryption
+            if (!EncryptFile(pData->szFileName1))
+                dwErrCode = GetLastError();
+            break;
+
+        case IDC_DECRYPT_FILE:
+            // Perform decryption
+            if (!DecryptFile(pData->szFileName1, 0))
+                dwErrCode = GetLastError();
+            break;
+    }
+
+    SetResultInfo(hDlg, RSI_LAST_ERROR, dwErrCode);
+    return TRUE;
+}
+
 static int OnSendAsynchronousFsctl(
     HWND hDlg,
     ULONG IoctlCode,
@@ -1440,6 +1469,10 @@ static int OnCommand(HWND hDlg, UINT nNotify, UINT nIDCtrl)
 
             case IDC_NT_DELETE_FILE:
                 return OnNtDeleteFile(hDlg);
+
+            case IDC_ENCRYPT_FILE:
+            case IDC_DECRYPT_FILE:
+                return OnEncryptFile(hDlg, nIDCtrl);
 
             case IDC_REQUEST_OPLOCK_MENU:
                 return ExecuteContextMenuForDlgItem(hDlg, FindContextMenu(IDR_REQUEST_OPLOCK_MENU), IDC_REQUEST_OPLOCK_MENU);
