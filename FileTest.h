@@ -267,6 +267,7 @@ struct TFileTestData : public TWindowData
 #define TYPE_FLAG16          23             // A 16-bit flag value
 #define TYPE_FLAG32          24             // A 32-bit flag value
 #define TYPE_GUID            25             // A GUID value
+#define TYPE_SID             26             // A SID value
 #define TYPE_STRUCT         100             // Sub-structure, nMemberSize must be sizeof(structure) !!!
 #define TYPE_CHAINED_STRUCT 101             // Chain of structures first 32-bit number is "NextEntryOffset"
 #define TYPE_ARRAY_PROCESS  102             // Array of process IDs, variable length, length is 32-bit number
@@ -463,6 +464,9 @@ LPTSTR GuidValueToString(LPTSTR szBuffer, size_t cchBuffer, LPCTSTR szFormat, LP
 void FileIDToString(TFileTestData * pData, ULONGLONG FileId, LPTSTR szBuffer);
 void ObjectIDToString(PBYTE pbObjId, LPCTSTR szFileName, LPTSTR szObjectID);
 int  StringToFileID(LPCTSTR szFileOrObjId, LPTSTR szVolume, PVOID pvFileObjId, PDWORD pLength);
+
+void SidToString(PSID pvSid, LPTSTR szString, size_t cchString, bool bAddUserName);
+bool StringToSid(LPTSTR szSid, PSID* ppSid);
 
 HMENU FindContextMenu(UINT nIDMenu);
 int ExecuteContextMenu(HWND hWndParent, HMENU hMenu, LPARAM lParam);

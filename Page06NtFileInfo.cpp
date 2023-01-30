@@ -456,7 +456,7 @@ TStructMember FileQuotaInformationMembers[] =
     {_T("QuotaUsed"),       TYPE_UINT64,   sizeof(LARGE_INTEGER)},
     {_T("QuotaThreshold"),  TYPE_UINT64,   sizeof(LARGE_INTEGER)},
     {_T("QuotaLimit"),      TYPE_UINT64,   sizeof(LARGE_INTEGER)},
-    {_T("Sid"),             TYPE_NONE,     sizeof(SID)},
+    {_T("Sid"),             TYPE_SID,      sizeof(SID)},
     {NULL, TYPE_NONE, 0}
 };
 
@@ -1836,6 +1836,20 @@ static int DataToItemText(TStructMember * pMember, LPTSTR szBuffer, size_t nMaxC
 
             GuidToString(pGuid, szGuidText, _countof(szGuidText));
             StringCchPrintfEx(szBuffer, (szEndChar - szBuffer), &szBuffer, NULL, 0, _T("%s"), szGuidText);
+            break;
+        }
+
+        case TYPE_SID:
+        {
+            PSID pSid = (PSID)pMember->pbDataPtr;
+            TCHAR szSidText[SECURITY_MAX_SID_STRING_CHARACTERS];
+
+            if (IsValidSid(pSid))
+            {
+                SidToString(pSid, szSidText, _countof(szSidText), TRUE);
+            }
+
+            StringCchPrintfEx(szBuffer, (szEndChar - szBuffer), &szBuffer, NULL, 0, _T("%s"), IsValidSid(pSid) ? szSidText : _T("<invalid>"));
             break;
         }
 
