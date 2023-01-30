@@ -630,6 +630,8 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
         pAnchors->AddAnchor(hDlg, IDC_NT_QUERY_ATTRIBUTES_FILE, akLeft | akTop);
         pAnchors->AddAnchor(hDlg, IDC_GET_FILE_ATTRIBUTES, akRight | akTop);
         pAnchors->AddAnchor(hDlg, IDC_FLUSH_FILE_BUFFERS, akLeft | akTop);
+        pAnchors->AddAnchor(hDlg, IDC_NT_DELETE_FILE, akRight | akTop);
+        pAnchors->AddAnchor(hDlg, IDC_CREATE_HARDLINK, akLeft | akTop);
 
         pAnchors->AddAnchor(hDlg, IDC_OPLOCKS_FRAME, akAll);
         pAnchors->AddAnchor(hDlg, IDC_REQUEST_OPLOCK_MENU, akLeft | akTop);
@@ -1106,7 +1108,7 @@ static int OnFlushFile(HWND hDlg)
     TFileTestData * pData = GetDialogData(hDlg);
     DWORD dwErrCode = ERROR_SUCCESS;
 
-    // Create the hardlink
+    // Flush the file
     if(!FlushFileBuffers(pData->hFile))
         dwErrCode = GetLastError();
 
@@ -1131,6 +1133,33 @@ static int OnCreateHardLink(HWND hDlg)
         dwErrCode = GetLastError();
 
     SetResultInfo(hDlg, RSI_LAST_ERROR, dwErrCode);
+    return TRUE;
+}
+
+static int OnNtDeleteFile(HWND hDlg)
+{
+    OBJECT_ATTRIBUTES ObjAttr;
+    TFileTestData* pData = GetDialogData(hDlg);
+    UNICODE_STRING FileName = { 0, 0, NULL };
+    NTSTATUS Status;
+
+    // Save the current state of the dialog
+    SaveDialog(hDlg);
+
+    // Retrieve the NT name of the file
+    InitializeObjectAttributes(&ObjAttr, &FileName, OBJ_CASE_INSENSITIVE, NULL, NULL);
+    Status = FileNameToUnicodeString(&FileName, pData->szFileName1);
+
+    // Delete it
+    if (NT_SUCCESS(Status))
+    {
+        Status = NtDeleteFile(&ObjAttr);        
+    }
+
+    // Set the result information
+    SetResultInfo(hDlg, RSI_NTSTATUS, Status);
+
+    FreeFileNameString(&FileName);
     return TRUE;
 }
 
@@ -1408,6 +1437,9 @@ static int OnCommand(HWND hDlg, UINT nNotify, UINT nIDCtrl)
 
             case IDC_CREATE_HARDLINK:
                 return OnCreateHardLink(hDlg);
+
+            case IDC_NT_DELETE_FILE:
+                return OnNtDeleteFile(hDlg);
 
             case IDC_REQUEST_OPLOCK_MENU:
                 return ExecuteContextMenuForDlgItem(hDlg, FindContextMenu(IDR_REQUEST_OPLOCK_MENU), IDC_REQUEST_OPLOCK_MENU);
