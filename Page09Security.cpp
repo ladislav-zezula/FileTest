@@ -308,7 +308,7 @@ static bool CheckForServiceAccount(LPTSTR szUserName)
     return false;
 }
 
-static void SidToString(PSID pvSid, LPTSTR szString, size_t cchString, bool bAddUserName)
+void SidToString(PSID pvSid, LPTSTR szString, size_t cchString, bool bAddUserName)
 {
     PSID_IDENTIFIER_AUTHORITY pSia;
     SID * pSid = (SID *)pvSid;
@@ -352,7 +352,7 @@ static void SidToString(PSID pvSid, LPTSTR szString, size_t cchString, bool bAdd
     }
 }
 
-static bool StringToSid(LPTSTR szSid, PSID * ppSid)
+bool StringToSid(LPTSTR szSid, PSID * ppSid)
 {
     SID_IDENTIFIER_AUTHORITY Sia = SiaNull;
     SID_NAME_USE SidNameUse;

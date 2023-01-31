@@ -364,7 +364,7 @@ static NTSTATUS NtDeleteFsObject(
                          FILE_LIST_DIRECTORY | FILE_READ_ATTRIBUTES | FILE_WRITE_ATTRIBUTES | DELETE | SYNCHRONIZE,
                          PtrObjectAttributes,
                         &IoStatus,
-                         FILE_SHARE_READ,
+                         FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                          FILE_SYNCHRONOUS_IO_ALERT | FILE_DELETE_ON_CLOSE | FILE_OPEN_REPARSE_POINT);
     NeedDeleteManually = FALSE;
 
@@ -389,7 +389,7 @@ static NTSTATUS NtDeleteFsObject(
                              FILE_LIST_DIRECTORY | FILE_READ_ATTRIBUTES | FILE_WRITE_ATTRIBUTES | DELETE | SYNCHRONIZE,
                              PtrObjectAttributes,
                             &IoStatus,
-                             FILE_SHARE_READ,
+                             FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                              FILE_SYNCHRONOUS_IO_ALERT | FILE_OPEN_REPARSE_POINT);
 
         // We need the manual delete here
@@ -630,6 +630,10 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
         pAnchors->AddAnchor(hDlg, IDC_NT_QUERY_ATTRIBUTES_FILE, akLeft | akTop);
         pAnchors->AddAnchor(hDlg, IDC_GET_FILE_ATTRIBUTES, akRight | akTop);
         pAnchors->AddAnchor(hDlg, IDC_FLUSH_FILE_BUFFERS, akLeft | akTop);
+        pAnchors->AddAnchor(hDlg, IDC_NT_DELETE_FILE, akLeft | akTop);
+        pAnchors->AddAnchor(hDlg, IDC_CREATE_HARDLINK, akLeft | akTop);
+        pAnchors->AddAnchor(hDlg, IDC_ENCRYPT_FILE, akRight | akTop);
+        pAnchors->AddAnchor(hDlg, IDC_DECRYPT_FILE, akRight | akTop);
 
         pAnchors->AddAnchor(hDlg, IDC_OPLOCKS_FRAME, akAll);
         pAnchors->AddAnchor(hDlg, IDC_REQUEST_OPLOCK_MENU, akLeft | akTop);
@@ -863,7 +867,7 @@ static int OnFileIdGetClick(HWND hDlg)
                                  FILE_READ_DATA | SYNCHRONIZE,
                                 &ObjAttr,
                                 &IoStatus,
-                                 FILE_SHARE_READ | FILE_SHARE_WRITE,
+                                 FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                                  FILE_SYNCHRONOUS_IO_ALERT);
 
             // If succeeded, we call for query directory on thet file
@@ -1106,7 +1110,7 @@ static int OnFlushFile(HWND hDlg)
     TFileTestData * pData = GetDialogData(hDlg);
     DWORD dwErrCode = ERROR_SUCCESS;
 
-    // Create the hardlink
+    // Flush the file
     if(!FlushFileBuffers(pData->hFile))
         dwErrCode = GetLastError();
 
@@ -1129,6 +1133,60 @@ static int OnCreateHardLink(HWND hDlg)
 	// Create the hard link
     if(!pfnCreateHardLink(pData->szFileName1, pData->szFileName2, NULL))
         dwErrCode = GetLastError();
+
+    SetResultInfo(hDlg, RSI_LAST_ERROR, dwErrCode);
+    return TRUE;
+}
+
+static int OnNtDeleteFile(HWND hDlg)
+{
+    OBJECT_ATTRIBUTES ObjAttr;
+    TFileTestData* pData = GetDialogData(hDlg);
+    UNICODE_STRING FileName = { 0, 0, NULL };
+    NTSTATUS Status;
+
+    // Save the current state of the dialog
+    SaveDialog(hDlg);
+
+    // Retrieve the NT name of the file
+    InitializeObjectAttributes(&ObjAttr, &FileName, OBJ_CASE_INSENSITIVE, NULL, NULL);
+    Status = FileNameToUnicodeString(&FileName, pData->szFileName1);
+
+    // Delete it
+    if (NT_SUCCESS(Status))
+    {
+        Status = NtDeleteFile(&ObjAttr);        
+    }
+
+    // Set the result information
+    SetResultInfo(hDlg, RSI_NTSTATUS, Status);
+
+    FreeFileNameString(&FileName);
+    return TRUE;
+}
+
+static int OnEncryptFile(HWND hDlg, UINT nIDCtrl)
+{
+    TFileTestData* pData = GetDialogData(hDlg);
+    DWORD dwErrCode = ERROR_SUCCESS;
+
+    // Save the current state of the dialog
+    SaveDialog(hDlg);
+
+    switch (nIDCtrl)
+    {
+        case IDC_ENCRYPT_FILE:            
+            // Perform encryption
+            if (!EncryptFile(pData->szFileName1))
+                dwErrCode = GetLastError();
+            break;
+
+        case IDC_DECRYPT_FILE:
+            // Perform decryption
+            if (!DecryptFile(pData->szFileName1, 0))
+                dwErrCode = GetLastError();
+            break;
+    }
 
     SetResultInfo(hDlg, RSI_LAST_ERROR, dwErrCode);
     return TRUE;
@@ -1408,6 +1466,13 @@ static int OnCommand(HWND hDlg, UINT nNotify, UINT nIDCtrl)
 
             case IDC_CREATE_HARDLINK:
                 return OnCreateHardLink(hDlg);
+
+            case IDC_NT_DELETE_FILE:
+                return OnNtDeleteFile(hDlg);
+
+            case IDC_ENCRYPT_FILE:
+            case IDC_DECRYPT_FILE:
+                return OnEncryptFile(hDlg, nIDCtrl);
 
             case IDC_REQUEST_OPLOCK_MENU:
                 return ExecuteContextMenuForDlgItem(hDlg, FindContextMenu(IDR_REQUEST_OPLOCK_MENU), IDC_REQUEST_OPLOCK_MENU);
