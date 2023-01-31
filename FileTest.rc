@@ -130,7 +130,7 @@ BEGIN
             VALUE "FileDescription", "Interactive File System API Test"
             VALUE "FileVersion", "2, 7, 0, 623"
             VALUE "InternalName", "FileTest"
-            VALUE "LegalCopyright", "Copyright © 2004 - 2018 Ladislav Zezula"
+            VALUE "LegalCopyright", "Copyright © 2004 - 2023 Ladislav Zezula"
             VALUE "LegalTrademarks", "http://www.zezula.net"
             VALUE "OriginalFilename", "FileTest.exe"
             VALUE "ProductName", "FileTest"
