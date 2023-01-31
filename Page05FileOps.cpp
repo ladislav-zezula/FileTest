@@ -630,10 +630,10 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
         pAnchors->AddAnchor(hDlg, IDC_NT_QUERY_ATTRIBUTES_FILE, akLeft | akTop);
         pAnchors->AddAnchor(hDlg, IDC_GET_FILE_ATTRIBUTES, akRight | akTop);
         pAnchors->AddAnchor(hDlg, IDC_FLUSH_FILE_BUFFERS, akLeft | akTop);
-        pAnchors->AddAnchor(hDlg, IDC_NT_DELETE_FILE, akLeft | akTop);
-        pAnchors->AddAnchor(hDlg, IDC_CREATE_HARDLINK, akLeft | akTop);
-        pAnchors->AddAnchor(hDlg, IDC_ENCRYPT_FILE, akRight | akTop);
+        pAnchors->AddAnchor(hDlg, IDC_CREATE_HARDLINK, akRight | akTop);
+        pAnchors->AddAnchor(hDlg, IDC_ENCRYPT_FILE, akLeft | akTop);
         pAnchors->AddAnchor(hDlg, IDC_DECRYPT_FILE, akRight | akTop);
+        pAnchors->AddAnchor(hDlg, IDC_NT_DELETE_FILE, akLeft | akTop);
 
         pAnchors->AddAnchor(hDlg, IDC_OPLOCKS_FRAME, akAll);
         pAnchors->AddAnchor(hDlg, IDC_REQUEST_OPLOCK_MENU, akLeft | akTop);
@@ -1153,14 +1153,13 @@ static int OnNtDeleteFile(HWND hDlg)
     Status = FileNameToUnicodeString(&FileName, pData->szFileName1);
 
     // Delete it
-    if (NT_SUCCESS(Status))
+    if(NT_SUCCESS(Status))
     {
-        Status = NtDeleteFile(&ObjAttr);        
+        Status = NtDeleteFile(&ObjAttr);
     }
 
     // Set the result information
     SetResultInfo(hDlg, RSI_NTSTATUS, Status);
-
     FreeFileNameString(&FileName);
     return TRUE;
 }
@@ -1177,13 +1176,13 @@ static int OnEncryptFile(HWND hDlg, UINT nIDCtrl)
     {
         case IDC_ENCRYPT_FILE:            
             // Perform encryption
-            if (!EncryptFile(pData->szFileName1))
+            if(!EncryptFile(pData->szFileName1))
                 dwErrCode = GetLastError();
             break;
 
         case IDC_DECRYPT_FILE:
             // Perform decryption
-            if (!DecryptFile(pData->szFileName1, 0))
+            if(!DecryptFile(pData->szFileName1, 0))
                 dwErrCode = GetLastError();
             break;
     }

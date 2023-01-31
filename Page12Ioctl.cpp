@@ -234,7 +234,7 @@ static void InitializeData(HWND hDlg, UINT nIDLength, UINT nIDData)
     // Set the length of the data
     Hex2DlgText32(hDlg, nIDLength, 0);
 
-    if ((hWndChild = GetDlgItem(hDlg, nIDData)) != NULL)
+    if((hWndChild = GetDlgItem(hDlg, nIDData)) != NULL)
     {
         DataEditor_SetDataFormat(hWndChild, PtrPointer32Bit, 0x08);
         DataEditor_SetData(hWndChild, 0, NULL, 0);
@@ -250,26 +250,26 @@ static void UpdateIoctlData(HWND hDlg, UINT nIDLength)
     UINT dwValue;
 
     // The dialog must be initialized
-    if (pData != NULL)
+    if(pData != NULL)
     {
         // Translate the text value into a number
         dwValue = GetDlgItemInt(hDlg, nIDLength, &bTranslated, FALSE);
-        if (bTranslated)
+        if(bTranslated)
         {
             // Retrieve the data editor handle
-            if (nIDLength == IDC_INPUT_DATA_LENGTH)
+            if(nIDLength == IDC_INPUT_DATA_LENGTH)
             {
                 hWndChild = GetDlgItem(hDlg, IDC_INPUT_DATA);
                 pDataBlob = &pData->InData;
             }
-            if (nIDLength == IDC_OUTPUT_DATA_LENGTH)
+            if(nIDLength == IDC_OUTPUT_DATA_LENGTH)
             {
                 hWndChild = GetDlgItem(hDlg, IDC_OUTPUT_DATA);
                 pDataBlob = &pData->OutData;
             }
 
             // If both controls exist, update them
-            if (pDataBlob != NULL && hWndChild != NULL)
+            if(pDataBlob != NULL && hWndChild != NULL)
             {
                 // Set the data size and the data itself
                 pDataBlob->SetLength(dwValue);
@@ -295,7 +295,7 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
     // Configure dialog resizing
     if(pData->bEnableResizing)
     {
-        if ((pAnchors = new TAnchors()) != NULL)
+        if((pAnchors = new TAnchors()) != NULL)
         {
             pAnchors->AddAnchor(hDlg, IDC_IOCTL_REQUEST_FRAME, akAll);
             pAnchors->AddAnchor(hDlg, IDC_IOCTL_CODE, akLeft | akTop | akRight);
@@ -322,7 +322,7 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
     InitializeData(hDlg, IDC_OUTPUT_DATA_LENGTH, IDC_OUTPUT_DATA);
 
     // Initialize combo box with the IOCTL list
-    if ((hWndChild = GetDlgItem(hDlg, IDC_IOCTL_CODE)) != NULL)
+    if((hWndChild = GetDlgItem(hDlg, IDC_IOCTL_CODE)) != NULL)
     {
         for (size_t i = 0; i < _countof(IoctlInfoList); i++)
         {
@@ -348,7 +348,7 @@ static int OnDeltaPos(HWND hDlg, NMUPDOWN * pNMUpDown, UINT nIDLength)
     HWND hWndChild;
     DWORD dwValue = 0;
 
-    if ((hWndChild = GetDlgItem(hDlg, nIDLength)) != NULL)
+    if((hWndChild = GetDlgItem(hDlg, nIDLength)) != NULL)
     {
         // Change the value
         DlgText2Hex32(hDlg, nIDLength, &dwValue);
@@ -366,7 +366,7 @@ static int OnDeltaPos(HWND hDlg, NMUPDOWN * pNMUpDown, UINT nIDLength)
 
 static int OnDeltaPos(HWND hDlg, NMUPDOWN * pNMUpDown)
 {
-    if (pNMUpDown->hdr.idFrom == IDC_INPUT_DATA_SPIN)
+    if(pNMUpDown->hdr.idFrom == IDC_INPUT_DATA_SPIN)
         return OnDeltaPos(hDlg, pNMUpDown, IDC_INPUT_DATA_LENGTH);
     if(pNMUpDown->hdr.idFrom == IDC_OUTPUT_DATA_SPIN)
         return OnDeltaPos(hDlg, pNMUpDown, IDC_OUTPUT_DATA_LENGTH);
@@ -398,9 +398,9 @@ static void OnComboBoxSelChanged(HWND hDlg)
     HWND hWndChild;
     int nIndex;
 
-    if ((hWndChild = GetDlgItem(hDlg, IDC_IOCTL_CODE)) != NULL)
+    if((hWndChild = GetDlgItem(hDlg, IDC_IOCTL_CODE)) != NULL)
     {
-        if ((nIndex = ComboBox_GetCurSel(hWndChild)) != CB_ERR)
+        if((nIndex = ComboBox_GetCurSel(hWndChild)) != CB_ERR)
         {
             if(nIndex < _countof(IoctlInfoList))
             {

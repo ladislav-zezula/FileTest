@@ -469,7 +469,7 @@ INT_PTR FlagsDialog(HWND hWndParent, UINT nIDTitle, TFlagInfo * pFlags, DWORD & 
     Result = DialogBoxParam(g_hInst, MAKEINTRESOURCE(IDD_FLAGS_DIALOG), hWndParent, DialogProc, (LPARAM)&fdd);
 
     // Only change the value on success
-    if (Result == IDOK)
+    if(Result == IDOK)
     {
         dwBitMask = fdd.dwBitMask;
     }

@@ -243,11 +243,11 @@ static PSID Sid_AllocateAndInitialize(
 
     // Prepare a buffer of a sufficient size
     pSid = Sid_Allocate(GetSidLengthRequired(nSubAuthorityCount));
-    if (pSid == NULL)
+    if(pSid == NULL)
         return NULL;
 
     // Fill in the identifier authority and sub-authority count
-    if (InitializeSid(pSid, pIdentifierAuthority, nSubAuthorityCount))
+    if(InitializeSid(pSid, pIdentifierAuthority, nSubAuthorityCount))
     {
         // Fill in the sub-authorities
         for (BYTE i = 0; i < nSubAuthorityCount; i++)

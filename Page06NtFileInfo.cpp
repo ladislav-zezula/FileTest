@@ -1833,7 +1833,7 @@ static int DataToItemText(TStructMember * pMember, LPTSTR szBuffer, size_t nMaxC
             PSID pSid = (PSID)pMember->pbDataPtr;
             TCHAR szSidText[SECURITY_MAX_SID_STRING_CHARACTERS];
 
-            if (IsValidSid(pSid))
+            if(IsValidSid(pSid))
             {
                 SidToString(pSid, szSidText, _countof(szSidText), TRUE);
             }

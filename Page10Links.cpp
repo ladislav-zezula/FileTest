@@ -580,7 +580,7 @@ static void TreeView_InsertHsmData(HWND hWndChild, HTREEITEM hParent, PHSM_DATA 
         TreeView_InsertInteger(hWndChild, hItem, _T("Offset"), _T("%08X"), pElementInfo->Offset);
 
         // Insert element data
-        if (pElementInfo->Offset && pElementInfo->Length)
+        if(pElementInfo->Offset && pElementInfo->Length)
         {
             // Retrieve the element data
             ElementData = HsmGetElementData(HsmData, i);
@@ -610,7 +610,7 @@ static NTSTATUS TreeView_InsertHsm(HWND hWndChild, HTREEITEM hParent, PREPARSE_D
     if(NT_SUCCESS(Status))
     {
         hItem = TreeView_InsertString(hWndChild, hParent, _T("HSM_REPARSE_DATA"));
-        if (hItem != NULL)
+        if(hItem != NULL)
         {
             // Insert the flags and length
             TreeView_InsertInteger(hWndChild, hItem, _T("Flags"), _T("0x%04X"), HsmReparseData->HsmReparseBufferRaw.Flags);
@@ -621,7 +621,7 @@ static NTSTATUS TreeView_InsertHsm(HWND hWndChild, HTREEITEM hParent, PREPARSE_D
 
             // Get the pointer to the HSM_DATA. If validated OK, insert the substructure
             Status = HsmValidateReparseData(HsmReparseData);
-            if (NT_SUCCESS(Status))
+            if(NT_SUCCESS(Status))
             {
                 PHSM_REPARSE_DATA HsmRpData = (PHSM_REPARSE_DATA)(&HsmReparseData->HsmReparseBufferRaw);
                 PHSM_DATA HsmData = &HsmRpData->FileData;
@@ -637,7 +637,7 @@ static NTSTATUS TreeView_InsertHsm(HWND hWndChild, HTREEITEM hParent, PREPARSE_D
         }
 
         // Free the uncompressed reparse data buffer
-        if (HsmReparseData != NULL && HsmReparseData != ReparseData)
+        if(HsmReparseData != NULL && HsmReparseData != ReparseData)
         {
             HeapFree(g_hHeap, 0, HsmReparseData);
         }
@@ -1070,7 +1070,7 @@ static void OnUpdateView(HWND hDlg)
 
         case IO_REPARSE_TAG_WCI:
             hItem = TreeView_InsertString(hWndChild, hItem, _T("WcifsReparseBuffer"));
-            if (hItem != NULL)
+            if(hItem != NULL)
             {
                 TreeView_InsertInteger(hWndChild, hItem, _T("Version"), _T("0x%08X"), ReparseData->WcifsReparseBuffer.Version);
                 TreeView_InsertInteger(hWndChild, hItem, _T("Reserved"), _T("0x%08X"), ReparseData->WcifsReparseBuffer.Reserved);
@@ -1091,7 +1091,7 @@ static void OnUpdateView(HWND hDlg)
             hItem = TreeView_InsertString(hWndChild, hItem, _T("GenericReparseBuffer"));
             if(hItem != NULL)
             {
-                if (ReparseData->ReparseDataLength != 0)
+                if(ReparseData->ReparseDataLength != 0)
                 {
                     TreeView_InsertBinary(hWndChild, hItem, _T("DataBuffer"), ReparseData->GenericReparseBuffer.DataBuffer, ReparseData->ReparseDataLength);
                 }
@@ -1425,7 +1425,7 @@ static int OnReparseQuery(HWND hDlg)
                                      0,
                                      pData->ReparseData,
                                      pData->ReparseDataLength);
-            if (NT_SUCCESS(Status))
+            if(NT_SUCCESS(Status))
             {
                 // Update the view
                 pData->ReparseDataValid = (ULONG)IoStatus.Information;
@@ -1536,13 +1536,13 @@ static void OnDestroy(HWND hDlg)
 {
     TFileTestData * pData = GetDialogData(hDlg);
 
-    if (pData != NULL)
+    if(pData != NULL)
     {
-        if (pAnchors != NULL)
+        if(pAnchors != NULL)
             delete pAnchors;
         pAnchors = NULL;
 
-        if (pData->ReparseData != NULL)
+        if(pData->ReparseData != NULL)
             HeapFree(g_hHeap, 0, pData->ReparseData);
         pData->ReparseData = NULL;
     }

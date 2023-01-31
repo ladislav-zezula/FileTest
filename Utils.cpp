@@ -2013,7 +2013,7 @@ DWORD TDataBlob::SetLength(SIZE_T cbNewData)
     LPBYTE pbNewData;
     SIZE_T cbNewDataAligned = ALIGN_TO_SIZE(cbNewData, WIN32_PAGE_SIZE);
 
-    if (cbNewData > cbDataMax)
+    if(cbNewData > cbDataMax)
     {
         // Allocate new data
         pbNewData = (LPBYTE)VirtualAlloc(NULL, cbNewDataAligned, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
@@ -2040,7 +2040,7 @@ DWORD TDataBlob::SetLength(SIZE_T cbNewData)
 
 void TDataBlob::Free()
 {
-    if (pbData != NULL)
+    if(pbData != NULL)
         VirtualFree(pbData, cbDataMax, MEM_RELEASE);
 
     pbData = NULL;

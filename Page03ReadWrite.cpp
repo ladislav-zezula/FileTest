@@ -84,7 +84,7 @@ static void CompleteAsynchronousOperation(HWND hDlg, TApcEntry * pApc, DWORD dwE
     }
 
     // Set the information about the operation
-    if (pApc->bHasIoStatus)
+    if(pApc->bHasIoStatus)
     {
         SetResultInfo(hDlg, pApc->UserParam, pApc->IoStatus.Status, &pApc->IoStatus);
     }
@@ -286,7 +286,7 @@ static int OnDataPaste(HWND hDlg, PDTE_PASTE_DATA pPasteData)
         SIZE_T nLength = strlen(pPasteData->szPasteText);
 
         // Paste the data to the view
-        if (pData->RdWrData.SetLength(pPasteData->PasteOffset + nLength) == ERROR_SUCCESS)
+        if(pData->RdWrData.SetLength(pPasteData->PasteOffset + nLength) == ERROR_SUCCESS)
         {
             memcpy(pData->RdWrData.pbData + pPasteData->PasteOffset, pPasteData->szPasteText, nLength);
             DataEditor_SetData(GetDlgItem(hDlg, IDC_FILE_DATA), 0, pData->RdWrData.pbData, pData->RdWrData.cbData);

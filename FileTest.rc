@@ -16,17 +16,15 @@
 // Neutral resources
 
 #if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_NEU)
-#ifdef _WIN32
 LANGUAGE LANG_NEUTRAL, SUBLANG_NEUTRAL
 #pragma code_page(1250)
-#endif //_WIN32
 
 /////////////////////////////////////////////////////////////////////////////
 //
 // Accelerator
 //
 
-IDR_ACCELERATORS ACCELERATORS 
+IDR_ACCELERATORS ACCELERATORS
 BEGIN
     VK_F2,          ID_EDIT_LABEL,          VIRTKEY, NOINVERT
 END
@@ -39,6 +37,7 @@ END
 
 1                       RT_MANIFEST             "res\\FileTest.exe.manifest"
 
+
 /////////////////////////////////////////////////////////////////////////////
 //
 // Icon
@@ -47,23 +46,27 @@ END
 // Icon with lowest ID value placed first to ensure application icon
 // remains consistent on all systems.
 IDI_FILE_TEST           ICON                    "res\\FileTest.ico"
+
 IDI_ICON_ERROR          ICON                    "res\\IconError.ico"
+
 IDI_ICON_WARNING        ICON                    "res\\IconWarning.ico"
+
 IDI_ICON_INFORMATION    ICON                    "res\\IconInformation.ico"
+
 IDI_ICON_WAIT           ICON                    "res\\IconWait.ico"
+
 IDI_RIGHT_ARROW         ICON                    "res\\IconRightArrow.ico"
+
 #endif    // Neutral resources
 /////////////////////////////////////////////////////////////////////////////
 
 
 /////////////////////////////////////////////////////////////////////////////
-// Czech resources
+// Czech (Czech Republic) resources
 
 #if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_CSY)
-#ifdef _WIN32
 LANGUAGE LANG_CZECH, SUBLANG_DEFAULT
 #pragma code_page(1250)
-#endif //_WIN32
 
 #ifdef APSTUDIO_INVOKED
 /////////////////////////////////////////////////////////////////////////////
@@ -90,18 +93,16 @@ END
 
 #endif    // APSTUDIO_INVOKED
 
-#endif    // Czech resources
+#endif    // Czech (Czech Republic) resources
 /////////////////////////////////////////////////////////////////////////////
 
 
 /////////////////////////////////////////////////////////////////////////////
-// English (U.S.) resources
+// English (United States) resources
 
 #if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
-#ifdef _WIN32
 LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 #pragma code_page(1252)
-#endif //_WIN32
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -127,13 +128,13 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Ladislav Zezula"
             VALUE "FileDescription", "Interactive File System API Test"
-            VALUE "FileVersion", "2, 7, 0, 623\0"
+            VALUE "FileVersion", "2, 7, 0, 623"
             VALUE "InternalName", "FileTest"
             VALUE "LegalCopyright", "Copyright © 2004 - 2018 Ladislav Zezula"
             VALUE "LegalTrademarks", "http://www.zezula.net"
             VALUE "OriginalFilename", "FileTest.exe"
             VALUE "ProductName", "FileTest"
-            VALUE "ProductVersion", "2, 7, 0, 623\0"
+            VALUE "ProductVersion", "2, 7, 0, 623"
         END
     END
     BLOCK "VarFileInfo"
@@ -148,7 +149,7 @@ END
 // Menu
 //
 
-IDR_ACE_MENU MENU 
+IDR_ACE_MENU MENU
 BEGIN
     POPUP "_ACE_MENU_"
     BEGIN
@@ -160,7 +161,7 @@ BEGIN
     END
 END
 
-IDR_FILL_DATA_MENU MENU 
+IDR_FILL_DATA_MENU MENU
 BEGIN
     POPUP "__DATA_PATTERN__"
     BEGIN
@@ -170,7 +171,7 @@ BEGIN
     END
 END
 
-IDR_NTCREATE_MENU MENU 
+IDR_NTCREATE_MENU MENU
 BEGIN
     POPUP "__NTCREATE_MENU__"
     BEGIN
@@ -184,7 +185,7 @@ BEGIN
     END
 END
 
-IDR_REQUEST_OPLOCK_MENU MENU 
+IDR_REQUEST_OPLOCK_MENU MENU
 BEGIN
     POPUP "__OPLOCK_TYPE__"
     BEGIN
@@ -195,7 +196,7 @@ BEGIN
     END
 END
 
-IDR_ACL_TYPE_MENU MENU 
+IDR_ACL_TYPE_MENU MENU
 BEGIN
     POPUP "_ACL_TYPE_MENU_"
     BEGIN
@@ -205,7 +206,7 @@ BEGIN
     END
 END
 
-IDR_DELETE_FILE_MENU MENU 
+IDR_DELETE_FILE_MENU MENU
 BEGIN
     POPUP "__DELETE_FILE__"
     BEGIN
@@ -214,7 +215,7 @@ BEGIN
     END
 END
 
-IDR_DELETE_OBJECT_MENU MENU 
+IDR_DELETE_OBJECT_MENU MENU
 BEGIN
     POPUP "__DELETE_DIRECTORY__"
     BEGIN
@@ -415,18 +416,18 @@ BEGIN
     EDITTEXT        IDC_OBJECT_ID,89,124,170,14,ES_AUTOHSCROLL
     PUSHBUTTON      "Use",IDC_OBJECT_ID_USE,263,124,30,14,WS_DISABLED
     GROUPBOX        "Other operations ",IDC_OTHERS_FRAME,7,148,293,95
+    PUSHBUTTON      "NtQueryAttributesFile (F1)",IDC_NT_QUERY_ATTRIBUTES_FILE,11,161,133,14
     PUSHBUTTON      "GetFileAttributes (F1)",IDC_GET_FILE_ATTRIBUTES,160,161,133,14
     PUSHBUTTON      "FlushFileBuffers",IDC_FLUSH_FILE_BUFFERS,11,179,133,14
-    PUSHBUTTON      "CreateHardLink (F1, F2)",IDC_CREATE_HARDLINK,11,197,133,14
+    PUSHBUTTON      "CreateHardLink (F1, F2)",IDC_CREATE_HARDLINK,160,179,133,14
+    PUSHBUTTON      "EncryptFile (F1)",IDC_ENCRYPT_FILE,11,197,133,14
+    PUSHBUTTON      "DecryptFile (F1)",IDC_DECRYPT_FILE,160,197,133,14
+    PUSHBUTTON      "NtDeleteFile (F1)",IDC_NT_DELETE_FILE,11,215,133,14
     GROUPBOX        "Oplock file operations",IDC_OPLOCKS_FRAME,7,247,293,53
     PUSHBUTTON      "Request Oplock (pre-Win7) ...",IDC_REQUEST_OPLOCK_MENU,11,260,133,14
     PUSHBUTTON      "FSCTL_OPLOCK_BREAK_ACKNWLDG",IDC_BREAK_ACKNOWLEDGE_1,160,260,133,14
     PUSHBUTTON      "FSCTL_REQUEST_OPLOCK (request)",IDC_REQUEST_OPLOCK_WIN7,11,279,133,14
     PUSHBUTTON      "FSCTL_REQUEST_OPLOCK (brk ack)",IDC_BREAK_ACKNOWLEDGE_2,160,279,133,14
-    PUSHBUTTON      "NtQueryAttributesFile (F1)",IDC_NT_QUERY_ATTRIBUTES_FILE,11,161,133,14
-    PUSHBUTTON      "EncryptFile (F1)",IDC_ENCRYPT_FILE,160,179,133,14
-    PUSHBUTTON      "DecryptFile (F1)",IDC_DECRYPT_FILE,160,197,133,14
-    PUSHBUTTON      "NtDeleteFile (F1)",IDC_NT_DELETE_FILE,11,215,133,14
     GROUPBOX        " Result ",IDC_RESULT_FRAME,7,304,293,28
     LTEXT           "GetLastError:",IDC_ERROR_CODE_TITLE,13,313,43,14,SS_CENTERIMAGE
     EDITTEXT        IDC_ERROR_CODE,73,313,220,14,ES_AUTOHSCROLL | ES_READONLY
@@ -837,7 +838,7 @@ END
 //
 
 #ifdef APSTUDIO_INVOKED
-GUIDELINES DESIGNINFO 
+GUIDELINES DESIGNINFO
 BEGIN
     IDD_FILE_TEST, DIALOG
     BEGIN
@@ -1127,29 +1128,29 @@ END
 // AFX_DIALOG_LAYOUT
 //
 
-IDD_PAGE12_IOCTL AFX_DIALOG_LAYOUT 
+IDD_PAGE12_IOCTL AFX_DIALOG_LAYOUT
 BEGIN
-    0x0000
+    0
 END
 
-IDD_PAGE05_FILEOPS AFX_DIALOG_LAYOUT 
+IDD_PAGE05_FILEOPS AFX_DIALOG_LAYOUT
 BEGIN
-    0x0000
+    0
 END
 
-IDD_PAGE04_MAPPING AFX_DIALOG_LAYOUT 
+IDD_PAGE04_MAPPING AFX_DIALOG_LAYOUT
 BEGIN
-    0x0000
+    0
 END
 
-IDD_PAGE10_LINKS AFX_DIALOG_LAYOUT 
+IDD_PAGE10_LINKS AFX_DIALOG_LAYOUT
 BEGIN
-    0x0000
+    0
 END
 
-IDD_PAGE09_SECURITY AFX_DIALOG_LAYOUT 
+IDD_PAGE09_SECURITY AFX_DIALOG_LAYOUT
 BEGIN
-    0x0000
+    0
 END
 
 
@@ -1158,7 +1159,7 @@ END
 // String Table
 //
 
-STRINGTABLE 
+STRINGTABLE
 BEGIN
     IDS_FLUSH_FILE_BUFFERS_TIP 
                             "Flushes all file buffers to disk using FlushFileBuffers API"
@@ -1177,7 +1178,7 @@ BEGIN
     IDS_SELECT_FILE         "Select a file"
 END
 
-STRINGTABLE 
+STRINGTABLE
 BEGIN
     IDS_FILTER_ALL          "All files (*.*)|*.*|||"
     IDS_INVHANDLE           "INVALID_HANDLE_VALUE"
@@ -1198,7 +1199,7 @@ BEGIN
                             "Cannot use a directory when a file is open by ID"
 END
 
-STRINGTABLE 
+STRINGTABLE
 BEGIN
     IDS_E_INVALID_NT_FILE_NAME "Invalid NT file name."
     IDS_E_INVALID_FILE_ID   "Invalid file ID.\nThe file ID must be in the form of \\\\??\\\\C:\\Path\\File.ext"
@@ -1220,7 +1221,7 @@ BEGIN
     IDS_FILE_BASIC_INFORMATION "FILE_BASIC_INFORMATION"
 END
 
-STRINGTABLE 
+STRINGTABLE
 BEGIN
     IDS_STREAM_TYPE         "Type"
     IDS_APP_TITLE_VISTA1    "FileTest (User: ""%s"", elevated)"
@@ -1240,7 +1241,7 @@ BEGIN
     IDS_MANDATORY_MASK      "Mandatory Mask"
 END
 
-STRINGTABLE 
+STRINGTABLE
 BEGIN
     IDS_E_OPEN_TOKEN        "Failed to open current token.\n%s"
     IDS_EMPTY_STREAM        "<empty>"
@@ -1262,7 +1263,7 @@ BEGIN
     IDS_E_CONVERT_VALUE     "Failed to convert the value to an integer.\nPlease, enter a valid hexadecimal value with a proper maximum size."
 END
 
-STRINGTABLE 
+STRINGTABLE
 BEGIN
     IDS_DATA_EXCEPTION      "Access violation exception when %s data at %p."
     IDS_E_CONVERT_TO_UINT32 "Error converting ""%s"" to 32-bit integer"
@@ -1277,12 +1278,12 @@ BEGIN
     IDS_IOCTL_FORMAT        "%s\n%u\n%s\n%s"
 END
 
-STRINGTABLE 
+STRINGTABLE
 BEGIN
     IDS_INTEGRITY_LEVEL     "Integrity Level"
 END
 
-#endif    // English (U.S.) resources
+#endif    // English (United States) resources
 /////////////////////////////////////////////////////////////////////////////
 
 
