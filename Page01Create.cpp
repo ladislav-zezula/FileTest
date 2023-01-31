@@ -360,7 +360,7 @@ static int OnCreateFileClick(HWND hDlg)
     {
         hTemplateFile = CreateFile(pData->szTemplate,
                                    FILE_READ_EA,
-                                   FILE_SHARE_READ,
+                                   FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                                    NULL,
                                    OPEN_EXISTING,
                                    0,

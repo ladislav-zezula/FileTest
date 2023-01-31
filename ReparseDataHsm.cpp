@@ -20,15 +20,15 @@ static bool HsmpCheckElement(PHSM_DATA HsmData, ULONG ElementIndex)
     PHSM_ELEMENT_INFO pElementInfo = &HsmData->ElementInfos[ElementIndex];
     ULONG ElementCount = HsmData->NumberOfElements;
 
-    if (pElementInfo->Type >= HSM_ELEMENT_TYPE_MAX)
+    if(pElementInfo->Type >= HSM_ELEMENT_TYPE_MAX)
         return false;
-    if (pElementInfo->Offset != 0 && pElementInfo->Offset < HSM_MIN_DATA_SIZE(ElementCount))
+    if(pElementInfo->Offset != 0 && pElementInfo->Offset < HSM_MIN_DATA_SIZE(ElementCount))
         return false;
-    if (pElementInfo->Offset > HsmData->Length)
+    if(pElementInfo->Offset > HsmData->Length)
         return false;
-    if (pElementInfo->Length > HsmData->Length)
+    if(pElementInfo->Length > HsmData->Length)
         return false;
-    if ((pElementInfo->Offset + pElementInfo->Length) > HsmData->Length)
+    if((pElementInfo->Offset + pElementInfo->Length) > HsmData->Length)
         return false;
 
     return true;
@@ -41,38 +41,38 @@ static NTSTATUS HsmValidateCommonData(PHSM_DATA HsmData, ULONG Magic, ULONG Elem
     ULONG CheckPhase = 0;
 
     // The remaining data must be at least HSM_FILE_DATA_MINSIZE bytes
-    if (RemainingLength < HSM_MIN_DATA_SIZE(1))
+    if(RemainingLength < HSM_MIN_DATA_SIZE(1))
         return STATUS_CLOUD_FILE_METADATA_CORRUPT;
     CheckPhase = 1;
 
-    if (HsmData->Magic != Magic)
+    if(HsmData->Magic != Magic)
         return STATUS_CLOUD_FILE_METADATA_CORRUPT;
     CheckPhase = 2;
 
     // Check CRC, if present
-    if ((HsmData->Flags & HSM_DATA_HAVE_CRC) && RtlComputeCrc32(0, &HsmData->Length, RemainingLength - 8) != HsmData->Crc32)
+    if((HsmData->Flags & HSM_DATA_HAVE_CRC) && RtlComputeCrc32(0, &HsmData->Length, RemainingLength - 8) != HsmData->Crc32)
         return STATUS_CLOUD_FILE_METADATA_CORRUPT;
     CheckPhase = 3;
 
     // Check the remaining size
-    if (HsmData->Length != RemainingLength)
+    if(HsmData->Length != RemainingLength)
         return STATUS_CLOUD_FILE_METADATA_CORRUPT;
     CheckPhase = 4;
 
     // Check the zero field
-    if ((NumberOfElements = HsmData->NumberOfElements) == 0)
+    if((NumberOfElements = HsmData->NumberOfElements) == 0)
         return STATUS_CLOUD_FILE_METADATA_CORRUPT;
     CheckPhase = 5;
 
     // Check the offset of the first element
-    if ((FirstElementOffset = HSM_MIN_DATA_SIZE(NumberOfElements)) > RemainingLength)
+    if((FirstElementOffset = HSM_MIN_DATA_SIZE(NumberOfElements)) > RemainingLength)
         return STATUS_CLOUD_FILE_METADATA_CORRUPT;
     CheckPhase = 0x10000;
 
     // Check the elements
     for (ULONG i = 0; i < min(NumberOfElements, ElementCount); i++)
     {
-        if (!HsmpCheckElement(HsmData, i))
+        if(!HsmpCheckElement(HsmData, i))
             return STATUS_CLOUD_FILE_METADATA_CORRUPT;
         CheckPhase++;
     }
@@ -80,13 +80,13 @@ static NTSTATUS HsmValidateCommonData(PHSM_DATA HsmData, ULONG Magic, ULONG Elem
     CheckPhase = 0x20000;
 
     // Check element[0] (version?)
-    if (NumberOfElements == 0 || RemainingLength < HSM_MIN_DATA_SIZE(1))
+    if(NumberOfElements == 0 || RemainingLength < HSM_MIN_DATA_SIZE(1))
         return STATUS_CLOUD_FILE_METADATA_CORRUPT;
-    if (!HsmpCheckElement(HsmData, 0))
+    if(!HsmpCheckElement(HsmData, 0))
         return STATUS_CLOUD_FILE_METADATA_CORRUPT;
-    if (HsmData->ElementInfos[0].Type != HSM_ELEMENT_TYPE_BYTE || HsmData->ElementInfos[0].Length != sizeof(BYTE))
+    if(HsmData->ElementInfos[0].Type != HSM_ELEMENT_TYPE_BYTE || HsmData->ElementInfos[0].Length != sizeof(BYTE))
         return STATUS_CLOUD_FILE_METADATA_CORRUPT;
-    if (*HsmGetElementData(HsmData, 0) != 1)
+    if(*HsmGetElementData(HsmData, 0) != 1)
         return STATUS_CLOUD_FILE_METADATA_CORRUPT;
 
     CheckPhase = 0x20001;
@@ -110,11 +110,11 @@ NTSTATUS HsmUncompressData(PREPARSE_DATA_BUFFER RawReparseData, ULONG RawReparse
     ULONG UncompressedSize = 0;
 
     // Is the cloud buffer compressed?
-    if (RawReparseData->HsmReparseBufferRaw.Flags & 0x8000)
+    if(RawReparseData->HsmReparseBufferRaw.Flags & 0x8000)
     {
         HsmReparseDataLength = sizeof(ULONG) + sizeof(USHORT) + sizeof(USHORT) + RawReparseData->HsmReparseBufferRaw.Length;
         HsmReparseData = (PREPARSE_DATA_BUFFER)HeapAlloc(g_hHeap, HEAP_ZERO_MEMORY, HsmReparseDataLength);
-        if (HsmReparseData != NULL)
+        if(HsmReparseData != NULL)
         {
             // Copy the data that don't belong in the compressed area
             memcpy(HsmReparseData, RawReparseData, FIELD_OFFSET(REPARSE_DATA_BUFFER, HsmReparseBufferRaw.RawData));
@@ -124,7 +124,7 @@ NTSTATUS HsmUncompressData(PREPARSE_DATA_BUFFER RawReparseData, ULONG RawReparse
                                          RawReparseData->HsmReparseBufferRaw.RawData,
                                          RawReparseDataLength - FIELD_OFFSET(REPARSE_DATA_BUFFER, HsmReparseBufferRaw.RawData),
                                         &UncompressedSize);
-            if (NT_SUCCESS(Status))
+            if(NT_SUCCESS(Status))
             {
                 HsmReparseData->ReparseDataLength = RawReparseData->HsmReparseBufferRaw.Length;
                 OutReparseData[0] = HsmReparseData;
@@ -158,38 +158,38 @@ NTSTATUS HsmpBitmapIsReparseBufferSupported(PHSM_DATA HsmData, ULONG RemainingLe
 
     // Perform common data validation
     Status = HsmValidateCommonData(HsmData, HSM_BITMAP_MAGIC, HSM_BITMAP_ELEMENTS, RemainingLength);
-    if (!NT_SUCCESS(Status))
+    if(!NT_SUCCESS(Status))
         return Status;
     NumberOfElements = HsmData->NumberOfElements;
 
     // Check element[2]
-    if (NumberOfElements < 2 || RemainingLength < HSM_MIN_DATA_SIZE(2))
+    if(NumberOfElements < 2 || RemainingLength < HSM_MIN_DATA_SIZE(2))
         return STATUS_NOT_FOUND;
-    if (!HsmpCheckElement(HsmData, 2))
+    if(!HsmpCheckElement(HsmData, 2))
         return STATUS_NOT_FOUND;
-    if (HsmData->ElementInfos[2].Type != HSM_ELEMENT_TYPE_BYTE || HsmData->ElementInfos[2].Length != sizeof(BYTE))
+    if(HsmData->ElementInfos[2].Type != HSM_ELEMENT_TYPE_BYTE || HsmData->ElementInfos[2].Length != sizeof(BYTE))
         return STATUS_NOT_FOUND;
     Element2 = *HsmGetElementData(HsmData, 2);
 
-    if (Element2 != 0)
+    if(Element2 != 0)
     {
-        if (NumberOfElements < 4 || HsmData->ElementInfos[4].Offset == 0)
+        if(NumberOfElements < 4 || HsmData->ElementInfos[4].Offset == 0)
             return STATUS_CLOUD_FILE_METADATA_CORRUPT;
-        if (HsmData->ElementInfos[4].Length > 0x1000)
+        if(HsmData->ElementInfos[4].Length > 0x1000)
             return STATUS_CLOUD_FILE_METADATA_CORRUPT;
     }
 
-    if (Element2 > 1)
+    if(Element2 > 1)
         STATUS_CLOUD_FILE_METADATA_CORRUPT;
-    if (NumberOfElements < 1 || RemainingLength < HSM_MIN_DATA_SIZE(1))
+    if(NumberOfElements < 1 || RemainingLength < HSM_MIN_DATA_SIZE(1))
         return STATUS_CLOUD_FILE_METADATA_CORRUPT;
-    if (!HsmpCheckElement(HsmData, 1))
+    if(!HsmpCheckElement(HsmData, 1))
         return STATUS_CLOUD_FILE_METADATA_CORRUPT;
-    if (HsmData->ElementInfos[1].Type != HSM_ELEMENT_TYPE_BYTE || HsmData->ElementInfos[1].Length != sizeof(BYTE))
+    if(HsmData->ElementInfos[1].Type != HSM_ELEMENT_TYPE_BYTE || HsmData->ElementInfos[1].Length != sizeof(BYTE))
         return STATUS_NOT_FOUND;
     Element1 = *HsmGetElementData(HsmData, 1);
 
-    if (Element1 <= 0 || Element1 > 0x14)
+    if(Element1 <= 0 || Element1 > 0x14)
         STATUS_CLOUD_FILE_METADATA_CORRUPT;
 
     return STATUS_SUCCESS;
@@ -204,25 +204,25 @@ NTSTATUS HsmpCheckBitmapElement(PHSM_DATA HsmData, ULONG ElementIndex)
 
     __try
     {
-        if (HsmData->NumberOfElements < ElementIndex || RemainingLength < HSM_MIN_DATA_SIZE(ElementIndex))
+        if(HsmData->NumberOfElements < ElementIndex || RemainingLength < HSM_MIN_DATA_SIZE(ElementIndex))
         {
             Status = STATUS_NOT_FOUND;
             __leave;
         }
 
-        if (!HsmpCheckElement(HsmData, ElementIndex))
+        if(!HsmpCheckElement(HsmData, ElementIndex))
         {
             Status = STATUS_NOT_FOUND;
             __leave;
         }
 
-        if (HsmData->ElementInfos[ElementIndex].Type != HSM_ELEMENT_TYPE_BITMAP)
+        if(HsmData->ElementInfos[ElementIndex].Type != HSM_ELEMENT_TYPE_BITMAP)
         {
             Status = STATUS_NOT_FOUND;
             __leave;
         }
 
-        if (HsmData->ElementInfos[ElementIndex].Offset && HsmData->ElementInfos[ElementIndex].Length)
+        if(HsmData->ElementInfos[ElementIndex].Offset && HsmData->ElementInfos[ElementIndex].Length)
         {
             pBitmap = (PHSM_DATA)HsmGetElementData(HsmData, ElementIndex);
             BitmapLength = HsmData->ElementInfos[ElementIndex].Length;
@@ -248,13 +248,13 @@ NTSTATUS HsmValidateReparseData(PREPARSE_DATA_BUFFER ReparseData)
     ULONG ElementFlags;
 
     // Check the length
-    if (HsmReparseData->Length != ReparseData->ReparseDataLength)
+    if(HsmReparseData->Length != ReparseData->ReparseDataLength)
         return STATUS_INVALID_BLOCK_LENGTH;
 
     // Check the revision
-    if ((HsmReparseData->Flags & 0x0F) > 1)
+    if((HsmReparseData->Flags & 0x0F) > 1)
         return STATUS_UNKNOWN_REVISION;
-    if ((HsmReparseData->Flags & 0x0F) < 1)
+    if((HsmReparseData->Flags & 0x0F) < 1)
         return STATUS_REVISION_MISMATCH;
     
     // Get the HSM data and the remaining length
@@ -263,37 +263,37 @@ NTSTATUS HsmValidateReparseData(PREPARSE_DATA_BUFFER ReparseData)
 
     // Check the common part of the data
     Status = HsmValidateCommonData(HsmData, HSM_FILE_MAGIC, HSM_FILE_ELEMENTS, RemainingLength);
-    if (!NT_SUCCESS(Status))
+    if(!NT_SUCCESS(Status))
         return Status;
     NumberOfElements = HsmData->NumberOfElements;
 
     // Check element[1] (flags?)
-    if (NumberOfElements < 1 || RemainingLength < HSM_MIN_DATA_SIZE(2))
+    if(NumberOfElements < 1 || RemainingLength < HSM_MIN_DATA_SIZE(2))
         return STATUS_NOT_FOUND;
-    if (!HsmpCheckElement(HsmData, 1))
+    if(!HsmpCheckElement(HsmData, 1))
         return STATUS_NOT_FOUND;
-    if (HsmData->ElementInfos[1].Type != HSM_ELEMENT_TYPE_UINT32 || HsmData->ElementInfos[1].Length != sizeof(DWORD))
+    if(HsmData->ElementInfos[1].Type != HSM_ELEMENT_TYPE_UINT32 || HsmData->ElementInfos[1].Length != sizeof(DWORD))
         return STATUS_NOT_FOUND;
     ElementFlags = *(PULONG)HsmGetElementData(HsmData, 1);
-    if (ElementFlags & 0x10)
+    if(ElementFlags & 0x10)
         return STATUS_SUCCESS;
 
     // Check element[2] (stream size)
-    if (NumberOfElements < 2 || RemainingLength < HSM_MIN_DATA_SIZE(3))
+    if(NumberOfElements < 2 || RemainingLength < HSM_MIN_DATA_SIZE(3))
         return STATUS_NOT_FOUND;
-    if (!HsmpCheckElement(HsmData, 2))
+    if(!HsmpCheckElement(HsmData, 2))
         return STATUS_NOT_FOUND;
-    if (HsmData->ElementInfos[2].Type != HSM_ELEMENT_TYPE_UINT64 || HsmData->ElementInfos[2].Length != sizeof(ULONGLONG))
+    if(HsmData->ElementInfos[2].Type != HSM_ELEMENT_TYPE_UINT64 || HsmData->ElementInfos[2].Length != sizeof(ULONGLONG))
         return STATUS_NOT_FOUND;
 
     // Check element[4] (HSM_BITMAP)
     Status = HsmpCheckBitmapElement(HsmData, 4);
-    if (!NT_SUCCESS(Status))
+    if(!NT_SUCCESS(Status))
         return Status;
 
     // Check element[5] (HSM_BITMAP)
     Status = HsmpCheckBitmapElement(HsmData, 5);
-    if (!NT_SUCCESS(Status))
+    if(!NT_SUCCESS(Status))
         return Status;
 
     // Check element[6] (HSM_BITMAP)

@@ -232,7 +232,7 @@ NTSTATUS NtCreateFileStream(PUNICODE_STRING SourceName, TFileStream * pStream)
                           &IoStatus,
                            NULL,
                            FILE_ATTRIBUTE_NORMAL,
-                           FILE_SHARE_READ,
+                           FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                            FILE_OPEN_IF,
                            FILE_NON_DIRECTORY_FILE | FILE_SYNCHRONOUS_IO_ALERT,
                            NULL,
@@ -385,7 +385,7 @@ static NTSTATUS LoadStreamFromFile(
                          FILE_READ_DATA | FILE_READ_ATTRIBUTES | SYNCHRONIZE,
                         &ObjAttr,
                         &IoStatus,
-                         FILE_SHARE_READ,
+                         FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                          FILE_SYNCHRONOUS_IO_ALERT);
 
     // Query the file size
@@ -478,7 +478,7 @@ static NTSTATUS SaveStreamToFile(
                               &IoStatus,
                                NULL,
                                FILE_ATTRIBUTE_NORMAL,
-                               FILE_SHARE_READ,
+                               FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                                FILE_OVERWRITE_IF,
                                FILE_SYNCHRONOUS_IO_ALERT,
                                NULL,
@@ -548,7 +548,7 @@ NTSTATUS LoadStreamsFromDirectory(
                              FILE_LIST_DIRECTORY | SYNCHRONIZE,
                             &ObjAttr,
                             &IoStatus,
-                             FILE_SHARE_READ | FILE_SHARE_WRITE,
+                             FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                              FILE_SYNCHRONOUS_IO_ALERT);
     }
 
@@ -738,7 +738,7 @@ static NTSTATUS StreamsToListView(
                                  FILE_READ_DATA | SYNCHRONIZE,
                                 &ObjAttr,
                                 &IoStatus,
-                                 FILE_SHARE_READ,
+                                FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                                 dwFlagsAndAttributes);
             if(NT_SUCCESS(Status))
             {
@@ -1031,7 +1031,7 @@ static int OnImportStreams(HWND hDlg)
                               &IoStatus,
                                NULL,
                                FILE_ATTRIBUTE_NORMAL,
-                               FILE_SHARE_READ,
+                               FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
                                FILE_OPEN_IF,
                                FILE_SYNCHRONOUS_IO_ALERT,
                                NULL,

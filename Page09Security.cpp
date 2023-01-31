@@ -243,11 +243,11 @@ static PSID Sid_AllocateAndInitialize(
 
     // Prepare a buffer of a sufficient size
     pSid = Sid_Allocate(GetSidLengthRequired(nSubAuthorityCount));
-    if (pSid == NULL)
+    if(pSid == NULL)
         return NULL;
 
     // Fill in the identifier authority and sub-authority count
-    if (InitializeSid(pSid, pIdentifierAuthority, nSubAuthorityCount))
+    if(InitializeSid(pSid, pIdentifierAuthority, nSubAuthorityCount))
     {
         // Fill in the sub-authorities
         for (BYTE i = 0; i < nSubAuthorityCount; i++)
@@ -308,7 +308,7 @@ static bool CheckForServiceAccount(LPTSTR szUserName)
     return false;
 }
 
-static void SidToString(PSID pvSid, LPTSTR szString, size_t cchString, bool bAddUserName)
+void SidToString(PSID pvSid, LPTSTR szString, size_t cchString, bool bAddUserName)
 {
     PSID_IDENTIFIER_AUTHORITY pSia;
     SID * pSid = (SID *)pvSid;
@@ -352,7 +352,7 @@ static void SidToString(PSID pvSid, LPTSTR szString, size_t cchString, bool bAdd
     }
 }
 
-static bool StringToSid(LPTSTR szSid, PSID * ppSid)
+bool StringToSid(LPTSTR szSid, PSID * ppSid)
 {
     SID_IDENTIFIER_AUTHORITY Sia = SiaNull;
     SID_NAME_USE SidNameUse;

@@ -724,4 +724,16 @@ typedef struct _REPARSE_DATA_BUFFER
 
 #define REPARSE_DATA_BUFFER_HEADER_SIZE   FIELD_OFFSET(REPARSE_DATA_BUFFER, GenericReparseBuffer)
 
+//-----------------------------------------------------------------------------
+// Other definitions
+
+#ifndef QUERY_STORAGE_CLASSES_FLAGS_MEASURE_WRITE
+#define QUERY_STORAGE_CLASSES_FLAGS_MEASURE_WRITE   0x80000000
+#define QUERY_STORAGE_CLASSES_FLAGS_MEASURE_READ    0x40000000
+#endif
+
+#ifndef SECURITY_MAX_SID_STRING_CHARACTERS
+#define SECURITY_MAX_SID_STRING_CHARACTERS (2 + 4 + 15 + (11 * SID_MAX_SUB_AUTHORITIES) + 1)
+#endif
+
 #endif // __WINSDK_H__
