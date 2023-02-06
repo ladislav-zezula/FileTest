@@ -80,10 +80,10 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
 static int OnCreateTransaction(HWND hDlg)
 {
     TFileTestData * pData = GetDialogData(hDlg);
-    int nError = ERROR_SUCCESS;
+    int dwErrCode = ERROR_SUCCESS;
 
     // Create new transaction
-    if(nError == ERROR_SUCCESS && pfnCreateTransaction != NULL)
+    if(dwErrCode == ERROR_SUCCESS && pfnCreateTransaction != NULL)
     {
         pData->hTransaction = pfnCreateTransaction(NULL,
                                                    NULL,
@@ -95,27 +95,27 @@ static int OnCreateTransaction(HWND hDlg)
         if(IsHandleValid(pData->hTransaction))
             pData->bTransactionActive = TRUE;
         else
-            nError = GetLastError();
+            dwErrCode = GetLastError();
     }
 
-    UpdateDialog(hDlg, nError);
+    UpdateDialog(hDlg, dwErrCode);
     return TRUE;
 }
 
 static int OnCommitTransaction(HWND hDlg)
 {
     TFileTestData * pData = GetDialogData(hDlg);
-    int nError = ERROR_SUCCESS;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
     // Commit the transaction
     if(IsHandleValid(pData->hTransaction))
     {
         if(!pfnCommitTransaction(pData->hTransaction))
-            nError = GetLastError();
+            dwErrCode = GetLastError();
 
         pData->bTransactionActive = FALSE;
         pData->bUseTransaction = FALSE;
-        UpdateDialog(hDlg, nError);
+        UpdateDialog(hDlg, dwErrCode);
     }
     return TRUE;
 }
@@ -123,17 +123,17 @@ static int OnCommitTransaction(HWND hDlg)
 static int OnRollbackTransaction(HWND hDlg)
 {
     TFileTestData * pData = GetDialogData(hDlg);
-    int nError = ERROR_SUCCESS;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
     // Rollback the transaction
     if(IsHandleValid(pData->hTransaction))
     {
         if(!pfnRollbackTransaction(pData->hTransaction))
-            nError = GetLastError();
+            dwErrCode = GetLastError();
 
         pData->bTransactionActive = FALSE;
         pData->bUseTransaction = FALSE;
-        UpdateDialog(hDlg, nError);
+        UpdateDialog(hDlg, dwErrCode);
     }
     return TRUE;
 }
@@ -141,7 +141,7 @@ static int OnRollbackTransaction(HWND hDlg)
 static int OnCloseTransaction(HWND hDlg)
 {
     TFileTestData * pData = GetDialogData(hDlg);
-    int nError = ERROR_SUCCESS;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
     // Assign the transaction to the current thread
     if(IsHandleValid(pData->hTransaction))
@@ -149,7 +149,7 @@ static int OnCloseTransaction(HWND hDlg)
 
     // Clear information about transaction
     pData->hTransaction = INVALID_HANDLE_VALUE;
-    UpdateDialog(hDlg, nError);
+    UpdateDialog(hDlg, dwErrCode);
     return TRUE;
 }
 

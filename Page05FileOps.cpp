@@ -564,9 +564,9 @@ static int SaveDialog(HWND hDlg)
 {
     TFileTestData * pData = GetDialogData(hDlg);
 
-    if((pData->dwCreateOptions & FILE_OPEN_BY_FILE_ID) == 0)
-        GetDlgItemText(hDlg, IDC_FILE_NAME1, pData->szFileName1, _countof(pData->szFileName1));
-    GetDlgItemText(hDlg, IDC_FILE_NAME2, pData->szFileName2, _countof(pData->szFileName2));
+    if((pData->OpenFile.dwCreateOptions & FILE_OPEN_BY_FILE_ID) == 0)
+        GetDlgItemText(hDlg, IDC_FILE_NAME1, pData->szFileName1, MAX_NT_PATH);
+    GetDlgItemText(hDlg, IDC_FILE_NAME2, pData->szFileName2, MAX_NT_PATH);
     return ERROR_SUCCESS;
 }
 
@@ -661,7 +661,7 @@ static int OnSetActive(HWND hDlg)
 {
     TFileTestData * pData = GetDialogData(hDlg);
 
-    if((pData->dwCreateOptions & FILE_OPEN_BY_FILE_ID) == 0)
+    if((pData->OpenFile.dwCreateOptions & FILE_OPEN_BY_FILE_ID) == 0)
     {
         SetDlgItemText(hDlg, IDC_FILE_NAME1, pData->szFileName1);
         ConvertToWin32Name(hDlg, IDC_FILE_NAME1);
@@ -669,7 +669,7 @@ static int OnSetActive(HWND hDlg)
     else
     {
         pData->szDirName[0] = 0;
-        pData->dwCreateOptions &= ~FILE_OPEN_BY_FILE_ID;
+        pData->OpenFile.dwCreateOptions &= ~FILE_OPEN_BY_FILE_ID;
     }
 
     if(pData->szFileName2[0] != 0)
@@ -731,8 +731,8 @@ static int OnCopyFileClick(HWND hDlg)
     DWORD dwErrCode;
 
     // Get the source and target file
-    GetDlgItemText(hDlg, IDC_FILE_NAME1, pData->szFileName1, _countof(pData->szFileName1));
-    GetDlgItemText(hDlg, IDC_FILE_NAME2, pData->szFileName2, _countof(pData->szFileName2));
+    GetDlgItemText(hDlg, IDC_FILE_NAME1, pData->szFileName1, MAX_NT_PATH);
+    GetDlgItemText(hDlg, IDC_FILE_NAME2, pData->szFileName2, MAX_NT_PATH);
 
     // Run the copy file dialog
     dwErrCode = (DWORD)CopyFileDialog(hDlg, pData);

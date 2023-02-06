@@ -32,9 +32,9 @@ struct TDialogData
     HWND hProgress;                 // Copy progress window
     HWND hCopyInfo;                 // Copy info window
     DWORD dwProgressShift;          // Shift to the progress value to fit in the 32-bit integer
+    DWORD dwErrCode;                // Result of the operation
     BOOL bProgressInitialized;      // If set to TRUE, the progress has already been initialized
     BOOL bCancelled;                // If set to TRUE, CopyFileEx will cancel the copy
-    int nError;                     // Result of the operation
 
     ULARGE_INTEGER TotalBytes;      // Total bytes attempted to read
     ULARGE_INTEGER BytesRead;       // Bytes that have been read succefssfully
@@ -340,7 +340,7 @@ static BOOL ReadFileSkipErrors(
     // Now try to read the file sector-by-sector
     while(cbBlockSize > 0)
     {
-        int nError = ERROR_SUCCESS;
+        DWORD dwErrCode = ERROR_SUCCESS;
 
         // Inform the user that we are attempting to read a damaged sector
         CopyProgressRoutine(ByteOffset, ByteOffset, ByteOffset, ByteOffset, 0, CALLBACK_READ_BAD_SECTOR, hFile, NULL, pData);
@@ -354,11 +354,11 @@ static BOOL ReadFileSkipErrors(
         if(!ReadFile(hFile, pbCopyBuffer, dwBytesToRead, &dwBytesRead, &Overlapped))
         {
             // Handle two cases which we know that can mean an end of file/drive
-            if((nError = GetLastError()) == ERROR_HANDLE_EOF || nError == ERROR_SECTOR_NOT_FOUND)
+            if((dwErrCode = GetLastError()) == ERROR_HANDLE_EOF || dwErrCode == ERROR_SECTOR_NOT_FOUND)
                 break;
 
             // Write the error to the log file
-            LogPrintf(pData->hLogFile, szReadErrorFmt, ByteOffset.QuadPart, nError);
+            LogPrintf(pData->hLogFile, szReadErrorFmt, ByteOffset.QuadPart, dwErrCode);
         }
 
         // Increment the stat counters. Use the number of bytes REALLY read
@@ -378,7 +378,7 @@ static BOOL ReadFileSkipErrors(
     return TRUE;
 }
 
-static int CopyLoop(
+static DWORD CopyLoop(
     TDialogData * pData,
     HANDLE hFile1,
     HANDLE hFile2,
@@ -402,23 +402,23 @@ static int CopyLoop(
     while(pData->bCancelled == FALSE)
     {
         DWORD dwTransferred = 0;
+        DWORD dwErrCode = ERROR_SUCCESS;
         DWORD dwRet;
-        int nError = ERROR_SUCCESS;
 
         // Read the source file/drive
         Overlapped.OffsetHigh = ByteOffset.HighPart;
         Overlapped.Offset = ByteOffset.LowPart;
         if(!ReadFile(hFile1, pbCopyBuffer, cbBlockSize, &dwTransferred, &Overlapped))
         {
-            switch(nError = GetLastError())
+            switch(dwErrCode = GetLastError())
             {
                 case ERROR_HANDLE_EOF:          // At or beyond the end of the file
-                    nError = ERROR_SUCCESS;
+                    dwErrCode = ERROR_SUCCESS;
                     break;
 
                 case ERROR_SECTOR_NOT_FOUND:    // Example: Reading 0x400 bytes from \\.\PhysicalDrive0, 0x200 bytes before end
                     ReadFileSkipErrors(pData, hFile1, ByteOffset, pbCopyBuffer, cbBlockSize, &dwTransferred);
-                    nError = ERROR_SUCCESS;
+                    dwErrCode = ERROR_SUCCESS;
                     break;
 
                 default:    // ERROR_CRC, ERROR_IO_DEVICE
@@ -430,7 +430,7 @@ static int CopyLoop(
                         if(cbBlockSize > SECTOR_SIZE)
                         {
                             ReadFileSkipErrors(pData, hFile1, ByteOffset, pbCopyBuffer, cbBlockSize, &dwTransferred);
-                            nError = ERROR_SUCCESS;
+                            dwErrCode = ERROR_SUCCESS;
                             break;
                         }
 
@@ -440,11 +440,11 @@ static int CopyLoop(
                     }
                     
                     // Log the error.
-                    LogPrintf(pData->hLogFile, szReadErrorFmt, ByteOffset.QuadPart, nError);
+                    LogPrintf(pData->hLogFile, szReadErrorFmt, ByteOffset.QuadPart, dwErrCode);
                     pData->TotalBytes.QuadPart += cbBlockSize;
                     
                     // If we are supposed to skip read errors, reset the error code
-                    nError = (dwCopyFlags & COPY_FILE_SKIP_IO_ERRORS) ? ERROR_SUCCESS : nError;
+                    dwErrCode = (dwCopyFlags & COPY_FILE_SKIP_IO_ERRORS) ? ERROR_SUCCESS : dwErrCode;
                     break;
             }
         }
@@ -455,8 +455,8 @@ static int CopyLoop(
         }
 
         // If we failed to read the data, do nothing
-        if(nError != ERROR_SUCCESS || dwTransferred == 0)
-            return nError;
+        if(dwErrCode != ERROR_SUCCESS || dwTransferred == 0)
+            return dwErrCode;
 
         // Write the target file
         if(!WriteFile(hFile2, pbCopyBuffer, dwTransferred, &dwTransferred, &Overlapped))
@@ -492,9 +492,9 @@ static void CopyFileWorker_ByHand(TDialogData * pData, LPCTSTR szFileName1, LPCT
     LPBYTE pbCopyBuffer = NULL;
     TCHAR szLogFile[MAX_PATH];
     DWORD cbCopyBuffer = COPY_BLOCK_SIZE;
+    DWORD dwErrCode = ERROR_SUCCESS;
     bool bHasFileSize = false;
     bool bHasFileTime = false;
-    int nError = ERROR_SUCCESS;
 
     // Initialize the copy info
     SetCopyMethodAndProgress(pData, _T("ReadFile+WriteFile"), TRUE);
@@ -506,29 +506,29 @@ static void CopyFileWorker_ByHand(TDialogData * pData, LPCTSTR szFileName1, LPCT
         ReplaceFileExt(szLogFile, _T(".log"));
         pData->hLogFile = CreateFile(szLogFile, GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, 0, NULL);
         if(IsHandleInvalid(pData->hLogFile))
-            nError = GetLastError();
+            dwErrCode = GetLastError();
     }
 
     // Open the source file file
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
         SetCopyInfo(pData, _T("Opening file %s ..."), szFileName1);
         hFile1 = OpenSourceFile(szFileName1, dwCopyFlags);
         if(IsHandleInvalid(hFile1))
-            nError = GetLastError();
+            dwErrCode = GetLastError();
     }
 
     // Create or open the target file
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
         SetCopyInfo(pData, _T("Opening file %s ..."), szFileName2);
         hFile2 = CreateOrOpenTargetFile(szFileName2);
         if(IsHandleInvalid(hFile2))
-            nError = GetLastError();
+            dwErrCode = GetLastError();
     }
 
     // Try to get the file size
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
         bHasFileSize = (TryGetFileSize(hFile1, TotalFileSize) == ERROR_SUCCESS);
         SetCopyMethodAndProgress(pData, NULL, bHasFileSize ? FALSE : TRUE);
@@ -538,7 +538,7 @@ static void CopyFileWorker_ByHand(TDialogData * pData, LPCTSTR szFileName1, LPCT
     // Note that the SetFileTime can fail if the second file
     // is actually a volume (\\.\GlobalRoot\Device\HarddiskVolume15)
     // Do not report the error
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
         if(GetFileTime(hFile1, &ft1, &ft2, &ft3))
             bHasFileTime = true;
@@ -546,23 +546,23 @@ static void CopyFileWorker_ByHand(TDialogData * pData, LPCTSTR szFileName1, LPCT
 
     // Allocate the buffer for holding copied data
     // Use VirtualAlloc to ensure that the buffer is sector aligned 
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
         // Allocate buffer
         pbCopyBuffer = (LPBYTE)VirtualAlloc(NULL, cbCopyBuffer, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
         if(pbCopyBuffer == NULL)
-            nError = ERROR_NOT_ENOUGH_MEMORY;
+            dwErrCode = ERROR_NOT_ENOUGH_MEMORY;
     }
 
     // Perform the copy
-    if(nError == ERROR_SUCCESS)
+    if(dwErrCode == ERROR_SUCCESS)
     {
         LogPrintf(pData->hLogFile, _T("--- Starting file copy -------\r\n")
                                    _T("Source File: %s\r\n")
                                    _T("Target File: %s\r\n")
                                    _T("Copy Flags : %08X\r\n"), szFileName1, szFileName2, dwCopyFlags);
 
-        nError = CopyLoop(pData,
+        dwErrCode = CopyLoop(pData,
                           hFile1,
                           hFile2,
                           pbCopyBuffer,
@@ -580,7 +580,7 @@ static void CopyFileWorker_ByHand(TDialogData * pData, LPCTSTR szFileName1, LPCT
     // Note that the SetFileTime can fail if the second file
     // is actually a volume (\\.\GlobalRoot\Device\HarddiskVolume15)
     // Do not report the error
-    if(nError == ERROR_SUCCESS && bHasFileTime)
+    if(dwErrCode == ERROR_SUCCESS && bHasFileTime)
     {
         SetFileTime(hFile2, &ft1, &ft2, &ft3);
     }
@@ -604,7 +604,7 @@ static void CopyFileWorker_ByHand(TDialogData * pData, LPCTSTR szFileName1, LPCT
         CloseHandle(pData->hLogFile);
 
     // Remember the last error
-    pData->nError = nError;
+    pData->dwErrCode = dwErrCode;
 }
 
 static void CopyFileWorker_CopyFileEx(TDialogData * pData, LPCTSTR szFileName1, LPCTSTR szFileName2, DWORD dwCopyFlags)
@@ -615,7 +615,7 @@ static void CopyFileWorker_CopyFileEx(TDialogData * pData, LPCTSTR szFileName1, 
 
     // Perform the copy
     if(!pData->pfnCopyFileEx(szFileName1, szFileName2, CopyProgressRoutine, pData, &pData->bCancelled, dwCopyFlags))
-        pData->nError = GetLastError();
+        pData->dwErrCode = GetLastError();
 }
 
 static void CopyFileWorker_CopyFile(TDialogData * pData, LPCTSTR szFileName1, LPCTSTR szFileName2, DWORD dwCopyFlags)
@@ -626,7 +626,7 @@ static void CopyFileWorker_CopyFile(TDialogData * pData, LPCTSTR szFileName1, LP
 
     // Perform the copy
     if(!pData->pfnCopyFile(szFileName1, szFileName2, (dwCopyFlags & COPY_FILE_FAIL_IF_EXISTS) ? TRUE : FALSE))
-        pData->nError = GetLastError();
+        pData->dwErrCode = GetLastError();
 }
 
 static DWORD WINAPI CopyFileWorker(LPVOID lpParameter)
@@ -636,7 +636,7 @@ static DWORD WINAPI CopyFileWorker(LPVOID lpParameter)
 
     // Get the pointer to the main data
     pFtData = pData->pFileTestData;
-    pData->nError = ERROR_SUCCESS;
+    pData->dwErrCode = ERROR_SUCCESS;
 
     // Manual copy (ReadFile+WriteFile)?
     if(pFtData->dwCopyFileFlags & COPY_FILE_USE_READ_WRITE)
@@ -659,7 +659,7 @@ static DWORD WINAPI CopyFileWorker(LPVOID lpParameter)
     // None available?
     else
     {
-        pData->nError = ERROR_NOT_SUPPORTED;
+        pData->dwErrCode = ERROR_NOT_SUPPORTED;
     }
 
     // Work is complete
@@ -735,7 +735,7 @@ static INT_PTR OnCommand(HWND hDlg, UINT nNotifyCode, UINT nCtrlID)
         }
 
         // Any other button closes the dialog
-        pData->nError = ERROR_CANCELLED;
+        pData->dwErrCode = ERROR_CANCELLED;
         EndDialog(hDlg, nCtrlID);
     }
     
@@ -778,5 +778,5 @@ INT_PTR CopyFileDialog(HWND hParent, TFileTestData * pData)
     DialogBoxParam(g_hInst, MAKEINTRESOURCE(IDD_COPY_FILE), hParent, DialogProc, (LPARAM)&Data);
 
     // Return the error code
-    return Data.nError;
+    return Data.dwErrCode;
 }

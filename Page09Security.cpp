@@ -638,7 +638,7 @@ static bool TreeView_ItemToValue32(HWND hTreeView, HTREEITEM hItem, LPDWORD PtrV
     TVITEM tvi;
     LPTSTR szValue;
     TCHAR szItemText[256];
-    int nError;
+    DWORD dwErrCode;
 
     // Get the text from the
     tvi.mask = TVIF_TEXT;
@@ -652,8 +652,8 @@ static bool TreeView_ItemToValue32(HWND hTreeView, HTREEITEM hItem, LPDWORD PtrV
         if(szValue != NULL)
         {
             // Convert the 32-bit value to an integer
-            nError = Text2Hex32(szValue, PtrValue);
-            return (nError == ERROR_SUCCESS);
+            dwErrCode = Text2Hex32(szValue, PtrValue);
+            return (dwErrCode == ERROR_SUCCESS);
         }
     }
 
@@ -1742,7 +1742,7 @@ static BOOL OnEditNumericItemInPlace(
     TCHAR szItemText[0x400];
     HWND hEdit;
     DWORD dwValue32 = 0;
-    int nError;
+    DWORD dwErrCode;
 
     // Retrieve the item text
     tvi.mask    = TVIF_TEXT;
@@ -1758,8 +1758,8 @@ static BOOL OnEditNumericItemInPlace(
         return FALSE;
 
     // Convert the value to 32-bit integer
-    nError = Text2Hex32(szValue, &dwValue32);
-    if(nError != ERROR_SUCCESS)
+    dwErrCode = Text2Hex32(szValue, &dwValue32);
+    if(dwErrCode != ERROR_SUCCESS)
         return FALSE;
 
     // Format the item to the edit field
@@ -1880,7 +1880,7 @@ static void OnEditNumericItemModal(
     LPTSTR szValue;
     TCHAR szItemText[0x400];
     DWORD dwFlags32 = 0;
-    int nError;
+    DWORD dwErrCode;
 
     // Retrieve the item text
     tvi.mask    = TVIF_TEXT;
@@ -1896,8 +1896,8 @@ static void OnEditNumericItemModal(
         return;
 
     // Convert the value to 32-bit integer
-    nError = Text2Hex32(szValue, &dwFlags32);
-    if(nError != ERROR_SUCCESS)
+    dwErrCode = Text2Hex32(szValue, &dwFlags32);
+    if(dwErrCode != ERROR_SUCCESS)
         return;
 
     // Either invoke the values dialog or the flags dialog

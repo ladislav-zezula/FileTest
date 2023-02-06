@@ -128,158 +128,172 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
     g_dwWinVer = GetWindowsVersion();
 
     // Allocate and fill our working structure with command line parameters
-    pData = (TFileTestData *)HeapAlloc(g_hHeap, HEAP_ZERO_MEMORY, sizeof(TFileTestData));
-
-    // Parse command line arguments
-    for(int i = 1; i < __argc; i++)
+    if((pData = new TFileTestData) != NULL)
     {
-        // If the argument a file name?
-        if(!IsCommandSwitch(__targv[i]))
+        // Initialize the TFileTestData structure
+        memset(pData, 0, sizeof(TFileTestData));
+        pData->MagicHeader   = FILETEST_DATA_MAGIC;
+        pData->szDirName     = pData->szBuffer1;
+        pData->szFileName1   = pData->szBuffer2;
+        pData->szFileName2   = pData->szBuffer3;
+        pData->szTemplate    = pData->szBuffer4;
+        pData->szSectionName = pData->szBuffer5;
+        pData->RelaFile.szId = "RelativeFile";
+        pData->OpenFile.szId = "MainFile";
+        pData->pOP = &pData->OpenFile;
+
+        // Parse command line arguments
+        for(int i = 1; i < __argc; i++)
         {
-            switch(nFileNameIndex)
+            // If the argument a file name?
+            if(!IsCommandSwitch(__targv[i]))
             {
-                case 0: // The first file name argument
-                    StringCchCopy(pData->szFileName1, _countof(pData->szFileName1), __targv[i]);
-                    nFileNameIndex++;
-                    break;
+                switch(nFileNameIndex)
+                {
+                    case 0: // The first file name argument
+                        StringCchCopy(pData->szFileName1, MAX_NT_PATH, __targv[i]);
+                        nFileNameIndex++;
+                        break;
 
-                case 1: // The second file name argument
-                    StringCchCopy(pData->szFileName2, _countof(pData->szFileName2), __targv[i]);
-                    nFileNameIndex++;
-                    break;
+                    case 1: // The second file name argument
+                        StringCchCopy(pData->szFileName2, MAX_NT_PATH, __targv[i]);
+                        nFileNameIndex++;
+                        break;
 
-                case 2: // The directory file name argument
-                    StringCchCopy(pData->szDirName, _countof(pData->szFileName2), __targv[i]);
-                    nFileNameIndex++;
-                    break;
+                    case 2: // The directory file name argument
+                        StringCchCopy(pData->szDirName, MAX_NT_PATH, __targv[i]);
+                        nFileNameIndex++;
+                        break;
+                }
+            }
+            else
+            {
+                LPCTSTR szArg = __targv[i] + 1;
+
+                // Check for default read+write access
+                if(!_tcsnicmp(szArg, _T("DesiredAccess:"), 14))
+                    Text2Hex32(szArg+14, &dwDesiredAccess);
+
+                // Check for default share read+write
+                if(!_tcsnicmp(szArg, _T("ShareAccess:"), 12))
+                    Text2Hex32(szArg+12, &dwShareAccess);
+
+                // Check for changed create options
+                if(!_tcsnicmp(szArg, _T("CreateOptions:"), 14))
+                    Text2Hex32(szArg+14, &dwCreateOptions);
+
+                if(!_tcsnicmp(szArg, _T("CopyFileFlags:"), 14))
+                    Text2Hex32(szArg+14, &dwCopyFileFlags);
+
+                if(!_tcsnicmp(szArg, _T("MoveFileFlags:"), 14))
+                    Text2Hex32(szArg+14, &dwMoveFileFlags);
+
+                // Check for asynchronous open
+                if(!_tcsicmp(szArg, _T("AsyncOpen")))
+                    bAsynchronousOpen = true;
             }
         }
-        else
+
+        // Set default file name
+        if(pData->szFileName1[0] == 0)
         {
-            LPCTSTR szArg = __targv[i] + 1;
-
-            // Check for default read+write access
-            if(!_tcsnicmp(szArg, _T("DesiredAccess:"), 14))
-                Text2Hex32(szArg+14, &dwDesiredAccess);
-
-            // Check for default share read+write
-            if(!_tcsnicmp(szArg, _T("ShareAccess:"), 12))
-                Text2Hex32(szArg+12, &dwShareAccess);
-
-            // Check for changed create options
-            if(!_tcsnicmp(szArg, _T("CreateOptions:"), 14))
-                Text2Hex32(szArg+14, &dwCreateOptions);
-
-            if(!_tcsnicmp(szArg, _T("CopyFileFlags:"), 14))
-                Text2Hex32(szArg+14, &dwCopyFileFlags);
-
-            if(!_tcsnicmp(szArg, _T("MoveFileFlags:"), 14))
-                Text2Hex32(szArg+14, &dwMoveFileFlags);
-
-            // Check for asynchronous open
-            if(!_tcsicmp(szArg, _T("AsyncOpen")))
-                bAsynchronousOpen = true;
+            StringCchCopy(pData->szFileName1, MAX_NT_PATH, _T("C:\\TestFile.bin"));
+            pData->IsDefaultFileName1 = TRUE;
         }
-    }
 
-    // Set default file name
-    if(pData->szFileName1[0] == 0)
-    {
-        StringCchCopy(pData->szFileName1, _countof(pData->szFileName1), _T("C:\\TestFile.bin"));
-        pData->IsDefaultFileName1 = TRUE;
-    }
+        //
+        // DEVELOPMENT CODE: Build the NT status table from the NTSTATUS.h
+        //
 
-    //
-    // DEVELOPMENT CODE: Build the NT status table from the NTSTATUS.h
-    //
+//      BuildNtStatusTableFromNTSTATUS_H();
+//      VerifyNtStatusTable();
 
-//  BuildNtStatusTableFromNTSTATUS_H();
-//  VerifyNtStatusTable();
+        //
+        // Resolve the dynamic loaded APIs
+        //
 
-    //
-    // Resolve the dynamic loaded APIs
-    //
+        ResolveDynamicLoadedAPIs();
 
-    ResolveDynamicLoadedAPIs();
+        //
+        // On Vista or newer, set the required integrity level of our token object
+        // to lowest possible value. This will allow us to open our token even if the user
+        // lowers the integrity level.
+        //
 
-    //
-    // On Vista or newer, set the required integrity level of our token object
-    // to lowest possible value. This will allow us to open our token even if the user
-    // lowers the integrity level.
-    //
+        SetTokenObjectIntegrityLevel(SECURITY_MANDATORY_UNTRUSTED_RID);
 
-    SetTokenObjectIntegrityLevel(SECURITY_MANDATORY_UNTRUSTED_RID);
+        //
+        // Save the application initial directory
+        //
 
-    //
-    // Save the application initial directory
-    //
+        GetCurrentDirectory(_countof(g_szInitialDirectory), g_szInitialDirectory);
 
-    GetCurrentDirectory(_countof(g_szInitialDirectory), g_szInitialDirectory);
+        //
+        // Register the data editor window
+        //
 
-    //
-    // Register the data editor window
-    //
+        RegisterDataEditor(hInstance);
 
-    RegisterDataEditor(hInstance);
+        //
+        // To make handles obtained by NtCreateFile usable for calling ReadFile and WriteFile,
+        // we have to set the FILE_SYNCHRONOUS_IO_NONALERT into CreateOptions
+        // and SYNCHRONIZE into DesiredAccess.
+        //
 
-    //
-    // To make handles obtained by NtCreateFile usable for calling ReadFile and WriteFile,
-    // we have to set the FILE_SYNCHRONOUS_IO_NONALERT into CreateOptions
-    // and SYNCHRONIZE into DesiredAccess.
-    //
+        // Pre-load menus so they don't generate any FS requests when loaded
+        memset(g_ContextMenus, 0, sizeof(g_ContextMenus));
+        EnumResourceNames(g_hInst, RT_MENU, EnumMenusProc, NULL);
 
-    // Pre-load menus so they don't generate any FS requests when loaded
-    memset(g_ContextMenus, 0, sizeof(g_ContextMenus));
-    EnumResourceNames(g_hInst, RT_MENU, EnumMenusProc, NULL);
+        // Set default values for CreateFile and NtCreateFile
+        pData->OpenFile.dwOA_Attributes      = OBJ_CASE_INSENSITIVE;
+        pData->OpenFile.dwCreateDisposition1 = OPEN_ALWAYS;
+        pData->OpenFile.dwCreateDisposition2 = FILE_OPEN_IF;
+        pData->OpenFile.dwDesiredAccess      = dwDesiredAccess;
+        pData->OpenFile.dwFlagsAndAttributes = FILE_ATTRIBUTE_NORMAL;
+        pData->OpenFile.dwShareAccess        = dwShareAccess;
+        pData->OpenFile.dwCreateOptions      = dwCreateOptions;
+        pData->dwMoveFileFlags               = MOVEFILE_COPY_ALLOWED;
+        pData->dwOplockLevel                 = OPLOCK_LEVEL_CACHE_READ | OPLOCK_LEVEL_CACHE_WRITE;
+        pData->dwCopyFileFlags               = dwCopyFileFlags;
+        pData->dwMoveFileFlags               = dwMoveFileFlags;
 
-    // Set default values for opening relative file by NtOpenFile
-    pData->dwDesiredAccessRF     = FILE_READ_DATA;
-    pData->dwOpenOptionsRF       = 0;
-    pData->dwShareAccessRF       = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
+        // Set default values for opening relative file by NtCreateFile
+        pData->RelaFile.dwOA_Attributes      = OBJ_CASE_INSENSITIVE;
+        pData->RelaFile.dwCreateDisposition1 = OPEN_EXISTING;
+        pData->RelaFile.dwCreateDisposition2 = FILE_OPEN;
+        pData->RelaFile.dwDesiredAccess      = FILE_READ_DATA;
+        pData->RelaFile.dwFlagsAndAttributes = FILE_ATTRIBUTE_NORMAL;
+        pData->RelaFile.dwShareAccess        = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
 
-    // Set default values for CreateFile and NtCreateFile
-    pData->dwCreateDisposition1  = OPEN_ALWAYS;
-    pData->dwCreateDisposition2  = FILE_OPEN_IF;
-    pData->dwDesiredAccess       = dwDesiredAccess;
-    pData->dwFlagsAndAttributes  = FILE_ATTRIBUTE_NORMAL;
-    pData->dwShareAccess         = dwShareAccess;
-    pData->dwCreateOptions       = dwCreateOptions;
-    pData->dwObjAttrFlags        = OBJ_CASE_INSENSITIVE;
-    pData->dwMoveFileFlags       = MOVEFILE_COPY_ALLOWED;
-    pData->dwOplockLevel         = OPLOCK_LEVEL_CACHE_READ | OPLOCK_LEVEL_CACHE_WRITE;
-    pData->dwCopyFileFlags       = dwCopyFileFlags;
-    pData->dwMoveFileFlags       = dwMoveFileFlags;
+        // Modify for synchronous open, if required
+        if(bAsynchronousOpen == false)
+        {
+            pData->OpenFile.dwCreateOptions |= FILE_SYNCHRONOUS_IO_NONALERT;
+            pData->RelaFile.dwCreateOptions |= FILE_SYNCHRONOUS_IO_NONALERT;
+            pData->OpenFile.dwDesiredAccess |= SYNCHRONIZE;
+            pData->RelaFile.dwDesiredAccess |= SYNCHRONIZE;
+        }
 
-    // Modify for synchronous open, if required
-    if(bAsynchronousOpen == false)
-    {
-        pData->dwCreateOptions |= FILE_SYNCHRONOUS_IO_NONALERT;
-        pData->dwDesiredAccess |= SYNCHRONIZE;
-    }
-
-    // Set default values for NtCreateSection/NtOpenSection
-    pData->dwSectDesiredAccess   = SECTION_ALL_ACCESS;
-    pData->dwSectPageProtection  = PAGE_READONLY;
-    pData->dwSectAllocAttributes = SEC_COMMIT;
-    pData->dwSectWin32Protect    = PAGE_READONLY;
+        // Set default values for NtCreateSection/NtOpenSection
+        pData->dwSectDesiredAccess   = SECTION_ALL_ACCESS;
+        pData->dwSectPageProtection  = PAGE_READONLY;
+        pData->dwSectAllocAttributes = SEC_COMMIT;
+        pData->dwSectWin32Protect    = PAGE_READONLY;
 
 #ifdef _DEBUG
-    DebugCode_TEST();
+        DebugCode_TEST();
 #endif
 
-    // Call the dialog
-    FileTestDialog(NULL, pData);
+        // Call the dialog
+        FileTestDialog(NULL, pData);
 
-    // Free the data blobs
-    pData->NtInfoData.Free();
-    pData->RdWrData.Free();
-    pData->OutData.Free();
-    pData->InData.Free();
-
-    // Cleanup the TFileTestData structure and exit
-    if(pData->pFileEa != NULL)
-        delete [] pData->pFileEa;
-    HeapFree(g_hHeap, 0, pData);
+        // Free the data blobs
+        pData->NtInfoData.Free();
+        pData->RdWrData.Free();
+        pData->OutData.Free();
+        pData->InData.Free();
+        delete pData;
+    }
 
     UnloadDynamicLoadedAPIs();
     return 0;

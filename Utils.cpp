@@ -170,7 +170,7 @@ int DlgText2Hex32(HWND hDlg, UINT nIDCtrl, PDWORD pValue)
 {
     TCHAR szText[128];
     HWND hWndChild = GetDlgItem(hDlg, nIDCtrl);
-    int nError = ERROR_INVALID_PARAMETER;
+    DWORD dwErrCode = ERROR_INVALID_PARAMETER;
 
     // Perform the conversion of the child text to a 32-bit hexa value
     if(hWndChild != NULL)
@@ -179,12 +179,12 @@ int DlgText2Hex32(HWND hDlg, UINT nIDCtrl, PDWORD pValue)
         GetWindowText(hWndChild, szText, _countof(szText));
     
         // Attempt to convert the value
-        nError = Text2Hex32(szText, pValue);
-        if(nError != ERROR_SUCCESS)
+        dwErrCode = Text2Hex32(szText, pValue);
+        if(dwErrCode != ERROR_SUCCESS)
             ShowConversionError(hDlg, hWndChild);
     }
 
-    return nError;
+    return dwErrCode;
 }
 
 void Hex2Text32(LPTSTR szBuffer, DWORD Value)
@@ -238,7 +238,7 @@ int DlgText2HexPtr(HWND hDlg, UINT nIDCtrl, PDWORD_PTR pValue)
 {
     TCHAR szText[128];
     HWND hWndChild = GetDlgItem(hDlg, nIDCtrl);
-    int nError = ERROR_INVALID_PARAMETER;
+    DWORD dwErrCode = ERROR_INVALID_PARAMETER;
 
     // Perform the conversion of the child text to a 32-bit hexa value
     if(hWndChild != NULL)
@@ -247,12 +247,12 @@ int DlgText2HexPtr(HWND hDlg, UINT nIDCtrl, PDWORD_PTR pValue)
         GetWindowText(hWndChild, szText, _countof(szText));
     
         // Attempt to convert the value
-        nError = Text2HexPtr(szText, pValue);
-        if(nError != ERROR_SUCCESS)
+        dwErrCode = Text2HexPtr(szText, pValue);
+        if(dwErrCode != ERROR_SUCCESS)
             ShowConversionError(hDlg, hWndChild);
     }
 
-    return nError;
+    return dwErrCode;
 }
 
 void Hex2TextPtr(LPTSTR szBuffer, DWORD_PTR Value)
@@ -308,7 +308,7 @@ int DlgText2Hex64(HWND hDlg, UINT nIDCtrl, PLONGLONG pValue)
 {
     TCHAR szText[128];
     HWND hWndChild = GetDlgItem(hDlg, nIDCtrl);
-    int nError = ERROR_INVALID_PARAMETER;
+    DWORD dwErrCode = ERROR_INVALID_PARAMETER;
 
     // Perform the conversion of the child text to a 32-bit hexa value
     if(hWndChild != NULL)
@@ -317,12 +317,12 @@ int DlgText2Hex64(HWND hDlg, UINT nIDCtrl, PLONGLONG pValue)
         GetWindowText(hWndChild, szText, _countof(szText));
     
         // Attempt to convert the value
-        nError = Text2Hex64(szText, pValue);
-        if(nError != ERROR_SUCCESS)
+        dwErrCode = Text2Hex64(szText, pValue);
+        if(dwErrCode != ERROR_SUCCESS)
             ShowConversionError(hDlg, hWndChild);
     }
 
-    return nError;
+    return dwErrCode;
 }
 
 void Hex2Text64(LPTSTR szBuffer, LONGLONG Value)
@@ -1745,7 +1745,7 @@ int StringToFileID(
     DWORD dwLength = 0;
     TCHAR OneChar;
     BYTE OneByte;
-    int nError = ERROR_SUCCESS;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
     // Is there drive letter?
     if(isalpha(szFileOrObjId[0]) && szFileOrObjId[1] == _T(':') && szFileOrObjId[2] == _T('\\'))
@@ -1770,7 +1770,7 @@ int StringToFileID(
         // Is the rest a file ID? (16 characters)
         case 0x10:
             dwLength = sizeof(ULONGLONG);
-            nError = Text2Hex64(szFileOrObjId, (PLONGLONG)pvFileObjId);
+            dwErrCode = Text2Hex64(szFileOrObjId, (PLONGLONG)pvFileObjId);
             break;
 
         case 0x20:
@@ -1778,7 +1778,7 @@ int StringToFileID(
             {
                 if(szFileOrObjId[0] > 0x80 || szFileOrObjId[1] > 0x80)
                 {
-                    nError = ERROR_BAD_FORMAT;
+                    dwErrCode = ERROR_BAD_FORMAT;
                     break;
                 }
 
@@ -1786,7 +1786,7 @@ int StringToFileID(
                 OneChar = *szFileOrObjId++;
                 if(CharToValue[OneChar] == 0xFF)
                 {
-                    nError = ERROR_BAD_FORMAT;
+                    dwErrCode = ERROR_BAD_FORMAT;
                     break;
                 }
                 OneByte = CharToValue[OneChar] << 0x04;
@@ -1795,7 +1795,7 @@ int StringToFileID(
                 OneChar = *szFileOrObjId++;
                 if(CharToValue[OneChar] == 0xFF)
                 {
-                    nError = ERROR_BAD_FORMAT;
+                    dwErrCode = ERROR_BAD_FORMAT;
                     break;
                 }
                 OneByte |= CharToValue[OneChar];
@@ -1805,14 +1805,14 @@ int StringToFileID(
             break;
 
         default:
-            nError = ERROR_BAD_FORMAT;
+            dwErrCode = ERROR_BAD_FORMAT;
             break;
     }
 
     // Give the output length
-    if(nError == ERROR_SUCCESS && pLength != NULL)
+    if(dwErrCode == ERROR_SUCCESS && pLength != NULL)
         *pLength = dwLength;
-    return nError;
+    return dwErrCode;
 }
 
 HMENU FindContextMenu(UINT nIDMenu)

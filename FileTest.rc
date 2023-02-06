@@ -110,8 +110,8 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 2,7,0,625
- PRODUCTVERSION 2,7,0,625
+ FILEVERSION 2,8,0,627
+ PRODUCTVERSION 2,8,0,627
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -128,13 +128,13 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Ladislav Zezula"
             VALUE "FileDescription", "Interactive File System API Test"
-            VALUE "FileVersion", "2, 7, 0, 625\0"
+            VALUE "FileVersion", "2, 8, 0, 627\0"
             VALUE "InternalName", "FileTest"
             VALUE "LegalCopyright", "Copyright © 2004 - 2023 Ladislav Zezula"
             VALUE "LegalTrademarks", "http://www.zezula.net"
             VALUE "OriginalFilename", "FileTest.exe"
             VALUE "ProductName", "FileTest"
-            VALUE "ProductVersion", "2, 7, 0, 625\0"
+            VALUE "ProductVersion", "2, 8, 0, 627\0"
         END
     END
     BLOCK "VarFileInfo"
@@ -309,7 +309,7 @@ CAPTION "NtCreateFile"
 FONT 8, "MS Shell Dlg", 0, 0, 0x0
 BEGIN
     GROUPBOX        " Input parameters of NtCreateFile ",IDC_MAIN_FRAME,7,7,293,256
-    CONTROL         "Relative File:",IDC_RELATIVE_FILE_HELP,"Button",BS_OWNERDRAW | BS_LEFT | WS_TABSTOP,12,20,60,14
+    CONTROL         "Relative File:",IDC_RELATIVE_FILE,"Button",BS_OWNERDRAW | BS_LEFT | WS_TABSTOP,12,20,60,14
     EDITTEXT        IDC_DIRECTORY_NAME,73,20,200,14,ES_AUTOHSCROLL
     PUSHBUTTON      "...",IDC_DIRECTORY_NAME_BROWSE,278,20,15,14,NOT WS_TABSTOP
     LTEXT           "File name:",IDC_STATIC,12,38,60,14,SS_CENTERIMAGE
@@ -831,6 +831,43 @@ BEGIN
     EDITTEXT        IDC_FILE_ATTRIBUTES,13,19,261,83,ES_MULTILINE | ES_AUTOHSCROLL | ES_READONLY
 END
 
+IDD_PAGE02_NTCREATE_RELFILE DIALOGEX 0, 0, 308, 224
+STYLE DS_SETFONT | DS_FIXEDSYS | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME
+CAPTION "Relative File for NtCreateFile"
+FONT 8, "MS Shell Dlg", 0, 0, 0x1
+BEGIN
+    GROUPBOX        " Input parameters of relative file for NtCreateFile ",IDC_MAIN_FRAME,7,7,293,189
+    LTEXT           "File name:",IDC_STATIC,12,20,60,14,SS_CENTERIMAGE
+    EDITTEXT        IDC_DIRECTORY_NAME,73,20,200,14,ES_AUTOHSCROLL
+    PUSHBUTTON      "...",IDC_FILE_NAME_BROWSE,278,20,15,14,NOT WS_TABSTOP
+    LTEXT           "ObjectAttr.Flags:",IDC_STATIC,12,38,60,14,SS_CENTERIMAGE
+    EDITTEXT        IDC_OBJ_ATTR_FLAGS,73,38,200,14,ES_AUTOHSCROLL
+    PUSHBUTTON      "...",IDC_OBJ_ATTR_FLAGS_BROWSE,278,38,15,14
+    LTEXT           "Desired access:",IDC_STATIC,12,56,60,14,SS_CENTERIMAGE
+    EDITTEXT        IDC_DESIRED_ACCESS,73,56,200,14,ES_AUTOHSCROLL
+    PUSHBUTTON      "...",IDC_DESIRED_ACCESS_BROWSE,278,56,15,14
+    LTEXT           "Allocation size:",IDC_STATIC,12,73,60,14,SS_CENTERIMAGE
+    EDITTEXT        IDC_ALLOCATION_SIZE,73,73,200,14,ES_AUTOHSCROLL
+    CONTROL         "",IDC_ALLOCATION_SIZE_UPDOWN,"msctls_updown32",UDS_ARROWKEYS | UDS_HOTTRACK,278,73,15,14
+    LTEXT           "File attributes:",IDC_STATIC,12,91,60,14,SS_CENTERIMAGE
+    EDITTEXT        IDC_FILE_ATTRIBUTES,73,91,200,14,ES_AUTOHSCROLL
+    PUSHBUTTON      "...",IDC_FILE_ATTRIBUTES_BROWSE,278,91,15,14
+    LTEXT           "Share access:",IDC_STATIC,12,110,60,14,SS_CENTERIMAGE
+    EDITTEXT        IDC_SHARE_ACCESS,73,110,200,14,ES_AUTOHSCROLL
+    PUSHBUTTON      "...",IDC_SHARE_ACCESS_BROWSE,278,110,15,14
+    LTEXT           "Create disposition:",IDC_STATIC,12,128,60,12,SS_CENTERIMAGE
+    COMBOBOX        IDC_CREATE_DISPOSITION,73,128,200,57,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Create options:",IDC_STATIC,12,144,60,14,SS_CENTERIMAGE
+    EDITTEXT        IDC_CREATE_OPTIONS,73,144,200,14,ES_AUTOHSCROLL
+    PUSHBUTTON      "...",IDC_CREATE_OPTIONS_BROWSE,278,144,15,14
+    LTEXT           "Extended attr:",IDC_STATIC,12,162,60,14,SS_CENTERIMAGE
+    EDITTEXT        IDC_EXTENDED_ATTRIBUTES,73,161,200,14,ES_AUTOHSCROLL
+    PUSHBUTTON      "...",IDC_EXTENDED_ATTRIBUTES_EDIT,278,161,15,14
+    CONTROL         "Use this relative file",IDC_USE_RELATIVE_FILE,"Button",BS_AUTOCHECKBOX | WS_GROUP | WS_TABSTOP,13,181,279,10
+    DEFPUSHBUTTON   "OK",IDOK,196,203,50,14,WS_GROUP
+    PUSHBUTTON      "Cancel",IDCANCEL,251,203,50,14
+END
+
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -1055,6 +1092,14 @@ BEGIN
         TOPMARGIN, 7
         BOTTOMMARGIN, 125
     END
+
+    IDD_PAGE02_NTCREATE_RELFILE, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 301
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 217
+    END
 END
 #endif    // APSTUDIO_INVOKED
 
@@ -1122,6 +1167,37 @@ BEGIN
     0
 END
 
+IDD_PAGE02_NTCREATE_RELFILE DLGINIT
+BEGIN
+    IDC_CREATE_DISPOSITION, 0x403, 53, 0
+0x305b, 0x205d, 0x4946, 0x454c, 0x535f, 0x5055, 0x5245, 0x4553, 0x4544, 
+0x2820, 0x6669, 0x6520, 0x6978, 0x7473, 0x2c73, 0x7220, 0x7065, 0x616c, 
+0x6563, 0x202c, 0x6c65, 0x6573, 0x6320, 0x6572, 0x7461, 0x2965, "\000" 
+    IDC_CREATE_DISPOSITION, 0x403, 43, 0
+0x315b, 0x205d, 0x4946, 0x454c, 0x4f5f, 0x4550, 0x204e, 0x6928, 0x2066, 
+0x7865, 0x7369, 0x7374, 0x202c, 0x706f, 0x6e65, 0x202c, 0x6c65, 0x6573, 
+0x6620, 0x6961, 0x296c, "\000" 
+    IDC_CREATE_DISPOSITION, 0x403, 55, 0
+0x325b, 0x205d, 0x4946, 0x454c, 0x435f, 0x4552, 0x5441, 0x2045, 0x6928, 
+0x2066, 0x6f6e, 0x2074, 0x7865, 0x7369, 0x7374, 0x202c, 0x7263, 0x6165, 
+0x6574, 0x6e20, 0x7765, 0x202c, 0x6c65, 0x6573, 0x6620, 0x6961, 0x296c, 
+"\000" 
+    IDC_CREATE_DISPOSITION, 0x403, 52, 0
+0x335b, 0x205d, 0x4946, 0x454c, 0x4f5f, 0x4550, 0x5f4e, 0x4649, 0x2820, 
+0x6669, 0x6520, 0x6978, 0x7473, 0x2c73, 0x6f20, 0x6570, 0x2c6e, 0x6520, 
+0x736c, 0x2065, 0x7263, 0x6165, 0x6574, 0x6e20, 0x7765, 0x0029, 
+    IDC_CREATE_DISPOSITION, 0x403, 52, 0
+0x345b, 0x205d, 0x4946, 0x454c, 0x4f5f, 0x4556, 0x5752, 0x4952, 0x4554, 
+0x2820, 0x6669, 0x6520, 0x6978, 0x7473, 0x2c73, 0x7220, 0x6365, 0x6572, 
+0x7461, 0x2c65, 0x6520, 0x736c, 0x2065, 0x6166, 0x6c69, 0x0029, 
+    IDC_CREATE_DISPOSITION, 0x403, 58, 0
+0x355b, 0x205d, 0x4946, 0x454c, 0x4f5f, 0x4556, 0x5752, 0x4952, 0x4554, 
+0x495f, 0x2046, 0x6928, 0x2066, 0x7865, 0x7369, 0x7374, 0x202c, 0x766f, 
+0x7265, 0x7277, 0x7469, 0x2c65, 0x6520, 0x736c, 0x2065, 0x7263, 0x6165, 
+0x6574, 0x0029, 
+    0
+END
+
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -1153,6 +1229,11 @@ BEGIN
     0
 END
 
+IDD_PAGE02_NTCREATE_RELFILE AFX_DIALOG_LAYOUT
+BEGIN
+    0
+END
+
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -1170,6 +1251,7 @@ BEGIN
     IDS_ENTER_FLAGS         "Enter Flags"
     IDS_SETTINGS            "Privileges and Settings"
     IDS_E_APPLY_SETTINGS    "Failed to apply new settings for %s.\n%s."
+    IDS_INTEGRITY_LEVEL     "Integrity Level"
     IDS_NOFILESELECTED      "No file selected."
     IDS_INVALIDACCESS       "Invalid access. Please, choose ANSI or Unicode access."
     IDS_OPERATIONCOMPLETE   "Operation complete, no errors."
@@ -1276,11 +1358,8 @@ BEGIN
     IDS_CUSTOM_VALUE        "Custom Value"
     IDS_DATA_LENGTH         "In/Out Data Length"
     IDS_IOCTL_FORMAT        "%s\n%u\n%s\n%s"
-END
-
-STRINGTABLE
-BEGIN
-    IDS_INTEGRITY_LEVEL     "Integrity Level"
+    IDS_EMPTY_RELATIVE_FILE_NAME "(Relative File of an Empty Name)"
+    IDS_NO_RELATIVE_FILE    "(No Relative File)"
 END
 
 #endif    // English (United States) resources

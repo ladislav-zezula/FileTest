@@ -101,6 +101,8 @@
 
 #define INTEGRITY_LEVEL_NONE        0xFFFFFFFF
 
+#define FILETEST_DATA_MAGIC         0x54534554454C4946ULL
+
 //-----------------------------------------------------------------------------
 // Structures
 
@@ -140,9 +142,42 @@ struct TApcEntry
     ULONG bHasIoStatus:1;                   // If true, the IO_STATUS_BLOCK is valid (otherwise it's OVERLAPED)
 };
 
+struct TOpenPacket
+{
+    TOpenPacket()
+    {
+        memset(this, 0, sizeof(TOpenPacket));
+    }
+
+    ~TOpenPacket()
+    {
+        Free();
+    }
+
+    void Free()
+    {
+        if(pvFileEa != NULL)
+            HeapFree(g_hHeap, 0, pvFileEa);
+        pvFileEa = NULL;
+    }
+
+    LARGE_INTEGER AllocationSize;
+    PFILE_FULL_EA_INFORMATION pvFileEa;
+    LPCSTR szId;                            // Const string with an ID, such as "RelativeFile" or "MainFile"
+    ULONG dwDesiredAccess;                  // Desired access
+    ULONG dwOA_Attributes;                  // OBJECT_ATTRIBUTES::Attributes
+    ULONG dwFlagsAndAttributes;
+    ULONG dwShareAccess;
+    ULONG dwCreateDisposition1;             // For CreateFile
+    ULONG dwCreateDisposition2;             // For NtCreateFile
+    ULONG dwCreateOptions;
+    ULONG cbFileEa;                         // Length of data in pvFileEa
+};
+
 // Structure used by main dialog to hold all its data
 struct TWindowData
 {
+    TAnchors * pAnchors;                    // Set of anchors
     HWND hDlg;                              // Handle to ourself
     HWND hWndPage;                          // HWND of the current page
 
@@ -175,32 +210,23 @@ struct TWindowData
 
 struct TFileTestData : public TWindowData
 {
-    TCHAR         szDirName[MAX_NT_PATH];   // Directory name
-    TCHAR         szFileName1[MAX_NT_PATH]; // First file name
-    TCHAR         szFileName2[MAX_NT_PATH]; // Second file name
-    TCHAR         szTemplate[MAX_NT_PATH];  // Template file for CreateFileW
-    TCHAR         szSectionName[MAX_NT_PATH];  // Section name for NtCreateSection
+    ULONGLONG     MagicHeader;              // FILETEST_DATA_MAGIC ('FILETEST')
+    LPTSTR        szDirName;                // Directory name
+    LPTSTR        szFileName1;              // First file name
+    LPTSTR        szFileName2;              // Second file name
+    LPTSTR        szTemplate;               // Template file for CreateFileW
+    LPTSTR        szSectionName;            // Section name for NtCreateSection
     HANDLE        hTransaction;             // Handle to the current transaction (NULL if none)
     HANDLE        hDirectory;               // Handle to the open directory
     HANDLE        hFile;                    // Handle to the open file
     HANDLE        hSection;                 // Section handle
     HANDLE        hSymLink;                 // Handle to the symbolic link
-    PFILE_FULL_EA_INFORMATION pFileEa;      // Extended attributes for NtCreate
-    ACCESS_MASK   dwDesiredAccess;
-    LONGLONG      AllocationSize;
-    ULONG         IsDefaultFileName1:1;     // TRUE: The file name was created as default
-    
-    ULONG         dwDesiredAccessRF;        // Desired Access for the relative file
-    ULONG         dwOpenOptionsRF;          // Create Options for the relative file
-    ULONG         dwShareAccessRF;          // Share Access for the relative file
 
-    ULONG         dwObjAttrFlags;           // ObjAttr.Attributes
-    ULONG         dwFlagsAndAttributes;
-    ULONG         dwShareAccess;
-    ULONG         dwCreateDisposition1;     // For CreateFile
-    ULONG         dwCreateDisposition2;     // For NtCreateFile
-    ULONG         dwCreateOptions;
-    ULONG         dwEaSize;                 // Length of data in pEaFile
+    TOpenPacket * pOP;                      // Current open packed (for LoadDialog / SaveDialog)
+    TOpenPacket   RelaFile;                 // Set of flags for NtCreateFile/CreateFileW for the relative file
+    TOpenPacket   OpenFile;                 // Set of flags for NtCreateFile/CreateFileW
+    ULONG         IsDefaultFileName1:1;     // TRUE: The file name was created as default
+    ULONG         UseRelativeFile:1;        // TRUE: Uset the relative file name (even if the name is empty)
 
     LARGE_INTEGER SectionOffset;            // Section Offset for NtCreateSection
     LARGE_INTEGER MaximumSize;              // Maximum size of section for NtCreateSection
@@ -233,6 +259,12 @@ struct TFileTestData : public TWindowData
     PREPARSE_DATA_BUFFER ReparseData;       // Buffer for reparse points
     ULONG         ReparseDataLength;        // Total length of reparse data buffer
     ULONG         ReparseDataValid;         // Available length of reparse data buffer
+
+    TCHAR         szBuffer1[MAX_NT_PATH];   // A buffer for directory name
+    TCHAR         szBuffer2[MAX_NT_PATH];   // A buffer for the first file name
+    TCHAR         szBuffer3[MAX_NT_PATH];   // A buffer for the second file name
+    TCHAR         szBuffer4[MAX_NT_PATH];   // A buffer for template file for CreateFileW
+    TCHAR         szBuffer5[MAX_NT_PATH];   // A buffer for section name for NtCreateSection
 };
 
 #define GetDialogData(hDlg) ((TFileTestData *)GetWindowLongPtr(hDlg, DWLP_USER))
@@ -397,9 +429,7 @@ extern TFlagInfo ShareAccessValues[];
 //-----------------------------------------------------------------------------
 // NTSTATUS conversion
 
-void BuildNtStatusTree();
 LPCTSTR NtStatus2Text(NTSTATUS Status);
-void FreeNtStatusTree();
 
 //-----------------------------------------------------------------------------
 // Utilities (in Utils.cpp)
@@ -430,7 +460,6 @@ ULONG GetEaEntrySize(PFILE_FULL_EA_INFORMATION EaInfo);
 
 DWORD TreeView_GetChildCount(HWND hTreeView, HTREEITEM hItem);
 LPARAM TreeView_GetItemParam(HWND hTreeView, HTREEITEM hItem);
-LPARAM TreeView_DeferItemText(HWND hTreeView, HTREEITEM hItem);
 HTREEITEM TreeView_SetTreeItem(HWND hTreeView, HTREEITEM hItem, LPCTSTR szText, LPARAM lParam);
 BOOL TreeView_EditLabel_ID(HWND hDlg, UINT nID);
 HTREEITEM InsertTreeItem(HWND hTreeView, HTREEITEM hParent, HTREEITEM hInsertAfter, LPCTSTR szText, PVOID pParam);
@@ -449,7 +478,7 @@ HWND AttachIconToEdit(HWND hDlg, HWND hWndChild, LPTSTR szIDIcon);
 void ResolveDynamicLoadedAPIs();
 void UnloadDynamicLoadedAPIs();
 
-BOOLEAN  IsNativeName(LPCTSTR szFileName);
+BOOLEAN  IsNativeName(LPCWSTR szFileName);
 
 NTSTATUS FileNameToUnicodeString(PUNICODE_STRING FileName, LPCTSTR szFileName);
 void     FreeFileNameString(PUNICODE_STRING FileName);
@@ -523,10 +552,6 @@ INT_PTR HelpAboutDialog(HWND hParent);
 INT_PTR FlagsDialog(HWND hWndParent, UINT nIDTitle, TFlagInfo * pFlags, DWORD & dwBitMask);
 INT_PTR FlagsDialog_OnControl(HWND hWndParent, UINT nIDTitle, TFlagInfo * pFlags, UINT nIDCtrl);
 
-INT_PTR ValuesDialog(HWND hWndParent, PDWORD pdwValue, UINT nIDTitle, TFlagInfo * pFlags);
-INT_PTR FlagsDialog(HWND hWndParent, LPDWORD pdwFlags, UINT nIDTitle, TFlagInfo * pFlags);
-INT_PTR FlagsDialog_OnControl(HWND hWndParent, UINT nIDCtrl, UINT nIDTitle, TFlagInfo * pFlags);
-INT_PTR FlagsDialog_PreArranged(HWND hWndParent, UINT nIDDialog, UINT nIDCtrl, TFlagInfo * pFlags);
 INT_PTR EaEditorDialog(HWND hParent, PFILE_FULL_EA_INFORMATION * pEaInfo);
 INT_PTR PrivilegesDialog(HWND hParent);
 INT_PTR ObjectIDActionDialog(HWND hParent);
@@ -547,10 +572,9 @@ INT_PTR FileTestDialog(HWND hParent, TFileTestData * pData);
 // Extended attributes dialog (shared functions)
 
 void ExtendedAttributesToListView(HWND hDlg, PFILE_FULL_EA_INFORMATION pFileEa);
-PFILE_FULL_EA_INFORMATION ListViewToExtendedAttributes(HWND hDlg, DWORD & dwOutEaLength);
+DWORD ListViewToExtendedAttributes(HWND hDlg, TOpenPacket & OpenPacket);
 INT_PTR CALLBACK ExtendedAttributesEditorProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);
 INT_PTR ExtendedAtributesEditorDialog(HWND hParent, TFileTestData * pData);
-INT_PTR FillUserDataDialog(HWND hParent, TFileTestData * pData);
 INT_PTR DataEditorDialog(HWND hParent, LPVOID BaseAddress, size_t ViewSize);
 
 //-----------------------------------------------------------------------------

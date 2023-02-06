@@ -168,16 +168,16 @@ static void UpdateDialog(HWND hDlg, TFileTestData * pData)
 static int SaveDialog1(HWND hDlg)
 {
     TFileTestData * pData = GetDialogData(hDlg);
-    int nError;
+    DWORD dwErrCode;
 
-    GetDlgItemText(hDlg, IDC_SECTION_NAME, pData->szSectionName, _countof(pData->szSectionName));
+    GetDlgItemText(hDlg, IDC_SECTION_NAME, pData->szSectionName, MAX_NT_PATH);
 
-    if((nError = DlgText2Hex64(hDlg, IDC_SECTION_SIZE, &pData->MaximumSize.QuadPart)) != ERROR_SUCCESS)
-        return nError;
-    if((nError = DlgText2Hex32(hDlg, IDC_DESIRED_ACCESS, &pData->dwSectDesiredAccess)) != ERROR_SUCCESS)
-        return nError;
-    if((nError = DlgText2Hex32(hDlg, IDC_ALLOCATION_ATTRIBUTES, &pData->dwSectAllocAttributes)) != ERROR_SUCCESS)
-        return nError;
+    if((dwErrCode = DlgText2Hex64(hDlg, IDC_SECTION_SIZE, &pData->MaximumSize.QuadPart)) != ERROR_SUCCESS)
+        return dwErrCode;
+    if((dwErrCode = DlgText2Hex32(hDlg, IDC_DESIRED_ACCESS, &pData->dwSectDesiredAccess)) != ERROR_SUCCESS)
+        return dwErrCode;
+    if((dwErrCode = DlgText2Hex32(hDlg, IDC_ALLOCATION_ATTRIBUTES, &pData->dwSectAllocAttributes)) != ERROR_SUCCESS)
+        return dwErrCode;
 
     pData->dwSectPageProtection = PageProtection2Hex(hDlg, IDC_PAGE_PROTECTION);
     return ERROR_SUCCESS;
@@ -186,18 +186,18 @@ static int SaveDialog1(HWND hDlg)
 static int SaveDialog2(HWND hDlg)
 {
     TFileTestData * pData = GetDialogData(hDlg);
-    int nError;
+    int dwErrCode;
 
-    if((nError = DlgText2HexPtr(hDlg, IDC_BASE_ADDRESS, (PDWORD_PTR)(&pData->pvSectionMappedView))) != ERROR_SUCCESS)
-        return nError;
-    if((nError = DlgText2HexPtr(hDlg, IDC_COMMIT_SIZE, (PDWORD_PTR)(&pData->cbSectCommitSize))) != ERROR_SUCCESS)
-        return nError;
-    if((nError = DlgText2Hex64(hDlg, IDC_SECTION_OFFSET, &pData->SectionOffset.QuadPart)) != ERROR_SUCCESS)
-        return nError;
-    if((nError = DlgText2HexPtr(hDlg, IDC_VIEW_SIZE, (PDWORD_PTR)(&pData->cbSectViewSize))) != ERROR_SUCCESS)
-        return nError;
-    if((nError = DlgText2Hex32(hDlg, IDC_ALLOCATION_TYPE, &pData->dwSectAllocType)) != ERROR_SUCCESS)
-        return nError;
+    if((dwErrCode = DlgText2HexPtr(hDlg, IDC_BASE_ADDRESS, (PDWORD_PTR)(&pData->pvSectionMappedView))) != ERROR_SUCCESS)
+        return dwErrCode;
+    if((dwErrCode = DlgText2HexPtr(hDlg, IDC_COMMIT_SIZE, (PDWORD_PTR)(&pData->cbSectCommitSize))) != ERROR_SUCCESS)
+        return dwErrCode;
+    if((dwErrCode = DlgText2Hex64(hDlg, IDC_SECTION_OFFSET, &pData->SectionOffset.QuadPart)) != ERROR_SUCCESS)
+        return dwErrCode;
+    if((dwErrCode = DlgText2HexPtr(hDlg, IDC_VIEW_SIZE, (PDWORD_PTR)(&pData->cbSectViewSize))) != ERROR_SUCCESS)
+        return dwErrCode;
+    if((dwErrCode = DlgText2Hex32(hDlg, IDC_ALLOCATION_TYPE, &pData->dwSectAllocType)) != ERROR_SUCCESS)
+        return dwErrCode;
     pData->dwSectWin32Protect = PageProtection2Hex(hDlg, IDC_WIN32_PROTECTION);
     return ERROR_SUCCESS;
 }

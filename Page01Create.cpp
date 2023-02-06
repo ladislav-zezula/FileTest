@@ -62,24 +62,24 @@ TFlagInfo ShareAccessValues[] =
 //-----------------------------------------------------------------------------
 // Helper functions
 
-static int SaveDialog(HWND hDlg)
+static DWORD SaveDialog(HWND hDlg)
 {
     TFileTestData * pData = GetDialogData(hDlg);
     HWND hCombo = GetDlgItem(hDlg, IDC_CREATE_DISPOSITION);
-    int nError = ERROR_SUCCESS;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
-    GetDlgItemText(hDlg, IDC_DIRECTORY_NAME, pData->szDirName, _countof(pData->szDirName));
-    GetDlgItemText(hDlg, IDC_FILE_NAME, pData->szFileName1, _countof(pData->szFileName1));
-    GetDlgItemText(hDlg, IDC_TEMPLATE_FILE, pData->szTemplate, _countof(pData->szTemplate));
+    GetDlgItemText(hDlg, IDC_DIRECTORY_NAME, pData->szDirName, MAX_NT_PATH);
+    GetDlgItemText(hDlg, IDC_FILE_NAME, pData->szFileName1, MAX_NT_PATH);
+    GetDlgItemText(hDlg, IDC_TEMPLATE_FILE, pData->szTemplate, MAX_NT_PATH);
 
-    if((nError = DlgText2Hex32(hDlg, IDC_DESIRED_ACCESS, &pData->dwDesiredAccess)) != ERROR_SUCCESS)
-        return nError;
-    if((nError = DlgText2Hex32(hDlg, IDC_SHARE_ACCESS, &pData->dwShareAccess)) != ERROR_SUCCESS)
-        return nError;
-    if((nError = DlgText2Hex32(hDlg, IDC_FILE_ATTRIBUTES, &pData->dwFlagsAndAttributes)) != ERROR_SUCCESS)
-        return nError;
+    if((dwErrCode = DlgText2Hex32(hDlg, IDC_DESIRED_ACCESS, &pData->OpenFile.dwDesiredAccess)) != ERROR_SUCCESS)
+        return dwErrCode;
+    if((dwErrCode = DlgText2Hex32(hDlg, IDC_SHARE_ACCESS, &pData->OpenFile.dwShareAccess)) != ERROR_SUCCESS)
+        return dwErrCode;
+    if((dwErrCode = DlgText2Hex32(hDlg, IDC_FILE_ATTRIBUTES, &pData->OpenFile.dwFlagsAndAttributes)) != ERROR_SUCCESS)
+        return dwErrCode;
 
-    pData->dwCreateDisposition1 = ComboBox_GetCurSel(hCombo) + 1;
+    pData->OpenFile.dwCreateDisposition1 = ComboBox_GetCurSel(hCombo) + 1;
     pData->bUseTransaction      = (IsDlgButtonChecked(hDlg, IDC_TRANSACTED) == BST_CHECKED);
     return ERROR_SUCCESS;
 }
@@ -166,7 +166,7 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
     // Initialize the combo box with operations
     InitDialogControls(hDlg, MAKEINTRESOURCE(IDD_PAGE01_CREATE));
     if(hCombo != NULL)
-        ComboBox_SetCurSel(hCombo, pData->dwCreateDisposition1 - 1);
+        ComboBox_SetCurSel(hCombo, pData->OpenFile.dwCreateDisposition1 - 1);
 
     // If we have a tooltip window, init tooltips 
     g_Tooltip.AddToolTip(hDlg, IDC_DESIRED_ACCESS,  AccessMaskValues);
@@ -190,7 +190,7 @@ static int OnSetActive(HWND hDlg)
     ConvertToWin32Name(hDlg, IDC_DIRECTORY_NAME);
     
     // Set file name
-    if((pData->dwCreateOptions & FILE_OPEN_BY_FILE_ID) == 0)
+    if((pData->OpenFile.dwCreateOptions & FILE_OPEN_BY_FILE_ID) == 0)
     {
         SetDlgItemText(hDlg, IDC_FILE_NAME, pData->szFileName1);
         ConvertToWin32Name(hDlg, IDC_FILE_NAME);
@@ -201,9 +201,9 @@ static int OnSetActive(HWND hDlg)
     ConvertToWin32Name(hDlg, IDC_TEMPLATE_FILE);
 
     // Set the various create options
-    Hex2DlgText32(hDlg, IDC_DESIRED_ACCESS, pData->dwDesiredAccess);
-    Hex2DlgText32(hDlg, IDC_FILE_ATTRIBUTES, pData->dwFlagsAndAttributes);
-    Hex2DlgText32(hDlg, IDC_SHARE_ACCESS, pData->dwShareAccess);
+    Hex2DlgText32(hDlg, IDC_DESIRED_ACCESS, pData->OpenFile.dwDesiredAccess);
+    Hex2DlgText32(hDlg, IDC_FILE_ATTRIBUTES, pData->OpenFile.dwFlagsAndAttributes);
+    Hex2DlgText32(hDlg, IDC_SHARE_ACCESS, pData->OpenFile.dwShareAccess);
 
     // Enable/disable transaction
     bEnabled = (pfnCreateFileTransacted != NULL && IsHandleValid(pData->hTransaction));
@@ -381,11 +381,11 @@ static int OnCreateFileClick(HWND hDlg)
             }
 
             pData->hFile = CreateFile(pData->szFileName1,
-                                      pData->dwDesiredAccess,
-                                      pData->dwShareAccess,
+                                      pData->OpenFile.dwDesiredAccess,
+                                      pData->OpenFile.dwShareAccess,
                                       NULL,
-                                      pData->dwCreateDisposition1,
-                                      pData->dwFlagsAndAttributes,
+                                      pData->OpenFile.dwCreateDisposition1,
+                                      pData->OpenFile.dwFlagsAndAttributes,
                                       hTemplateFile);
         }
         else
@@ -397,11 +397,11 @@ static int OnCreateFileClick(HWND hDlg)
             }
 
             pData->hFile = pfnCreateFileTransacted(pData->szFileName1,
-                                                   pData->dwDesiredAccess,
-                                                   pData->dwShareAccess,
+                                                   pData->OpenFile.dwDesiredAccess,
+                                                   pData->OpenFile.dwShareAccess,
                                                    NULL,
-                                                   pData->dwCreateDisposition1,
-                                                   pData->dwFlagsAndAttributes,
+                                                   pData->OpenFile.dwCreateDisposition1,
+                                                   pData->OpenFile.dwFlagsAndAttributes,
                                                    hTemplateFile,
                                                    pData->hTransaction,
                                                    NULL,

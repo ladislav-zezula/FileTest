@@ -1642,7 +1642,7 @@ static LRESULT WINAPI WindowProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPa
 int RegisterDataEditor(HINSTANCE hInst)
 {
     WNDCLASSEX wc;
-    int nError = ERROR_SUCCESS;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
     // Register the class
     wc.cbSize = sizeof(WNDCLASSEX);
@@ -1659,9 +1659,9 @@ int RegisterDataEditor(HINSTANCE hInst)
         wc.hbrBackground = NULL;
         wc.lpszClassName = szDataEditClassName;
         if(!RegisterClassEx(&wc))
-            nError = GetLastError();
+            dwErrCode = GetLastError();
     }
-    return nError;
+    return dwErrCode;
 }
 
 // Applies the new data
