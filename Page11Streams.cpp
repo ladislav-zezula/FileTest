@@ -706,8 +706,8 @@ static NTSTATUS StreamsToListView(
     // Example: mklink.exe C:\sample_file.exe:byebye \??\nul
     //
 
-    dwFlagsAndAttributes |= (pData->dwFlagsAndAttributes & FILE_FLAG_OPEN_REPARSE_POINT);
-    dwFlagsAndAttributes |= (pData->dwCreateOptions & FILE_OPEN_REPARSE_POINT);
+    dwFlagsAndAttributes |= (pData->OpenFile.dwFlagsAndAttributes & FILE_FLAG_OPEN_REPARSE_POINT);
+    dwFlagsAndAttributes |= (pData->OpenFile.dwCreateOptions & FILE_OPEN_REPARSE_POINT);
 
     // Iterate over all file streams and show them/save them
     for(;;)
@@ -822,7 +822,7 @@ static int OnSetActive(HWND hDlg)
     TFileTestData * pData = GetDialogData(hDlg);
     BOOL bEnabled;
 
-    if((pData->dwCreateOptions & FILE_OPEN_BY_FILE_ID) == 0)
+    if((pData->OpenFile.dwCreateOptions & FILE_OPEN_BY_FILE_ID) == 0)
     {
         SetDlgItemText(hDlg, IDC_FILE_NAME, pData->szFileName1);
         ConvertToWin32Name(hDlg, IDC_FILE_NAME);
@@ -955,7 +955,7 @@ static int OnImportStreams(HWND hDlg)
     HANDLE FileHandle = NULL;
     DWORD cbFileEa = 0;
     HWND hListView = GetDlgItem(hDlg, IDC_STREAMS_LIST);
-    int nError = ERROR_SUCCESS;
+    DWORD dwErrCode = ERROR_SUCCESS;
 
     // Delete all items from the list view
     ListView_DeleteAllItems(hListView);
@@ -999,7 +999,7 @@ static int OnImportStreams(HWND hDlg)
     if(NT_SUCCESS(Status))
     {
         Status = NtDeleteFile(&ObjAttr);
-        if(Status == STATUS_OBJECT_NAME_NOT_FOUND || nError == STATUS_OBJECT_PATH_INVALID)
+        if(Status == STATUS_OBJECT_NAME_NOT_FOUND || dwErrCode == STATUS_OBJECT_PATH_INVALID)
             Status = STATUS_SUCCESS;
     }
 
@@ -1057,7 +1057,7 @@ static int OnImportStreams(HWND hDlg)
         pStream = CONTAINING_RECORD(StreamLinks.Flink, TFileStream, Entry);
 
         // Insert the stream to the listview
-        if(nError == ERROR_SUCCESS)
+        if(dwErrCode == ERROR_SUCCESS)
         {
             InsertStreamToListView(hListView, pStream->szStreamName,
                                               pStream->pbStreamData,

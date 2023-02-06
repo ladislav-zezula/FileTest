@@ -2583,7 +2583,7 @@ static int CopyItemToClipboard(HWND hDlg, TStructMember * pMemberInfo)
     HGLOBAL hMem = NULL;
     LPTSTR szClipboard = NULL;
     size_t cbMemberData = 0;
-    int nError = ERROR_CAN_NOT_COMPLETE;
+    DWORD dwErrCode = ERROR_CAN_NOT_COMPLETE;
 
     // Get the binary length of the data
     if(pMemberInfo->nDataType == TYPE_WNAME_L32B)
@@ -2609,7 +2609,7 @@ static int CopyItemToClipboard(HWND hDlg, TStructMember * pMemberInfo)
             {
                 EmptyClipboard();
                 if(SetClipboardData(CF_UNICODETEXT, hMem))
-                    nError = ERROR_SUCCESS;
+                    dwErrCode = ERROR_SUCCESS;
                 CloseClipboard();
             }
         }
@@ -2617,7 +2617,7 @@ static int CopyItemToClipboard(HWND hDlg, TStructMember * pMemberInfo)
         GlobalFree(hMem);
     }
 
-    return nError;
+    return dwErrCode;
 }
 
 static bool FileIdHasFileName(HWND hTreeView, HTREEITEM hItem)
@@ -3074,7 +3074,7 @@ static int OnDoubleClick(HWND hDlg, LPNMHDR pNMHDR)
         szFileName = CreateFullName(pData->szFileName1, (LPWSTR)pMemberInfo->pbDataPtr, FileNameLength);
         if(szFileName != NULL)
         {
-            StringCchCopy(pData->szFileName1, _countof(pData->szFileName1), szFileName);
+            StringCchCopy(pData->szFileName1, MAX_NT_PATH, szFileName);
             TabCtrl_SelectPageByID(hTabCtrl, MAKEINTRESOURCE(IDD_PAGE02_NTCREATE));
             delete [] szFileName;
         }

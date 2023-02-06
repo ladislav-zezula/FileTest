@@ -153,7 +153,7 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
 
     // Save the pointer to TFileTestData
     if(lParam != 0)
-        ExtendedAttributesToListView(hDlg, pData->pFileEa);
+        ExtendedAttributesToListView(hDlg, pData->OpenFile.pvFileEa);
 
     // Initialize the listview
     UpdateDialogButtons(hDlg);
@@ -306,13 +306,10 @@ static BOOL OnSaveDialog(HWND hDlg)
     if(pData != NULL)
     {
         // Delete the existing EAs
-        if(pData->pFileEa != NULL)
-            HeapFree(g_hHeap, 0, pData->pFileEa);
-        pData->pFileEa = NULL;
-        pData->dwEaSize = 0;
+        pData->OpenFile.Free();
 
         // Create new extended attributes
-        pData->pFileEa = ListViewToExtendedAttributes(hDlg, pData->dwEaSize);
+        ListViewToExtendedAttributes(hDlg, pData->OpenFile);
     }
     return TRUE;
 }
@@ -425,12 +422,12 @@ void ExtendedAttributesToListView(HWND hDlg, PFILE_FULL_EA_INFORMATION pFileEa)
     }
 }
 
-PFILE_FULL_EA_INFORMATION ListViewToExtendedAttributes(HWND hDlg, DWORD & dwOutEaLength)
+DWORD ListViewToExtendedAttributes(HWND hDlg, TOpenPacket & OpenPacket)
 {
     PFILE_FULL_EA_INFORMATION pFileEaPtr;
     PFILE_FULL_EA_INFORMATION pEaItem;
-    PFILE_FULL_EA_INFORMATION pFileEa = NULL;
-    DWORD dwEaLength = 0;
+    PFILE_FULL_EA_INFORMATION pvFileEa = NULL;
+    DWORD cbFileEa = 0;
     HWND hListView = GetDlgItem(hDlg, IDC_EA_LIST);
     int nItemCount = ListView_GetItemCount(hListView);
     int nIndex;
@@ -442,14 +439,14 @@ PFILE_FULL_EA_INFORMATION ListViewToExtendedAttributes(HWND hDlg, DWORD & dwOutE
         if(pEaItem != NULL)
         {
             // The size of the previous EA item must be aligned to 4 bytes
-            dwEaLength = ALIGN_TO_SIZE(dwEaLength, sizeof(DWORD));
-            dwEaLength = dwEaLength + FIELD_OFFSET(FILE_FULL_EA_INFORMATION, EaName) + pEaItem->EaNameLength + 1 + pEaItem->EaValueLength;
+            cbFileEa = ALIGN_TO_SIZE(cbFileEa, sizeof(DWORD));
+            cbFileEa = cbFileEa + FIELD_OFFSET(FILE_FULL_EA_INFORMATION, EaName) + pEaItem->EaNameLength + 1 + pEaItem->EaValueLength;
         }
     }
 
     // Allocate buffer for the complete EA list and copy the EAs to that buffer
-    pFileEaPtr = pFileEa = (PFILE_FULL_EA_INFORMATION)HeapAlloc(g_hHeap, HEAP_ZERO_MEMORY, dwEaLength);
-    if(pFileEa != NULL)
+    pFileEaPtr = pvFileEa = (PFILE_FULL_EA_INFORMATION)HeapAlloc(g_hHeap, HEAP_ZERO_MEMORY, cbFileEa);
+    if(pvFileEa != NULL)
     {
         for(nIndex = 0; nIndex < nItemCount; nIndex++)
         {
@@ -463,15 +460,18 @@ PFILE_FULL_EA_INFORMATION ListViewToExtendedAttributes(HWND hDlg, DWORD & dwOutE
                 pFileEaPtr = (PFILE_FULL_EA_INFORMATION)((LPBYTE)pFileEaPtr + pFileEaPtr->NextEntryOffset);
             }
         }
+
+        // Give the EAs tothe caller
+        OpenPacket.pvFileEa = pvFileEa;
+        OpenPacket.cbFileEa = cbFileEa;
+        return ERROR_SUCCESS;
     }
     else
     {
-        dwEaLength = 0;
+        OpenPacket.pvFileEa = NULL;
+        OpenPacket.cbFileEa = 0;
+        return ERROR_NOT_ENOUGH_MEMORY;
     }
-
-    // Give the EAs tothe caller
-    dwOutEaLength = dwEaLength;
-    return pFileEa;
 }
 
 // Common dialog proc, shared by Page08Ea.cpp

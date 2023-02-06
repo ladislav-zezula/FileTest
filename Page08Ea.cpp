@@ -145,25 +145,23 @@ static int OnQueryEa(HWND hDlg)
 
 static int OnSetEa(HWND hDlg)
 {
-    PFILE_FULL_EA_INFORMATION pFileEa = NULL;
     TFileTestData * pData = GetDialogData(hDlg);
     IO_STATUS_BLOCK IoStatus = {0};
+    TOpenPacket OpenFile;
     NTSTATUS Status = STATUS_SUCCESS;
-    ULONG dwEaLength = 0;
 
     // Get the EA buffer and size
-    pFileEa = ListViewToExtendedAttributes(hDlg, dwEaLength);
-    if(pFileEa != NULL)
+    if(ListViewToExtendedAttributes(hDlg, OpenFile) == ERROR_SUCCESS)
     {
         // Set the extended attributes to the file
         Status = NtSetEaFile(pData->hFile,
                             &IoStatus,
-                             pFileEa,
-                             dwEaLength);
+                             OpenFile.pvFileEa,
+                             OpenFile.cbFileEa);
 
         // Set the result to the dialog
         SetResultInfo(hDlg, RSI_NTSTATUS | RSI_INFORMATION, Status, &IoStatus);
-        HeapFree(g_hHeap, 0, pFileEa);
+        OpenFile.Free();
     }
     return TRUE;
 }

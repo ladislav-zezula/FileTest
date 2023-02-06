@@ -46,13 +46,13 @@
 #define IDD_OBJECT_GUID_HELP            143
 #define IDR_ACL_TYPE_MENU               144
 #define IDD_SETTINGS01                  144
-#define IDS_INTEGRITY_LEVEL             145
 #define IDR_DELETE_OBJECT_MENU          145
 #define IDD_SETTINGS02                  145
 #define IDR_DELETE_FILE_MENU            146
 #define IDD_SETTINGS03                  146
 #define IDD_NT_ATTRIBUTES               147
 #define IDD_NT_ATTRIBUTES1              148
+#define IDD_PAGE02_NTCREATE_RELFILE     149
 #define IDC_DESIRED_ACCESS_BROWSE       1002
 #define IDC_FILE_ATTRIBUTES_BROWSE      1003
 #define IDC_SHARE_ACCESS_BROWSE         1004
@@ -109,7 +109,7 @@
 #define IDC_CREATE_OPTIONS              1055
 #define IDC_TEMPLATE_FILE               1055
 #define IDC_TEMPLATE_FILE_BROWSE        1056
-#define IDC_RELATIVE_FILE_HELP          1056
+#define IDC_RELATIVE_FILE               1056
 #define IDC_INFORMATION                 1058
 #define IDC_OBJ_ATTR_FLAGS              1060
 #define IDC_EXTENDED_ATTRIBUTES         1061
@@ -326,6 +326,7 @@
 #define IDC_DELETE_OBJECT_ID            1257
 #define IDC_NT_DELETE_FILE              1258
 #define IDC_ENCRYPT_FILE                1259
+#define IDC_USE_RELATIVE_FILE           1259
 #define IDC_DECRYPT_FILE                1260
 #define IDS_FLUSH_FILE_BUFFERS_TIP      4000
 #define IDS_FLAGS_AND_ATTRIBUTES        4001
@@ -335,6 +336,7 @@
 #define IDS_ENTER_FLAGS                 4005
 #define IDS_SETTINGS                    4006
 #define IDS_E_APPLY_SETTINGS            4007
+#define IDS_INTEGRITY_LEVEL             4008
 #define IDS_NOFILESELECTED              4010
 #define IDS_INVALIDACCESS               4011
 #define IDS_OPERATIONCOMPLETE           4012
@@ -420,6 +422,8 @@
 #define IDS_CUSTOM_VALUE                4088
 #define IDS_DATA_LENGTH                 4089
 #define IDS_IOCTL_FORMAT                4090
+#define IDS_EMPTY_RELATIVE_FILE_NAME    4091
+#define IDS_NO_RELATIVE_FILE            4092
 #define ID_EDIT_LABEL                   40001
 #define ID_NEW_ACE_BEFORE               40008
 #define ID_NEW_ACE_AFTER                40009
@@ -450,9 +454,9 @@
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        149
+#define _APS_NEXT_RESOURCE_VALUE        152
 #define _APS_NEXT_COMMAND_VALUE         40065
-#define _APS_NEXT_CONTROL_VALUE         1259
+#define _APS_NEXT_CONTROL_VALUE         1260
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

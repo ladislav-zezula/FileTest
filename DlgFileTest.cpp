@@ -16,6 +16,7 @@
 
 #define SC_HELP_ABOUT (SC_CLOSE + 0x800)
 
+static SIZE InitialDialogSize = {0, 0};
 static BOOL bDisableCloseDialog = FALSE;
 
 //-----------------------------------------------------------------------------
@@ -199,19 +200,16 @@ static NTSTATUS SafeInitializeCriticalSection(CRITICAL_SECTION & Section)
 
 static void InitializeTabControl(HWND hDlg, TWindowData * pData)
 {
-    PROPSHEETHEADER psh;
+    PROPSHEETHEADER psh = {sizeof(PROPSHEETHEADER)};
     PROPSHEETPAGE psp[13];
     TCHAR szAppTitle[256];
     HWND hTabCtrl = GetDlgItem(hDlg, IDC_TAB);
-    int nStartPage = 0;
     int nPages = 0;
 
     // Get the title of FileTest application
     GetFileTestAppTitle(szAppTitle, _countof(szAppTitle));
 
     // Fill the property sheet header
-    ZeroMemory(&psh, sizeof(PROPSHEETHEADER));
-    psh.dwSize     = sizeof(PROPSHEETHEADER);
     psh.dwFlags    = PSH_PROPSHEETPAGE | PSH_USEICONID | PSH_NOAPPLYNOW | PSH_NOCONTEXTHELP | PSH_MODELESS;
     psh.hwndParent = hDlg;
     psh.hInstance  = g_hInst;
@@ -229,7 +227,6 @@ static void InitializeTabControl(HWND hDlg, TWindowData * pData)
         psp[nPages].pszTemplate = MAKEINTRESOURCE(IDD_PAGE00_TRANSACTION);
         psp[nPages].pfnDlgProc  = PageProc00;
         psp[nPages].lParam      = (LPARAM)pData;
-        nStartPage++;
         nPages++;
     }
 
@@ -241,8 +238,7 @@ static void InitializeTabControl(HWND hDlg, TWindowData * pData)
     psp[nPages].pszTemplate = MAKEINTRESOURCE(IDD_PAGE01_CREATE);
     psp[nPages].pfnDlgProc  = PageProc01;
     psp[nPages].lParam      = (LPARAM)pData;
-    psh.nStartPage = nPages;
-    nPages++;
+    psh.nStartPage = nPages++;
 
     // Fill the "NtCreateFile"
     // Note: If the file name looks like an NT name, go to NtCreateFile page
@@ -335,9 +331,6 @@ static void InitializeTabControl(HWND hDlg, TWindowData * pData)
     psp[nPages].pszTemplate = MAKEINTRESOURCE(IDD_PAGE10_LINKS);
     psp[nPages].pfnDlgProc  = PageProc10;
     psp[nPages].lParam      = (LPARAM)pData;
-#ifdef _DEBUG
-//  nStartPage = nPages;
-#endif
     nPages++;
 
     // Fill the "Streams" page.
@@ -361,7 +354,6 @@ static void InitializeTabControl(HWND hDlg, TWindowData * pData)
     nPages++;
 
     // Set the number of pages and start page
-    psh.nStartPage = nStartPage;
     psh.nPages = nPages;
 
     // Create Tab Control
@@ -541,9 +533,9 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
 {
     TWindowData * pData = (TWindowData *)lParam;
     DWORD dwThreadId;
+    RECT rectDialog;
 
     // Initialize dialog data
-    ZeroMemory(pData, sizeof(TWindowData));
     SafeInitializeCriticalSection(pData->ApcLock);
     InitializeListHead(&pData->ApcList);
     pData->hDlg = hDlg;
@@ -558,6 +550,9 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
     //
 
     FixDialogToOriginalSize(hDlg, IDD_FILE_TEST);
+    GetWindowRect(hDlg, &rectDialog);
+    InitialDialogSize.cx = (rectDialog.right - rectDialog.left);
+    InitialDialogSize.cy = (rectDialog.bottom - rectDialog.top);
 
     // Create the tooltip window
     g_Tooltip.Initialize(g_hInst, hDlg);
@@ -626,8 +621,8 @@ static void OnGetMinMaxInfo(HWND /* hDlg */, LPARAM lParam)
 {
     LPMINMAXINFO pmmi = (LPMINMAXINFO)lParam;
 
-    pmmi->ptMinTrackSize.x = 490;
-    pmmi->ptMinTrackSize.y = 700;
+    pmmi->ptMinTrackSize.x = InitialDialogSize.cx;
+    pmmi->ptMinTrackSize.y = InitialDialogSize.cy;
 }
 
 static void OnTimerCheckMouse(HWND hDlg)
@@ -905,12 +900,13 @@ int NtUseFileId(HWND hDlg, LPCTSTR szFileId)
     pData->szDirName[1] = szFileId[1];
     pData->szDirName[2] = szFileId[2];
     pData->szDirName[3] = 0;
+    pData->UseRelativeFile = FALSE;
 
     // Copy the file id
-    StringCchCopy(pData->szFileName1, _countof(pData->szFileName1), szPlainName);
+    StringCchCopy(pData->szFileName1, MAX_NT_PATH, szPlainName);
 
     // Set the appropriate flags
-    pData->dwCreateOptions = FILE_SYNCHRONOUS_IO_NONALERT | FILE_OPEN_BY_FILE_ID;
+    pData->OpenFile.dwCreateOptions = FILE_SYNCHRONOUS_IO_NONALERT | FILE_OPEN_BY_FILE_ID;
 
     // Switch to the "NtCreateFile" tab
     TabCtrl_SelectPageByID(hTabCtrl, MAKEINTRESOURCE(IDD_PAGE02_NTCREATE));

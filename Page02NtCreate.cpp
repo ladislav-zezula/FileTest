@@ -11,8 +11,6 @@
 #include "FileTest.h"
 #include "resource.h"
 
-#define FILE_ID_SIZE 16
-
 //-----------------------------------------------------------------------------
 // Flags
 
@@ -121,6 +119,41 @@ static TFlagInfo ObjAttrFlagsValues[] =
 //-----------------------------------------------------------------------------
 // Local functions
 
+static TFileTestData * IsPropSheetPageDialog(HWND hDlg)
+{
+    TFileTestData * pData;
+
+    if((pData = GetDialogData(hDlg)) != NULL)
+    {
+        return (pData->pOP == &pData->OpenFile) ? pData : NULL;
+    }
+    return NULL;
+}
+
+static TAnchors * GetDialogAnchors(HWND hDlg)
+{
+    TFileTestData * pData;
+
+    if((pData = GetDialogData(hDlg)) != NULL)
+    {
+        return pData->pAnchors;
+    }
+    return NULL;
+}
+
+static void SetDialogAnchors(HWND hDlg, TAnchors * pAnchors)
+{
+    TFileTestData * pData;
+
+    if((pData = GetDialogData(hDlg)) != NULL)
+    {
+        // Free old anchors, if any
+        if(pData->pAnchors != NULL)
+            delete pData->pAnchors;
+        pData->pAnchors = pAnchors;
+    }
+}
+
 static NTSTATUS MyCreateDirectory(TFileTestData * pData, POBJECT_ATTRIBUTES pObjAttr, PIO_STATUS_BLOCK pIoStatus)
 {
     NTSTATUS Status;
@@ -189,138 +222,224 @@ static int QuickAccessSelection(HWND hDlg, DWORD dwDesiredAccess, DWORD dwShareA
     return TRUE;
 }
 
-static int SaveDialog(HWND hDlg)
+static void EAttr2DlgText(HWND hDlg, UINT nIDCtrl, TOpenPacket * pOP)
+{
+    TCHAR szEaInfo[128];
+
+    // Update the info about extended attributes
+    rsprintf(szEaInfo, _countof(szEaInfo), IDS_EA_INFO, pOP->pvFileEa, pOP->cbFileEa);
+    SetDlgItemText(hDlg, nIDCtrl, szEaInfo);
+}
+
+static BOOL UpdateRelativeFileHint(HWND hDlg)
 {
     TFileTestData * pData = GetDialogData(hDlg);
-    HWND hCombo = GetDlgItem(hDlg, IDC_CREATE_DISPOSITION);
-    int nError;
+    HWND hWndChild;
+    UINT nID;
 
-    GetDlgItemText(hDlg, IDC_DIRECTORY_NAME, pData->szDirName, _countof(pData->szDirName));
-    GetDlgItemText(hDlg, IDC_FILE_NAME, pData->szFileName1, _countof(pData->szFileName1));
+    // Does the "relative file" edit field exist?
+    if((hWndChild = GetDlgItem(hDlg, IDC_DIRECTORY_NAME)) != NULL)
+    {
+        // Is there no text?
+        if(GetWindowTextLength(hWndChild) == 0)
+        {
+            nID = (pData->UseRelativeFile) ? IDS_EMPTY_RELATIVE_FILE_NAME : IDS_NO_RELATIVE_FILE;
+            SetEditCueBanner(hWndChild, nID);
+        }
+    }
+    return TRUE;
+}
 
-    if((nError = DlgText2Hex32(hDlg, IDC_OBJ_ATTR_FLAGS, &pData->dwObjAttrFlags)) != ERROR_SUCCESS)
-        return nError;
-    if((nError = DlgText2Hex32(hDlg, IDC_DESIRED_ACCESS, &pData->dwDesiredAccess)) != ERROR_SUCCESS)
-        return nError;
-    if((nError = DlgText2Hex32(hDlg, IDC_FILE_ATTRIBUTES, &pData->dwFlagsAndAttributes)) != ERROR_SUCCESS)
-        return nError;
-    if((nError = DlgText2Hex32(hDlg, IDC_SHARE_ACCESS, &pData->dwShareAccess)) != ERROR_SUCCESS)
-        return nError;
-    if((nError = DlgText2Hex32(hDlg, IDC_CREATE_OPTIONS, &pData->dwCreateOptions)) != ERROR_SUCCESS)
-        return nError;
-    if((nError = DlgText2Hex64(hDlg, IDC_ALLOCATION_SIZE, &pData->AllocationSize)) != ERROR_SUCCESS)
-        return nError;
+static BOOL UpdateUseRelativeFile(HWND hDlg)
+{
+    TFileTestData * pData = GetDialogData(hDlg);
+    HWND hWndChild;
 
-    pData->dwCreateDisposition2 = ComboBox_GetCurSel(hCombo);
-    pData->bUseTransaction      = (IsDlgButtonChecked(hDlg, IDC_TRANSACTED) == BST_CHECKED);
+    if((hWndChild = GetDlgItem(hDlg, IDC_USE_RELATIVE_FILE)) != NULL)
+        pData->UseRelativeFile = (Button_GetCheck(hWndChild) == BST_CHECKED);
+    return UpdateRelativeFileHint(hDlg);
+}
+
+static void LoadDialog(HWND hDlg)
+{
+    TFileTestData * pData = GetDialogData(hDlg);
+    TOpenPacket * pOP = pData->pOP;
+    HWND hWndChild = GetDlgItem(hDlg, IDC_CREATE_DISPOSITION);
+
+    // Load the file names into the dialog edit fields
+    SetDlgItemText(hDlg, IDC_DIRECTORY_NAME, pData->szDirName);
+    SetDlgItemText(hDlg, IDC_FILE_NAME, pData->szFileName1);
+
+    // Convert both to NT name.
+    if(pData->szDirName[0] == 0)
+        ConvertToNtName(hDlg, IDC_FILE_NAME);
+    ConvertToNtName(hDlg, IDC_DIRECTORY_NAME);
+
+    // Set the create disposition
+    if(hWndChild != NULL)
+        ComboBox_SetCurSel(hWndChild, pOP->dwCreateDisposition2);
+
+    // Init the various flags from the open packet
+    Hex2DlgText32(hDlg, IDC_OBJ_ATTR_FLAGS, pOP->dwOA_Attributes);
+    Hex2DlgText32(hDlg, IDC_DESIRED_ACCESS, pOP->dwDesiredAccess);
+    Hex2DlgText64(hDlg, IDC_ALLOCATION_SIZE, pOP->AllocationSize.QuadPart);
+    Hex2DlgText32(hDlg, IDC_FILE_ATTRIBUTES, pOP->dwFlagsAndAttributes);
+    Hex2DlgText32(hDlg, IDC_SHARE_ACCESS, pOP->dwShareAccess);
+    Hex2DlgText32(hDlg, IDC_CREATE_OPTIONS, pOP->dwCreateOptions);
+    EAttr2DlgText(hDlg, IDC_EXTENDED_ATTRIBUTES, pOP);
+
+    // (Un)check the "use relative file" button
+    if((hWndChild = GetDlgItem(hDlg, IDC_USE_RELATIVE_FILE)) != NULL)
+        Button_SetCheck(hWndChild, pData->UseRelativeFile ? BST_CHECKED : BST_UNCHECKED);
+    UpdateUseRelativeFile(hDlg);
+}
+
+static DWORD SaveDialog(HWND hDlg)
+{
+    TFileTestData * pData = GetDialogData(hDlg);
+    TOpenPacket * pOP = pData->pOP;
+    HWND hWndChild;
+    DWORD dwErrCode;
+
+    // Save both file names to the TFileTestData
+    GetDlgItemText(hDlg, IDC_DIRECTORY_NAME, pData->szDirName, MAX_NT_PATH);
+    GetDlgItemText(hDlg, IDC_FILE_NAME, pData->szFileName1, MAX_NT_PATH);
+    assert(pOP == &pData->OpenFile || pOP == &pData->RelaFile);
+
+    if((dwErrCode = DlgText2Hex32(hDlg, IDC_OBJ_ATTR_FLAGS,  &pOP->dwOA_Attributes)) != ERROR_SUCCESS)
+        return dwErrCode;
+    if((dwErrCode = DlgText2Hex32(hDlg, IDC_DESIRED_ACCESS,  &pOP->dwDesiredAccess)) != ERROR_SUCCESS)
+        return dwErrCode;
+    if((dwErrCode = DlgText2Hex32(hDlg, IDC_FILE_ATTRIBUTES, &pOP->dwFlagsAndAttributes)) != ERROR_SUCCESS)
+        return dwErrCode;
+    if((dwErrCode = DlgText2Hex32(hDlg, IDC_SHARE_ACCESS,    &pOP->dwShareAccess)) != ERROR_SUCCESS)
+        return dwErrCode;
+    if((dwErrCode = DlgText2Hex32(hDlg, IDC_CREATE_OPTIONS,  &pOP->dwCreateOptions)) != ERROR_SUCCESS)
+        return dwErrCode;
+    if((dwErrCode = DlgText2Hex64(hDlg, IDC_ALLOCATION_SIZE, &pOP->AllocationSize.QuadPart)) != ERROR_SUCCESS)
+        return dwErrCode;
+
+    if((hWndChild = GetDlgItem(hDlg, IDC_CREATE_DISPOSITION)) != NULL)
+        pOP->dwCreateDisposition2 = ComboBox_GetCurSel(hWndChild);
+    if((hWndChild = GetDlgItem(hDlg, IDC_TRANSACTED)) != NULL)
+        pData->bUseTransaction = (Button_GetCheck(hWndChild) == BST_CHECKED);
+    UpdateUseRelativeFile(hDlg);
     return ERROR_SUCCESS;
 }
                                                              
 //-----------------------------------------------------------------------------
 // Message handlers
 
-static TAnchors * pAnchors = NULL;
-
-static int OnNtCloseClick(HWND hDlg);
-
 static int OnInitDialog(HWND hDlg, LPARAM lParam)
 {
-    TFileTestData * pData;
     PROPSHEETPAGE * pPage = (PROPSHEETPAGE *)lParam;
-    HWND hCombo = GetDlgItem(hDlg, IDC_CREATE_DISPOSITION);
+    TFileTestData * pData = (TFileTestData *)pPage->lParam;
+    TAnchors * pAnchors;
 
+    // Save the data pointer to the dialog
+    assert(pData->MagicHeader == FILETEST_DATA_MAGIC);
     SetDialogData(hDlg, pPage->lParam);
-    pData = (TFileTestData *)pPage->lParam;
+
+    // Initialize the combo box
+    InitDialogControls(hDlg, MAKEINTRESOURCE(IDD_PAGE02_NTCREATE));
+
+    // Initialize the "Relative File" hyperlink
+    InitURLButton(hDlg, IDC_RELATIVE_FILE, FALSE);
 
     // Configure dialog resizing
     if(pData->bEnableResizing)
     {
-        pAnchors = new TAnchors();
-        pAnchors->AddAnchor(hDlg, IDC_MAIN_FRAME, akAll);
-        pAnchors->AddAnchor(hDlg, IDC_DIRECTORY_NAME, akLeft | akTop | akRight);
-        pAnchors->AddAnchor(hDlg, IDC_DIRECTORY_NAME_BROWSE, akTop | akRight);
-        pAnchors->AddAnchor(hDlg, IDC_FILE_NAME, akLeft | akTop | akRight);
-        pAnchors->AddAnchor(hDlg, IDC_FILE_NAME_BROWSE, akTop | akRight);
-        pAnchors->AddAnchor(hDlg, IDC_OBJ_ATTR_FLAGS, akLeft | akTop | akRight);
-        pAnchors->AddAnchor(hDlg, IDC_OBJ_ATTR_FLAGS_BROWSE, akTop | akRight);
-        pAnchors->AddAnchor(hDlg, IDC_DESIRED_ACCESS, akLeft | akTop | akRight);
-        pAnchors->AddAnchor(hDlg, IDC_DESIRED_ACCESS_BROWSE, akTop | akRight);
-        pAnchors->AddAnchor(hDlg, IDC_ALLOCATION_SIZE, akLeft | akTop | akRight);
-        pAnchors->AddAnchor(hDlg, IDC_ALLOCATION_SIZE_UPDOWN, akTop | akRight);
-        pAnchors->AddAnchor(hDlg, IDC_FILE_ATTRIBUTES, akLeft | akTop | akRight);
-        pAnchors->AddAnchor(hDlg, IDC_FILE_ATTRIBUTES_BROWSE, akTop | akRight);
-        pAnchors->AddAnchor(hDlg, IDC_SHARE_ACCESS, akLeft | akTop | akRight);
-        pAnchors->AddAnchor(hDlg, IDC_SHARE_ACCESS_BROWSE, akTop | akRight);
-        pAnchors->AddAnchor(hDlg, IDC_CREATE_DISPOSITION, akLeft | akTop | akRight);
-        pAnchors->AddAnchor(hDlg, IDC_CREATE_OPTIONS, akLeft | akTop | akRight);
-        pAnchors->AddAnchor(hDlg, IDC_CREATE_OPTIONS_BROWSE, akTop | akRight);
-        pAnchors->AddAnchor(hDlg, IDC_EXTENDED_ATTRIBUTES, akLeft | akTop | akRight);
-        pAnchors->AddAnchor(hDlg, IDC_EXTENDED_ATTRIBUTES_EDIT, akTop | akRight);
-        pAnchors->AddAnchor(hDlg, IDC_TRANSACTED, akLeft | akRight | akBottom);
-        pAnchors->AddAnchor(hDlg, IDC_VIRTUALIZATION, akLeft | akRight | akBottom);
-        pAnchors->AddAnchor(hDlg, IDC_BREAKPOINT, akLeft | akRight | akBottom);
-        pAnchors->AddAnchor(hDlg, IDC_PRIVILEGES, akLeft | akBottom);
-        pAnchors->AddAnchor(hDlg, IDC_MAKE_DIRECTORY, akLeft | akBottom);
-        pAnchors->AddAnchor(hDlg, IDC_CREATE_FILE, akRight | akBottom);
-        pAnchors->AddAnchor(hDlg, IDC_CLOSE_HANDLE, akRight | akBottom);
-        pAnchors->AddAnchor(hDlg, IDC_RESULT_FRAME, akLeft | akRight | akBottom);
-        pAnchors->AddAnchor(hDlg, IDC_ERROR_CODE_TITLE, akLeft | akBottom);
-        pAnchors->AddAnchor(hDlg, IDC_ERROR_CODE, akLeft | akRight | akBottom);
-        pAnchors->AddAnchor(hDlg, IDC_HANDLE_TITLE, akLeft | akBottom);
-        pAnchors->AddAnchor(hDlg, IDC_HANDLE, akLeft | akRight | akBottom);
-        pAnchors->AddAnchor(hDlg, IDC_INFORMATION_TITLE, akLeft | akBottom);
-        pAnchors->AddAnchor(hDlg, IDC_INFORMATION, akLeft | akRight | akBottom);
+        if((pAnchors = new TAnchors()) != NULL)
+        {
+            pAnchors->AddAnchor(hDlg, IDC_MAIN_FRAME, akAll);
+            pAnchors->AddAnchor(hDlg, IDC_DIRECTORY_NAME, akLeft | akTop | akRight);
+            pAnchors->AddAnchor(hDlg, IDC_DIRECTORY_NAME_BROWSE, akTop | akRight);
+            pAnchors->AddAnchor(hDlg, IDC_FILE_NAME, akLeft | akTop | akRight);
+            pAnchors->AddAnchor(hDlg, IDC_FILE_NAME_BROWSE, akTop | akRight);
+            pAnchors->AddAnchor(hDlg, IDC_OBJ_ATTR_FLAGS, akLeft | akTop | akRight);
+            pAnchors->AddAnchor(hDlg, IDC_OBJ_ATTR_FLAGS_BROWSE, akTop | akRight);
+            pAnchors->AddAnchor(hDlg, IDC_DESIRED_ACCESS, akLeft | akTop | akRight);
+            pAnchors->AddAnchor(hDlg, IDC_DESIRED_ACCESS_BROWSE, akTop | akRight);
+            pAnchors->AddAnchor(hDlg, IDC_ALLOCATION_SIZE, akLeft | akTop | akRight);
+            pAnchors->AddAnchor(hDlg, IDC_ALLOCATION_SIZE_UPDOWN, akTop | akRight);
+            pAnchors->AddAnchor(hDlg, IDC_FILE_ATTRIBUTES, akLeft | akTop | akRight);
+            pAnchors->AddAnchor(hDlg, IDC_FILE_ATTRIBUTES_BROWSE, akTop | akRight);
+            pAnchors->AddAnchor(hDlg, IDC_SHARE_ACCESS, akLeft | akTop | akRight);
+            pAnchors->AddAnchor(hDlg, IDC_SHARE_ACCESS_BROWSE, akTop | akRight);
+            pAnchors->AddAnchor(hDlg, IDC_CREATE_DISPOSITION, akLeft | akTop | akRight);
+            pAnchors->AddAnchor(hDlg, IDC_CREATE_OPTIONS, akLeft | akTop | akRight);
+            pAnchors->AddAnchor(hDlg, IDC_CREATE_OPTIONS_BROWSE, akTop | akRight);
+            pAnchors->AddAnchor(hDlg, IDC_EXTENDED_ATTRIBUTES, akLeft | akTop | akRight);
+            pAnchors->AddAnchor(hDlg, IDC_EXTENDED_ATTRIBUTES_EDIT, akTop | akRight);
+            pAnchors->AddAnchor(hDlg, IDC_USE_RELATIVE_FILE, akLeft | akTop | akRight);
+            pAnchors->AddAnchor(hDlg, IDC_TRANSACTED, akLeft | akRight | akBottom);
+            pAnchors->AddAnchor(hDlg, IDC_VIRTUALIZATION, akLeft | akRight | akBottom);
+            pAnchors->AddAnchor(hDlg, IDC_BREAKPOINT, akLeft | akRight | akBottom);
+            pAnchors->AddAnchor(hDlg, IDC_PRIVILEGES, akLeft | akBottom);
+            pAnchors->AddAnchor(hDlg, IDC_MAKE_DIRECTORY, akLeft | akBottom);
+            pAnchors->AddAnchor(hDlg, IDC_CREATE_FILE, akRight | akBottom);
+            pAnchors->AddAnchor(hDlg, IDC_CLOSE_HANDLE, akRight | akBottom);
+            pAnchors->AddAnchor(hDlg, IDC_RESULT_FRAME, akLeft | akRight | akBottom);
+            pAnchors->AddAnchor(hDlg, IDC_ERROR_CODE_TITLE, akLeft | akBottom);
+            pAnchors->AddAnchor(hDlg, IDC_ERROR_CODE, akLeft | akRight | akBottom);
+            pAnchors->AddAnchor(hDlg, IDC_HANDLE_TITLE, akLeft | akBottom);
+            pAnchors->AddAnchor(hDlg, IDC_HANDLE, akLeft | akRight | akBottom);
+            pAnchors->AddAnchor(hDlg, IDC_INFORMATION_TITLE, akLeft | akBottom);
+            pAnchors->AddAnchor(hDlg, IDC_INFORMATION, akLeft | akRight | akBottom);
+            pAnchors->AddAnchor(hDlg, IDOK, akRightBottom);
+            pAnchors->AddAnchor(hDlg, IDCANCEL, akRightBottom);
+            assert(pData->pAnchors == NULL);
+            SetDialogAnchors(hDlg, pAnchors);
+        }
     }
 
-    // Initialize the "Relative File" hyperlink
-    InitURLButton(hDlg, IDC_RELATIVE_FILE_HELP, FALSE);
-
-    // Initialize the combo box
-    InitDialogControls(hDlg, MAKEINTRESOURCE(IDD_PAGE02_NTCREATE));
-    if(hCombo != NULL)
-        ComboBox_SetCurSel(hCombo, pData->dwCreateDisposition2);
-
     // If we have a tooltip window, init tooltips 
-    g_Tooltip.AddToolTip(hDlg, IDC_OBJ_ATTR_FLAGS, ObjAttrFlagsValues);
-    g_Tooltip.AddToolTip(hDlg, IDC_DESIRED_ACCESS, AccessMaskValues);
-    g_Tooltip.AddToolTip(hDlg, IDC_FILE_ATTRIBUTES, FileAttributesValues);
-    g_Tooltip.AddToolTip(hDlg, IDC_SHARE_ACCESS, ShareAccessValues);
-    g_Tooltip.AddToolTip(hDlg, IDC_CREATE_OPTIONS, CreateOptionsValues);
+    if(IsPropSheetPageDialog(hDlg))
+    {
+        g_Tooltip.AddToolTip(hDlg, IDC_OBJ_ATTR_FLAGS, ObjAttrFlagsValues);
+        g_Tooltip.AddToolTip(hDlg, IDC_DESIRED_ACCESS, AccessMaskValues);
+        g_Tooltip.AddToolTip(hDlg, IDC_FILE_ATTRIBUTES, FileAttributesValues);
+        g_Tooltip.AddToolTip(hDlg, IDC_SHARE_ACCESS, ShareAccessValues);
+        g_Tooltip.AddToolTip(hDlg, IDC_CREATE_OPTIONS, CreateOptionsValues);
+    }
+    else
+    {
+        // If this is not the propsheet, we need to explicitly call the OnSetActive
+        LoadDialog(hDlg);
+    }
 
     // On post-Vista, enable the virtualization button
     if(GetTokenVirtualizationEnabled(NULL))
         EnableDlgItems(hDlg, TRUE, IDC_VIRTUALIZATION, 0);
+    return TRUE;
+}
 
+static BOOL OnSize(HWND hDlg)
+{
+    TAnchors * pAnchors;
+
+    if((pAnchors = GetDialogAnchors(hDlg)) != NULL)
+        pAnchors->OnSize();
+    return TRUE;
+}
+
+static BOOL OnGetMinMaxInfo(HWND hDlg, LPARAM lParam)
+{
+    TAnchors * pAnchors;
+
+    if((pAnchors = GetDialogAnchors(hDlg)) != NULL)
+        pAnchors->OnGetMinMaxInfo(lParam);
     return TRUE;
 }
 
 static int OnSetActive(HWND hDlg)
 {
     TFileTestData * pData = GetDialogData(hDlg);
-    TCHAR szEaInfo[128];
     BOOL bEnabled;
     int nChecked;
 
-    // Set directory name and file name
-    SetDlgItemText(hDlg, IDC_DIRECTORY_NAME, pData->szDirName);
-    SetDlgItemText(hDlg, IDC_FILE_NAME, pData->szFileName1);
-
-    // Convert both to NT name.
-    if(GetWindowTextLength(GetDlgItem(hDlg, IDC_DIRECTORY_NAME)) == 0)
-        ConvertToNtName(hDlg, IDC_FILE_NAME);
-    ConvertToNtName(hDlg, IDC_DIRECTORY_NAME);
-
-    // Set the various create options
-    Hex2DlgText32(hDlg, IDC_OBJ_ATTR_FLAGS, pData->dwObjAttrFlags);
-    Hex2DlgText32(hDlg, IDC_DESIRED_ACCESS, pData->dwDesiredAccess);
-    Hex2DlgText64(hDlg, IDC_ALLOCATION_SIZE, pData->AllocationSize);
-    Hex2DlgText32(hDlg, IDC_FILE_ATTRIBUTES, pData->dwFlagsAndAttributes);
-    Hex2DlgText32(hDlg, IDC_SHARE_ACCESS, pData->dwShareAccess);
-    Hex2DlgText32(hDlg, IDC_CREATE_OPTIONS, pData->dwCreateOptions);
-
-    // Update the info about extended attributes
-    rsprintf(szEaInfo, _countof(szEaInfo), IDS_EA_INFO, pData->pFileEa, pData->dwEaSize);
-    SetDlgItemText(hDlg, IDC_EXTENDED_ATTRIBUTES, szEaInfo);
+    // Load the directory controls from TFileTestData structure
+    LoadDialog(hDlg);
 
     // Enable/disable transaction
     bEnabled = (pfnRtlSetCurrentTransaction != NULL && IsHandleValid(pData->hTransaction));
@@ -344,35 +463,31 @@ static int OnKillActive(HWND hDlg)
     return TRUE;
 }
 
-static int OnRelativeFileHelp(HWND hDlg)
+static int OnRelativeFileClick(HWND hDlg)
 {
     TFileTestData * pData = GetDialogData(hDlg);
-    LPTSTR szBuffer;
-    TCHAR szAccessMask[0x100];
-    TCHAR szShareAccess[0x100];
-    TCHAR szOpenOptions[0x100];
-    TCHAR szMsgFormat[512];
-    size_t cchBuffer = 0x1000;
-    int nLength = 0;
+    PROPSHEETPAGE Page = {0};
+    TOpenPacket * pSaveOP = pData->pOP;
+    TAnchors * pSaveAnchors = pData->pAnchors;
 
-    // Load both parts of the message
-    nLength = LoadString(g_hInst, IDS_RELATIVE_FILE_HELP, szMsgFormat, _countof(szMsgFormat));
-    if(nLength > 0)
+    // Only invoke the sub-dialog if it's not invoked already
+    if(IsPropSheetPageDialog(hDlg))
     {
-        // Allocate big buffer for the entire text
-        szBuffer = new TCHAR[cchBuffer];
-        if(szBuffer != NULL)
-        {
-            // Format the result string
-            StringCchPrintf(szBuffer, cchBuffer, szMsgFormat,
-                            pData->dwDesiredAccessRF, FlagsToString(AccessMaskValues,    szAccessMask,  _countof(szAccessMask),  pData->dwDesiredAccessRF, false),
-                            pData->dwShareAccessRF,   FlagsToString(ShareAccessValues,   szShareAccess, _countof(szShareAccess), pData->dwShareAccessRF, false),
-                            pData->dwOpenOptionsRF,   FlagsToString(CreateOptionsValues, szOpenOptions, _countof(szOpenOptions), pData->dwOpenOptionsRF, false));
+        // Switch to the relative file open packet
+        GetDlgItemText(hDlg, IDC_DIRECTORY_NAME, pData->szDirName, MAX_NT_PATH);
+        pData->pAnchors = NULL;
+        pData->pOP = &pData->RelaFile;
+        pData->UseRelativeFile = TRUE;
 
-            // Display the message box
-            MessageBoxRc(hDlg, IDS_INFO, (UINT_PTR)szBuffer);
-            delete [] szBuffer;
-        }
+        // Execute the dialog box. The InitDialog dialog expects pointer to PROPSHEETPAGE as LPARAM
+        Page.lParam = (LPARAM)(pData);
+        DialogBoxParam(g_hInst, MAKEINTRESOURCE(IDD_PAGE02_NTCREATE_RELFILE), hDlg, PageProc02, (LPARAM)(&Page));
+
+        // Restore the original open packet
+        pData->pAnchors = pSaveAnchors;
+        pData->pOP = pSaveOP;
+        SetDlgItemText(hDlg, IDC_DIRECTORY_NAME, pData->szDirName);
+        UpdateRelativeFileHint(hDlg);
     }
     return TRUE;
 }
@@ -415,7 +530,7 @@ static int OnDesiredAccessClick(HWND hDlg)
     // Shall we edit desired access for relative file?
     if(bRelativeFile)
     {
-        FlagsDialog(hDlg, IDS_DESIRED_ACCESS_RF, AccessMaskValues, pData->dwDesiredAccessRF);
+        FlagsDialog(hDlg, IDS_DESIRED_ACCESS_RF, AccessMaskValues, pData->RelaFile.dwDesiredAccess);
         return TRUE;
     }
 
@@ -438,7 +553,7 @@ static int OnShareAccessClick(HWND hDlg)
     // Shall we edit desired access for relative file?
     if(bRelativeFile)
     {
-        FlagsDialog(hDlg, IDS_SHARE_ACCESS_RF, ShareAccessValues, pData->dwShareAccessRF);
+        FlagsDialog(hDlg, IDS_SHARE_ACCESS_RF, ShareAccessValues, pData->RelaFile.dwShareAccess);
         return TRUE;
     }
 
@@ -455,7 +570,7 @@ static int OnCreateOptionsClick(HWND hDlg)
     // Shall we edit desired access for relative file?
     if(bRelativeFile)
     {
-        FlagsDialog(hDlg,IDS_OPEN_OPTIONS_RF, CreateOptionsValues, pData->dwOpenOptionsRF);
+        FlagsDialog(hDlg,IDS_OPEN_OPTIONS_RF, CreateOptionsValues, pData->RelaFile.dwCreateOptions);
         return TRUE;
     }
 
@@ -467,16 +582,13 @@ static int OnCreateOptionsClick(HWND hDlg)
 static int OnEditEaClick(HWND hDlg)
 {
     TFileTestData * pData = GetDialogData(hDlg);
-    TCHAR szEaInfo[128];
 
     // Invoke the editor of the extended attributes
     if(ExtendedAtributesEditorDialog(hDlg, pData) == IDOK)
     {
         // Update the info about extended attributes
-        rsprintf(szEaInfo, _countof(szEaInfo), IDS_EA_INFO, pData->pFileEa, pData->dwEaSize);
-        SetDlgItemText(hDlg, IDC_EXTENDED_ATTRIBUTES, szEaInfo);
+        EAttr2DlgText(hDlg, IDC_EXTENDED_ATTRIBUTES, &pData->OpenFile);
     }
-
     return TRUE;
 }
 
@@ -546,24 +658,23 @@ static int OnMakeDirectoryClick(HWND hDlg)
     return TRUE;
 }
 
-static int OnCreateFileClick(HWND hDlg)
+static int OnNtCreateFileClick(HWND hDlg)
 {
     TFileTestData * pData = GetDialogData(hDlg);
     OBJECT_ATTRIBUTES ObjAttr;
     IO_STATUS_BLOCK IoStatus = {0};
     UNICODE_STRING FileName;
     UNICODE_STRING DirName;
-    LARGE_INTEGER AllocationSize;
     NTSTATUS Status = STATUS_SUCCESS;
     HANDLE SaveTransactionHandle = NULL;
+    TCHAR szRelativeFile[MAX_NT_PATH];
     TCHAR szFileName[MAX_NT_PATH];
-    TCHAR szDirName[MAX_NT_PATH];
     DWORD cbObjectID = 0;
     BYTE ObjectID[0x10];
 
     // Close the handle, if already open
     if(IsHandleValid(pData->hDirectory) || IsHandleValid(pData->hFile))
-        OnNtCloseClick(hDlg);
+        SendMessage(hDlg, WM_COMMAND, MAKEWPARAM(IDC_CLOSE_HANDLE, BN_CLICKED), 0);
 
     // Get the various create options
     if(SaveDialog(hDlg) != ERROR_SUCCESS)
@@ -576,12 +687,12 @@ static int OnCreateFileClick(HWND hDlg)
     }
 
     // Get the directory name from the dialog data
-    StringCchCopy(szDirName, _countof(szDirName), pData->szDirName);
+    StringCchCopy(szRelativeFile, _countof(szRelativeFile), pData->szDirName);
     StringCchCopy(szFileName, _countof(szFileName), pData->szFileName1);
 
     // If we are about to open a file by ID, and we have no relative directory,
     // try to take the directory from the file name
-    if(szDirName[0] == 0 && (pData->dwCreateOptions & FILE_OPEN_BY_FILE_ID))
+    if((szRelativeFile[0] == 0) && (pData->OpenFile.dwCreateOptions & FILE_OPEN_BY_FILE_ID))
     {
         LPTSTR szFullName = pData->szFileName1;
         LPTSTR szFileId = _tcsrchr(szFullName, _T('\\'));
@@ -589,23 +700,27 @@ static int OnCreateFileClick(HWND hDlg)
 
         if(szFileId != NULL)
         {
-            StringCchCopy(szDirName, nLength, szFullName);
+            StringCchCopy(szRelativeFile, nLength, szFullName);
             StringCchCopy(szFileName, _countof(szFileName), szFileId + 1);
         }
     }
 
     // Open the relative file (if any)
-    if(szDirName[0] != 0)
+    if(szRelativeFile[0] || pData->UseRelativeFile)
     {
-        RtlInitUnicodeString(&DirName, szDirName);
-        InitializeObjectAttributes(&ObjAttr, &DirName, pData->dwObjAttrFlags, 0, NULL);
-        Status = NtOpenFile(&pData->hDirectory,
-                             pData->dwDesiredAccessRF,
-                            &ObjAttr,
-                            &IoStatus,
-                             pData->dwShareAccessRF,
-                             pData->dwOpenOptionsRF);
-
+        InitializeObjectAttributes(&ObjAttr, &DirName, pData->RelaFile.dwOA_Attributes, 0, NULL);
+        RtlInitUnicodeString(&DirName, szRelativeFile);
+        Status = NtCreateFile(&pData->hDirectory,
+                               pData->RelaFile.dwDesiredAccess,
+                              &ObjAttr,
+                              &IoStatus,
+                              &pData->RelaFile.AllocationSize,
+                               pData->RelaFile.dwFlagsAndAttributes,
+                               pData->RelaFile.dwShareAccess,
+                               pData->RelaFile.dwCreateDisposition2,
+                               pData->RelaFile.dwCreateOptions,
+                               pData->RelaFile.pvFileEa,
+                               pData->RelaFile.cbFileEa);
         if(!NT_SUCCESS(Status))
         {
             SetResultInfo(hDlg, RSI_NTSTATUS | RSI_HANDLE, Status, pData->hDirectory);
@@ -619,7 +734,7 @@ static int OnCreateFileClick(HWND hDlg)
         RtlInitUnicodeString(&FileName, szFileName);
 
         // If open by ID required, set the ID to the string
-        if(pData->dwCreateOptions & FILE_OPEN_BY_FILE_ID)
+        if(pData->OpenFile.dwCreateOptions & FILE_OPEN_BY_FILE_ID)
         {
             // Convert object ID to binary value
             if(StringToFileID(szFileName, NULL, ObjectID, &cbObjectID) != ERROR_SUCCESS)
@@ -632,8 +747,7 @@ static int OnCreateFileClick(HWND hDlg)
         }
 
         ZeroMemory(&IoStatus, sizeof(IO_STATUS_BLOCK));
-        InitializeObjectAttributes(&ObjAttr, &FileName, pData->dwObjAttrFlags, pData->hDirectory, NULL);
-        AllocationSize.QuadPart = (LONGLONG)pData->AllocationSize;
+        InitializeObjectAttributes(&ObjAttr, &FileName, pData->OpenFile.dwOA_Attributes, pData->hDirectory, NULL);
            
         // Invoke breakpoint if the user wants to
         if(IsDlgButtonChecked(hDlg, IDC_BREAKPOINT) == BST_CHECKED)
@@ -642,16 +756,16 @@ static int OnCreateFileClick(HWND hDlg)
         }
 
         Status = NtCreateFile(&pData->hFile,
-                               pData->dwDesiredAccess,
+                               pData->OpenFile.dwDesiredAccess,
                               &ObjAttr,
                               &IoStatus,
-                              &AllocationSize,
-                               pData->dwFlagsAndAttributes,
-                               pData->dwShareAccess,
-                               pData->dwCreateDisposition2,
-                               pData->dwCreateOptions,
-                               pData->pFileEa,
-                               pData->dwEaSize);
+                              &pData->OpenFile.AllocationSize,
+                               pData->OpenFile.dwFlagsAndAttributes,
+                               pData->OpenFile.dwShareAccess,
+                               pData->OpenFile.dwCreateDisposition2,
+                               pData->OpenFile.dwCreateOptions,
+                               pData->OpenFile.pvFileEa,
+                               pData->OpenFile.cbFileEa);
         SetResultInfo(hDlg, RSI_NTSTATUS | RSI_HANDLE | RSI_NTCREATE, Status, pData->hFile, &IoStatus);
 
         // If this operation failed, we close the directory as well
@@ -667,7 +781,6 @@ static int OnCreateFileClick(HWND hDlg)
         pfnRtlSetCurrentTransaction(SaveTransactionHandle);
         SaveTransactionHandle = NULL;
     }
-
     return TRUE;
 }
 
@@ -696,6 +809,18 @@ static int OnNtCloseClick(HWND hDlg)
     return TRUE;
 }
 
+static BOOL OnEndDialogButtonClick(HWND hDlg, UINT nIDCtrl)
+{
+    // Is this a modal dialog?
+    if(!IsPropSheetPageDialog(hDlg))
+    {
+        if(nIDCtrl == IDOK)
+            SaveDialog(hDlg);
+        EndDialog(hDlg, nIDCtrl);
+    }
+    return TRUE;
+}
+
 static int OnDeltaPos(HWND hDlg, NMUPDOWN * pNMUpDown)
 {
     LONGLONG AllocationSize;
@@ -714,8 +839,8 @@ static int OnCommand(HWND hDlg, UINT nNotify, UINT nIDCtrl)
     {
         switch(nIDCtrl)
         {
-            case IDC_RELATIVE_FILE_HELP:
-                return OnRelativeFileHelp(hDlg);
+            case IDC_RELATIVE_FILE:
+                return OnRelativeFileClick(hDlg);
 
             case IDC_DIRECTORY_NAME_BROWSE:
                 return OnBrowseDirClick(hDlg);
@@ -773,10 +898,17 @@ static int OnCommand(HWND hDlg, UINT nNotify, UINT nIDCtrl)
                 return QuickAccessSelection(hDlg, DELETE, 0, false);
 
             case IDC_CREATE_FILE:
-                return OnCreateFileClick(hDlg);
+                return OnNtCreateFileClick(hDlg);
 
             case IDC_CLOSE_HANDLE:
                 return OnNtCloseClick(hDlg);
+
+            case IDC_USE_RELATIVE_FILE:
+                return UpdateUseRelativeFile(hDlg);
+
+            case IDOK:
+            case IDCANCEL:
+                return OnEndDialogButtonClick(hDlg, nIDCtrl);
         }
     }
 
@@ -826,12 +958,13 @@ INT_PTR CALLBACK PageProc02(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
             return OnInitDialog(hDlg, lParam);
 
         case WM_SIZE:
-            if(pAnchors != NULL)
-                pAnchors->OnSize();
-            return FALSE;
+            return OnSize(hDlg);
+
+        case WM_GETMINMAXINFO:
+            return OnGetMinMaxInfo(hDlg, lParam);
 
         case WM_DRAWITEM:
-            if(wParam == IDC_RELATIVE_FILE_HELP)
+            if(wParam == IDC_RELATIVE_FILE)
                 DrawURLButton(hDlg, (LPDRAWITEMSTRUCT)lParam);
             return TRUE;
 
@@ -845,9 +978,7 @@ INT_PTR CALLBACK PageProc02(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
             return OnNotify(hDlg, (NMHDR *)lParam);
 
         case WM_DESTROY:
-            if(pAnchors != NULL)
-                delete pAnchors;
-            pAnchors = NULL;
+            SetDialogAnchors(hDlg, NULL);
             return FALSE;
     }
     return FALSE;
