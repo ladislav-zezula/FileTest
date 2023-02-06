@@ -119,6 +119,11 @@ static TFlagInfo ObjAttrFlagsValues[] =
 //-----------------------------------------------------------------------------
 // Local functions
 
+static bool ShallEditRelativeFile()
+{
+    return (GetAsyncKeyState(VK_SHIFT) < 0);
+}
+
 static TFileTestData * IsPropSheetPageDialog(HWND hDlg)
 {
     TFileTestData * pData;
@@ -516,79 +521,92 @@ static int OnBrowseFileClick(HWND hDlg)
     return TRUE;
 }
 
-static int OnObjAtributesFlags(HWND hDlg)
+static BOOL OnEditRelativeOrMainFileFlags(
+    HWND hDlg,                  // Owner dialog
+    UINT nIDTitle1,             // Dialog title for relative file flags
+    UINT nIDTitle2,             // Dialog title for main file flags
+    TFlagInfo * pFlagsInfos,    // List of flags
+    ULONG & RefFlags,           // Value of the flags (in/out)
+    UINT nIDCtrl)               // ID of the dialog control to modify
 {
-    FlagsDialog_OnControl(hDlg, IDS_OBJECT_ATTRIBUTES_FLAGS, ObjAttrFlagsValues, IDC_OBJ_ATTR_FLAGS);
+    // Is this the main property sheet dialog?
+    if(IsPropSheetPageDialog(hDlg))
+    {
+        // Take Shift key into account
+        if(GetAsyncKeyState(VK_SHIFT) < 0)
+            FlagsDialog(hDlg, nIDTitle1, pFlagsInfos, RefFlags);
+        else
+            FlagsDialog_OnControl(hDlg, nIDTitle2, pFlagsInfos, nIDCtrl);
+    }
+    else
+    {
+        FlagsDialog_OnControl(hDlg, nIDTitle1, pFlagsInfos, nIDCtrl);
+    }
     return TRUE;
+}
+
+static BOOL OnObjAtributesFlags(HWND hDlg)
+{
+    return OnEditRelativeOrMainFileFlags(hDlg,
+                                         IDS_OBJECT_ATTRIBUTES_FLAGS_RF,
+                                         IDS_OBJECT_ATTRIBUTES_FLAGS,
+                                         ObjAttrFlagsValues,
+                                         GetDialogData(hDlg)->RelaFile.dwOA_Attributes,
+                                         IDC_OBJ_ATTR_FLAGS);
 }
 
 static int OnDesiredAccessClick(HWND hDlg)
 {
-    TFileTestData * pData = GetDialogData(hDlg);
-    bool bRelativeFile = (GetAsyncKeyState(VK_SHIFT) < 0);
-
-    // Shall we edit desired access for relative file?
-    if(bRelativeFile)
-    {
-        FlagsDialog(hDlg, IDS_DESIRED_ACCESS_RF, AccessMaskValues, pData->RelaFile.dwDesiredAccess);
-        return TRUE;
-    }
-
-    // Show the dialog for desired access
-    FlagsDialog_OnControl(hDlg, IDS_DESIRED_ACCESS, AccessMaskValues, IDC_DESIRED_ACCESS);
-    return TRUE;
+    return OnEditRelativeOrMainFileFlags(hDlg,
+                                         IDS_DESIRED_ACCESS_RF,
+                                         IDS_DESIRED_ACCESS,
+                                         AccessMaskValues,
+                                         GetDialogData(hDlg)->RelaFile.dwDesiredAccess,
+                                         IDC_DESIRED_ACCESS);
 }
 
 static int OnFileAttributesClick(HWND hDlg)
 {
-    FlagsDialog_OnControl(hDlg, IDS_FILE_ATTRIBUTES, FileAttributesValues, IDC_FILE_ATTRIBUTES);
-    return TRUE;
+    return OnEditRelativeOrMainFileFlags(hDlg,
+                                         IDS_FILE_ATTRIBUTES_RF,
+                                         IDS_FILE_ATTRIBUTES,
+                                         FileAttributesValues,
+                                         GetDialogData(hDlg)->RelaFile.dwFlagsAndAttributes,
+                                         IDC_FILE_ATTRIBUTES);
 }
 
 static int OnShareAccessClick(HWND hDlg)
 {
-    TFileTestData * pData = GetDialogData(hDlg);
-    bool bRelativeFile = (GetAsyncKeyState(VK_SHIFT) < 0);
-
-    // Shall we edit desired access for relative file?
-    if(bRelativeFile)
-    {
-        FlagsDialog(hDlg, IDS_SHARE_ACCESS_RF, ShareAccessValues, pData->RelaFile.dwShareAccess);
-        return TRUE;
-    }
-
-    // Show the dialog for desired access
-    FlagsDialog_OnControl(hDlg, IDS_SHARE_ACCESS, ShareAccessValues, IDC_SHARE_ACCESS);
-    return TRUE;
+    return OnEditRelativeOrMainFileFlags(hDlg,
+                                         IDS_SHARE_ACCESS_RF,
+                                         IDS_SHARE_ACCESS,
+                                         ShareAccessValues,
+                                         GetDialogData(hDlg)->RelaFile.dwShareAccess,
+                                         IDC_SHARE_ACCESS);
 }
 
 static int OnCreateOptionsClick(HWND hDlg)
 {
-    TFileTestData * pData = GetDialogData(hDlg);
-    bool bRelativeFile = (GetAsyncKeyState(VK_SHIFT) < 0);
-
-    // Shall we edit desired access for relative file?
-    if(bRelativeFile)
-    {
-        FlagsDialog(hDlg,IDS_OPEN_OPTIONS_RF, CreateOptionsValues, pData->RelaFile.dwCreateOptions);
-        return TRUE;
-    }
-
-    // Show the dialog for desired access
-    FlagsDialog_OnControl(hDlg, IDS_CREATE_OPTIONS, CreateOptionsValues, IDC_CREATE_OPTIONS);
-    return TRUE;
+    return OnEditRelativeOrMainFileFlags(hDlg,
+                                         IDS_CREATE_OPTIONS_RF,
+                                         IDS_CREATE_OPTIONS,
+                                         CreateOptionsValues,
+                                         GetDialogData(hDlg)->RelaFile.dwCreateOptions,
+                                         IDC_CREATE_OPTIONS);
 }
 
 static int OnEditEaClick(HWND hDlg)
 {
     TFileTestData * pData = GetDialogData(hDlg);
+    TOpenPacket * pOP = pData->pOP;
+
+    // Always take relative file on property sheet, if Shift is pressed
+    if(IsPropSheetPageDialog(hDlg) && ShallEditRelativeFile())
+        pOP = &pData->RelaFile;
 
     // Invoke the editor of the extended attributes
-    if(ExtendedAtributesEditorDialog(hDlg, pData) == IDOK)
-    {
-        // Update the info about extended attributes
-        EAttr2DlgText(hDlg, IDC_EXTENDED_ATTRIBUTES, &pData->OpenFile);
-    }
+    if(ExtendedAtributesEditorDialog(hDlg, pOP) == IDOK)
+        EAttr2DlgText(hDlg, IDC_EXTENDED_ATTRIBUTES, pOP);
     return TRUE;
 }
 

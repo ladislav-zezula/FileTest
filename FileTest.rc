@@ -110,8 +110,8 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 2,8,0,627
- PRODUCTVERSION 2,8,0,627
+ FILEVERSION 2,8,0,629
+ PRODUCTVERSION 2,8,0,629
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -128,13 +128,13 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Ladislav Zezula"
             VALUE "FileDescription", "Interactive File System API Test"
-            VALUE "FileVersion", "2, 8, 0, 627\0"
+            VALUE "FileVersion", "2, 8, 0, 629\0"
             VALUE "InternalName", "FileTest"
             VALUE "LegalCopyright", "Copyright © 2004 - 2023 Ladislav Zezula"
             VALUE "LegalTrademarks", "http://www.zezula.net"
             VALUE "OriginalFilename", "FileTest.exe"
             VALUE "ProductName", "FileTest"
-            VALUE "ProductVersion", "2, 8, 0, 627\0"
+            VALUE "ProductVersion", "2, 8, 0, 629\0"
         END
     END
     BLOCK "VarFileInfo"
@@ -1252,6 +1252,7 @@ BEGIN
     IDS_SETTINGS            "Privileges and Settings"
     IDS_E_APPLY_SETTINGS    "Failed to apply new settings for %s.\n%s."
     IDS_INTEGRITY_LEVEL     "Integrity Level"
+    IDS_OBJECT_ATTRIBUTES_FLAGS_RF "OBJECT_ATTRIBUTES::Flags (Relative File)"
     IDS_NOFILESELECTED      "No file selected."
     IDS_INVALIDACCESS       "Invalid access. Please, choose ANSI or Unicode access."
     IDS_OPERATIONCOMPLETE   "Operation complete, no errors."
@@ -1266,10 +1267,10 @@ BEGIN
     IDS_INVHANDLE           "INVALID_HANDLE_VALUE"
     IDS_CLOSEFILEFIRST      "The File1 is currently open. Close it first."
     IDS_NULL                "NULL"
-    IDS_FILE_ATTRIBUTES_TEXT "%s"
     IDS_NO_FILENAME1        "No first file name."
     IDS_NO_FILENAME2        "No second file name."
     IDS_FILE_ATTRIBUTES     "File attributes"
+    IDS_FILE_ATTRIBUTES_RF  "File attributes (Relative File)"
     IDS_APP_TITLE           "FileTest (User: ""%s"")"
     IDS_DESIRED_ACCESS      "Desired access"
     IDS_SHARE_ACCESS        "Share access"
@@ -1287,7 +1288,7 @@ BEGIN
     IDS_E_INVALID_FILE_ID   "Invalid file ID.\nThe file ID must be in the form of \\\\??\\\\C:\\Path\\File.ext"
     IDS_TIME_FORMAT_PREFIX  "\nSupported time formats:\n\n"
     IDS_EXIT                "Exit"
-    IDS_OBJECT_ATTRIBUTES_FLAGS "ObjectAttributes.Flags"
+    IDS_OBJECT_ATTRIBUTES_FLAGS "OBJECT_ATTRIBUTES::Flags"
     IDS_EA_NAME             "EA Name"
     IDS_EA_VALUE            "EA Value"
     IDS_CONVERSION_ERROR    "[Conversion error]"
@@ -1333,7 +1334,7 @@ BEGIN
     IDS_ACE_TYPE_NOT_SUPPORTED "This ACE is not supported."
     IDS_RELATIVE_FILE_TITLE "Relative File"
     IDS_DESIRED_ACCESS_RF   "Desired Access (Relative File)"
-    IDS_OPEN_OPTIONS_RF     "Open Options (Relative File)"
+    IDS_CREATE_OPTIONS_RF   "Create Options (Relative File)"
     IDS_SHARE_ACCESS_RF     "Share Access (Relative File)"
     IDS_EA_SIZE             "Size"
     IDS_NT_QUERY_ATTRIBUTES_FILE_TIP 

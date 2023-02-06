@@ -337,6 +337,7 @@
 #define IDS_SETTINGS                    4006
 #define IDS_E_APPLY_SETTINGS            4007
 #define IDS_INTEGRITY_LEVEL             4008
+#define IDS_OBJECT_ATTRIBUTES_FLAGS_RF  4009
 #define IDS_NOFILESELECTED              4010
 #define IDS_INVALIDACCESS               4011
 #define IDS_OPERATIONCOMPLETE           4012
@@ -347,10 +348,10 @@
 #define IDS_INVHANDLE                   4017
 #define IDS_CLOSEFILEFIRST              4018
 #define IDS_NULL                        4019
-#define IDS_FILE_ATTRIBUTES_TEXT        4020
-#define IDS_NO_FILENAME1                4021
-#define IDS_NO_FILENAME2                4022
-#define IDS_FILE_ATTRIBUTES             4023
+#define IDS_NO_FILENAME1                4020
+#define IDS_NO_FILENAME2                4021
+#define IDS_FILE_ATTRIBUTES             4022
+#define IDS_FILE_ATTRIBUTES_RF          4023
 #define IDS_APP_TITLE                   4024
 #define IDS_DESIRED_ACCESS              4025
 #define IDS_SHARE_ACCESS                4026
@@ -402,7 +403,7 @@
 #define IDS_ACE_TYPE_NOT_SUPPORTED      4069
 #define IDS_RELATIVE_FILE_TITLE         4070
 #define IDS_DESIRED_ACCESS_RF           4071
-#define IDS_OPEN_OPTIONS_RF             4072
+#define IDS_CREATE_OPTIONS_RF           4072
 #define IDS_SHARE_ACCESS_RF             4073
 #define IDS_EA_SIZE                     4074
 #define IDS_NT_QUERY_ATTRIBUTES_FILE_TIP 4075

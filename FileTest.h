@@ -574,7 +574,7 @@ INT_PTR FileTestDialog(HWND hParent, TFileTestData * pData);
 void ExtendedAttributesToListView(HWND hDlg, PFILE_FULL_EA_INFORMATION pFileEa);
 DWORD ListViewToExtendedAttributes(HWND hDlg, TOpenPacket & OpenPacket);
 INT_PTR CALLBACK ExtendedAttributesEditorProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);
-INT_PTR ExtendedAtributesEditorDialog(HWND hParent, TFileTestData * pData);
+INT_PTR ExtendedAtributesEditorDialog(HWND hParent, TOpenPacket * pOP);
 INT_PTR DataEditorDialog(HWND hParent, LPVOID BaseAddress, size_t ViewSize);
 
 //-----------------------------------------------------------------------------

@@ -140,7 +140,7 @@ static int SetListViewEaEntry(
 
 static int OnInitDialog(HWND hDlg, LPARAM lParam)
 {
-    TFileTestData * pData = (TFileTestData *)lParam;
+    TOpenPacket * pOP = (TOpenPacket *)lParam;
     HWND hListView = GetDlgItem(hDlg, IDC_EA_LIST);
 
     // Save the user data
@@ -153,7 +153,7 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
 
     // Save the pointer to TFileTestData
     if(lParam != 0)
-        ExtendedAttributesToListView(hDlg, pData->OpenFile.pvFileEa);
+        ExtendedAttributesToListView(hDlg, pOP->pvFileEa);
 
     // Initialize the listview
     UpdateDialogButtons(hDlg);
@@ -301,15 +301,15 @@ static int OnLVKeyDown(HWND hDlg, NMLVKEYDOWN * pLVKeyDown)
 
 static BOOL OnSaveDialog(HWND hDlg)
 {
-    TFileTestData * pData = GetDialogData(hDlg);
+    TOpenPacket * pOP = (TOpenPacket *)GetDialogData(hDlg);
 
-    if(pData != NULL)
+    if(pOP != NULL)
     {
         // Delete the existing EAs
-        pData->OpenFile.Free();
+        pOP->Free();
 
         // Create new extended attributes
-        ListViewToExtendedAttributes(hDlg, pData->OpenFile);
+        ListViewToExtendedAttributes(hDlg, *pOP);
     }
     return TRUE;
 }
@@ -494,11 +494,11 @@ INT_PTR CALLBACK ExtendedAttributesEditorProc(HWND hDlg, UINT uMsg, WPARAM wPara
     return FALSE;
 }
 
-INT_PTR ExtendedAtributesEditorDialog(HWND hParent, TFileTestData * pData)
+INT_PTR ExtendedAtributesEditorDialog(HWND hParent, TOpenPacket * pOP)
 {
     return DialogBoxParam(g_hInst,
                           MAKEINTRESOURCE(IDD_EAS_EDITOR),
                           hParent,
                           ExtendedAttributesEditorProc,
-                  (LPARAM)pData);
+                  (LPARAM)pOP);
 }
