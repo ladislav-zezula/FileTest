@@ -102,6 +102,15 @@ static void OnDestroy(HWND hDlg)
     }
 }
 
+static int OnFlushViewOfFileClick(HWND hDlg)
+{
+    TDialogData* pData = ((TDialogData*)GetWindowLongPtr(hDlg, DWLP_USER));
+
+    FlushViewOfFile(pData->pbFileData, pData->cbFileData);
+
+    return TRUE;
+}
+
 static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
     UINT nIDCtrl;
@@ -130,8 +139,18 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM l
             nIDNotify = HIWORD(wParam);
             nIDCtrl = LOWORD(wParam);
 
-            if(nIDNotify == BN_CLICKED)
-                EndDialog(hDlg, nIDCtrl);
+            if (nIDNotify == BN_CLICKED)
+            {
+                switch (nIDCtrl)
+                {
+                    case IDC_FLUSH_VIEW:
+                        OnFlushViewOfFileClick(hDlg);
+                        break;
+
+                    default:
+                        EndDialog(hDlg, nIDCtrl);
+                }
+            }
             break;
 
         case WM_DESTROY:
