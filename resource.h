@@ -274,6 +274,7 @@
 #define IDC_ALLOCATION_TYPE             1204
 #define IDC_MAP_VIEW                    1205
 #define IDC_UNMAP_VIEW                  1206
+#define IDC_FLUSH_VIEW                  1206
 #define IDC_MEM_COPY_READ               1207
 #define IDC_DATA_EDITOR                 1207
 #define IDC_MEM_COPY_READ2              1208
