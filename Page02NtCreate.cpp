@@ -401,6 +401,7 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
     // If we have a tooltip window, init tooltips 
     if(IsPropSheetPageDialog(hDlg))
     {
+        g_Tooltip.AddToolTip(hDlg, IDC_RELATIVE_FILE, IDS_TIP_RELATIVE_FILE);
         g_Tooltip.AddToolTip(hDlg, IDC_OBJ_ATTR_FLAGS, ObjAttrFlagsValues);
         g_Tooltip.AddToolTip(hDlg, IDC_DESIRED_ACCESS, AccessMaskValues);
         g_Tooltip.AddToolTip(hDlg, IDC_FILE_ATTRIBUTES, FileAttributesValues);

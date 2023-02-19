@@ -648,9 +648,9 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
     }
 
     // Initialize tooltips
-    g_Tooltip.AddToolTip(hDlg, IDC_NT_QUERY_ATTRIBUTES_FILE, IDS_NT_QUERY_ATTRIBUTES_FILE_TIP);
-    g_Tooltip.AddToolTip(hDlg, IDC_GET_FILE_ATTRIBUTES,      IDS_GET_FILE_ATTRIBUTES_TIP);
-    g_Tooltip.AddToolTip(hDlg, IDC_FLUSH_FILE_BUFFERS,       IDS_FLUSH_FILE_BUFFERS_TIP);
+    g_Tooltip.AddToolTip(hDlg, IDC_NT_QUERY_ATTRIBUTES_FILE, IDS_TIP_NT_QUERY_ATTRIBUTES_FILE);
+    g_Tooltip.AddToolTip(hDlg, IDC_GET_FILE_ATTRIBUTES,      IDS_TIP_GET_FILE_ATTRIBUTES);
+    g_Tooltip.AddToolTip(hDlg, IDC_FLUSH_FILE_BUFFERS,       IDS_TIP_FLUSH_FILE_BUFFERS);
 
     Hex2DlgText64(hDlg, IDC_BYTE_OFFSET, 0);
     Hex2DlgText32(hDlg, IDC_LENGTH, 0x10000);

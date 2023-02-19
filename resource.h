@@ -329,7 +329,7 @@
 #define IDC_ENCRYPT_FILE                1259
 #define IDC_USE_RELATIVE_FILE           1259
 #define IDC_DECRYPT_FILE                1260
-#define IDS_FLUSH_FILE_BUFFERS_TIP      4000
+#define IDS_TIP_FLUSH_FILE_BUFFERS      4000
 #define IDS_FLAGS_AND_ATTRIBUTES        4001
 #define IDS_OPLOCK_BROKE                4002
 #define IDS_FILE_INFO_CLASS             4003
@@ -407,8 +407,8 @@
 #define IDS_CREATE_OPTIONS_RF           4072
 #define IDS_SHARE_ACCESS_RF             4073
 #define IDS_EA_SIZE                     4074
-#define IDS_NT_QUERY_ATTRIBUTES_FILE_TIP 4075
-#define IDS_GET_FILE_ATTRIBUTES_TIP     4076
+#define IDS_TIP_NT_QUERY_ATTRIBUTES_FILE 4075
+#define IDS_TIP_GET_FILE_ATTRIBUTES     4076
 #define IDS_ALLOCATION_ATTRIBUTES       4077
 #define IDS_ALLOCATION_TYPE             4078
 #define IDS_E_CONVERT_VALUE             4079
@@ -426,6 +426,7 @@
 #define IDS_IOCTL_FORMAT                4090
 #define IDS_EMPTY_RELATIVE_FILE_NAME    4091
 #define IDS_NO_RELATIVE_FILE            4092
+#define IDS_TIP_RELATIVE_FILE           4093
 #define ID_EDIT_LABEL                   40001
 #define ID_NEW_ACE_BEFORE               40008
 #define ID_NEW_ACE_AFTER                40009
