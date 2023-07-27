@@ -31,10 +31,10 @@ del buildfre_w2k_x86.log
 echo.
 
 :POST_BUILD_STEPS
-PostBuild.exe .\objfre_wlh_amd64\amd64\%EXE_NAME%.exe /tools /subsystem4
-PostBuild.exe .\objfre_w2k_x86\i386\%EXE_NAME%.exe /tools /subsystem4
+PostBuild.exe .\objfre_wlh_amd64\amd64\%BINARY_NAME%.exe /tools /subsystem4
+PostBuild.exe .\objfre_w2k_x86\i386\%BINARY_NAME%.exe /tools /subsystem4
 
 :CLEANUP
-if exist %EXE_NAME%_WDK.rc del %EXE_NAME%_WDK.rc
+if exist %BINARY_NAME%_WDK.rc del %BINARY_NAME%_WDK.rc
 if exist build.bat del build.bat
 set PATH=%SAVE_PATH%
