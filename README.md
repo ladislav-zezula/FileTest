@@ -5,7 +5,7 @@ FileTest
 You can use this tool for testing, debugging and learning [Windows FileSystem APIs](http://msdn.microsoft.com/en-us/library/windows/desktop/aa364232(v=vs.85).aspx).
 If you use this tool with [Process Monitor](http://technet.microsoft.com/en-us/sysinternals/bb896645.aspx), you can understand how Windows FileSystems internally works.
 
-![Interactive File System Test Tool](https://dl.dropboxusercontent.com/u/29668275/filetest.png)
+![Interactive File System Test Tool](http://www.zezula.net/images/tools/filetest_001.png)
 
 ### Build Requirements
 To build FileTest, you need to have one of these build environments

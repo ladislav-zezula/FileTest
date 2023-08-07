@@ -4,8 +4,8 @@
 :: Save the values of INCLUDE, LIB and PATH
 set PROJECT_DIR=%~dp0
 set SAVE_INCLUDE=%INCLUDE%
-set SAVE_LIB=%LIB%
 set SAVE_PATH=%PATH%
+set SAVE_LIB=%LIB%
 set PROJECT_NAME=FileTest
 set PROJECT_ZIP_NAME=filetest
 
@@ -13,7 +13,7 @@ set PROJECT_ZIP_NAME=filetest
 if "x%1" == "x/web" set PUBLISH_PROJECT=1
 
 :: Determine where the program files are, both for 64-bit and 32-bit Windows
-if exist "%ProgramFiles%"      set PROGRAM_FILES_X64=%ProgramFiles%
+if exist "%ProgramW6432%"      set PROGRAM_FILES_X64=%ProgramW6432%
 if exist "%ProgramFiles%"      set PROGRAM_FILES_DIR=%ProgramFiles%
 if exist "%ProgramFiles(x86)%" set PROGRAM_FILES_DIR=%ProgramFiles(x86)%
 
@@ -53,12 +53,12 @@ goto:eof
 ::   %2     Plain name of the .sln solution file
 ::   %3     Language version (Cn, En, Ko, Pl, Ru)
 ::   %4     Language version lowercase (cn, en, ko, pl, ru)
-::   %5     x86 or x64
-::   %6     Win32 or x64
+::   %5     x86, x64, amd64_arm64
+::   %6     Win32, x64, ARM64
 ::
 
 :BuildProject
-echo [*] Building %PROJECT_NAME% (%3, %5) ...
+echo [*] Building %PROJECT_NAME% (%3, %6) ...
 call %1 %5 >nul
 devenv.com %2 /project "%PROJECT_NAME%" /rebuild "Release|%6" >nul
 ::if "%5" == "x64" PostBuild.exe %PROJECT_NAME%.rc /nologo
@@ -78,10 +78,14 @@ popd
 :: Restore environment variables to the old level
 :RestoreEnvironment
 set INCLUDE=%SAVE_INCLUDE%
-set LIB=%SAVE_LIB%
 set PATH=%SAVE_PATH%
+set LIB=%SAVE_LIB%
+
+:: Delete environment variables that are set by Visual Studio
+set __VSCMD_PREINIT_PATH=
+set EXTERNAL_INCLUDE=
 set VSINSTALLDIR=
 set VCINSTALLDIR=
 set DevEnvDir=
 set LIBPATH=
-goto:eof
+
