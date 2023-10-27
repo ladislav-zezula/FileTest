@@ -20,8 +20,8 @@ cd C:\Projects
 ```
 2) Run the following batch script
 ```
-git clone https://github.com/ladislav-zezula/Aaa.git
-git clone https://github.com/ladislav-zezula/FileTest.git
+git clone git@github.com:ladislav-zezula/Aaa.git
+git clone git@github.com:ladislav-zezula/FileTest.git
 cd FileTest
 call make-msvc.bat
 ```

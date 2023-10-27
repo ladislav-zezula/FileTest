@@ -360,7 +360,7 @@ static DWORD LocalGetStringForSid(
     void * RootDomainSid,
     void * DomainSid,
     PSTRSD_SID_LOOKUP tSidLookupDomOrRootDomRelativeTable,
-    bool DefaultToDomain)
+    BOOL DefaultToDomain)
 {
     UNREFERENCED_PARAMETER(tSidLookupDomOrRootDomRelativeTable);
     UNREFERENCED_PARAMETER(DefaultToDomain);

@@ -36,6 +36,10 @@
 #define IDI_SHIELD              MAKEINTRESOURCE(32518)
 #endif
 
+#ifndef ERROR_INVALID_ACE_CONDITION
+#define ERROR_INVALID_ACE_CONDITION      805L
+#endif
+
 //-----------------------------------------------------------------------------
 // Kernel32 definitions (not included in VS 2005 SDK)
 

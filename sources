@@ -25,7 +25,8 @@ USR_LIB_PATH=..\aaa\lib64
 USR_LIB_PATH=..\aaa\lib32
 !endif
 
-SOURCES=DateTime.cpp \
+SOURCES=AceCondition.cpp \
+		DateTime.cpp \
 		DlgCopyFile.cpp \
 		DlgDataEditor.cpp \
 		DlgEaEditor.cpp \
