@@ -32,8 +32,8 @@ if exist "%PROGRAM_FILES_X64%\Microsoft Visual Studio\2022\Community\VC\Auxiliar
 :: Build the project using Visual Studio 2008 and 2017+
 rem if not "x%VCVARS_2008%" == "x" call :BuildProject "%VCVARS_2008%" %PROJECT_NAME%_vs08.sln En en x86 Win32
 rem if not "x%VCVARS_2008%" == "x" call :BuildProject "%VCVARS_2008%" %PROJECT_NAME%_vs08.sln En en x64 x64
-if not "x%VCVARS_20xx%" == "x" call :BuildProject "%VCVARS_20xx%" %PROJECT_NAME%_vs22.sln En en x86 Win32
-if not "x%VCVARS_20xx%" == "x" call :BuildProject "%VCVARS_20xx%" %PROJECT_NAME%_vs22.sln En en x64 x64
+if not "x%VCVARS_20xx%" == "x" call :BuildProject "%VCVARS_20xx%" %PROJECT_NAME%.sln En en x86 Win32
+if not "x%VCVARS_20xx%" == "x" call :BuildProject "%VCVARS_20xx%" %PROJECT_NAME%.sln En en x64 x64
 echo [*] Build complete.
 
 :: Update web pages

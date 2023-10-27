@@ -26,26 +26,26 @@
 #define ACE_FIELD_OBJECT_TYPE2      0x00000100      // ACE::InheritedObjectType
 #define ACE_FIELD_ACCESS_SID        0x00000200      // ACE::SidStart contains an access SID
 #define ACE_FIELD_MANDATORY_SID     0x00000400      // ACE::SidStart contains a mandatory label SID
-#define ACE_FIELD_RCMGR_DATA        0x00000800      // Opaque data after SidStart + SidLength
+#define ACE_FIELD_CONDITION         0x00000800      // Decode ACE condition
 #define ACE_FIELD_NEED_FREE_SID     0x80000000      // The ACE_HELPER::Sid needs to be freed using Sid_Free
 
-// Flag combinations for {Header-Mask-SidStart} ACEs
-#define ACE_LAYOUT_SIMPLE   (ACE_FIELD_HDR_TYPE | ACE_FIELD_HDR_FLAGS | ACE_FIELD_HDR_SIZE | ACE_FIELD_ACCESS_MASK | ACE_FIELD_ACCESS_SID)
-
-// Flag combinations for {Header-Mask-SidStart-OpaqueResMgrData} ACEs
-#define ACE_LAYOUT_SIMPLE2   (ACE_FIELD_HDR_TYPE | ACE_FIELD_HDR_FLAGS | ACE_FIELD_HDR_SIZE | ACE_FIELD_ACCESS_MASK | ACE_FIELD_ACCESS_SID | ACE_FIELD_RCMGR_DATA)
-
 // Unknown ACE layout (ACCESS_ALLOWED_COMPOUND_ACE)
-#define ACE_LAYOUT_UNKNOWN  (0)
+#define ACE_LAYOUT_UNKNOWN   (0)
+
+// Flag combinations for {Header-Mask-SidStart} ACEs
+#define ACE_LAYOUT_SIMPLE     (ACE_FIELD_HDR_TYPE | ACE_FIELD_HDR_FLAGS | ACE_FIELD_HDR_SIZE | ACE_FIELD_ACCESS_MASK | ACE_FIELD_ACCESS_SID)
+
+// Flag combinations for {Header-Mask-SidStart-Condition} ACEs
+#define ACE_LAYOUT_SIMPLE_CND (ACE_FIELD_HDR_TYPE | ACE_FIELD_HDR_FLAGS | ACE_FIELD_HDR_SIZE | ACE_FIELD_ACCESS_MASK | ACE_FIELD_ACCESS_SID | ACE_FIELD_CONDITION)
 
 // ACE layout for {Header-AdsMask-Flags-ObjectType-InheritedObjectType-SidStart}
-#define ACE_LAYOUT_OBJECT   (ACE_FIELD_HDR_TYPE | ACE_FIELD_HDR_FLAGS | ACE_FIELD_HDR_SIZE | ACE_FIELD_ADS_ACCESS_MASK | ACE_FIELD_FLAGS | ACE_FIELD_OBJECT_TYPE | ACE_FIELD_OBJECT_TYPE2 | ACE_FIELD_ACCESS_SID)
+#define ACE_LAYOUT_OBJECT     (ACE_FIELD_HDR_TYPE | ACE_FIELD_HDR_FLAGS | ACE_FIELD_HDR_SIZE | ACE_FIELD_ADS_ACCESS_MASK | ACE_FIELD_FLAGS | ACE_FIELD_OBJECT_TYPE | ACE_FIELD_OBJECT_TYPE2 | ACE_FIELD_ACCESS_SID)
 
-// ACE layout for {Header-AdsMask-Flags-ObjectType-InheritedObjectType-SidStart-OpaqueResMgrData}
-#define ACE_LAYOUT_OBJECT2  (ACE_FIELD_HDR_TYPE | ACE_FIELD_HDR_FLAGS | ACE_FIELD_HDR_SIZE | ACE_FIELD_ADS_ACCESS_MASK | ACE_FIELD_FLAGS | ACE_FIELD_OBJECT_TYPE | ACE_FIELD_OBJECT_TYPE2 | ACE_FIELD_ACCESS_SID | ACE_FIELD_RCMGR_DATA)
+// ACE layout for {Header-AdsMask-Flags-ObjectType-InheritedObjectType-SidStart-Condition}
+#define ACE_LAYOUT_OBJECT_CND (ACE_FIELD_HDR_TYPE | ACE_FIELD_HDR_FLAGS | ACE_FIELD_HDR_SIZE | ACE_FIELD_ADS_ACCESS_MASK | ACE_FIELD_FLAGS | ACE_FIELD_OBJECT_TYPE | ACE_FIELD_OBJECT_TYPE2 | ACE_FIELD_ACCESS_SID | ACE_FIELD_CONDITION)
 
 // ACE Layout for SYSTEM_MANDATORY_LABEL_ACE_TYPE
-#define ACE_LAYOUT_MANDATORY (ACE_FIELD_HDR_TYPE | ACE_FIELD_HDR_FLAGS | ACE_FIELD_HDR_SIZE | ACE_FIELD_MANDATORY_MASK | ACE_FIELD_MANDATORY_SID)
+#define ACE_LAYOUT_MANDATORY  (ACE_FIELD_HDR_TYPE | ACE_FIELD_HDR_FLAGS | ACE_FIELD_HDR_SIZE | ACE_FIELD_MANDATORY_MASK | ACE_FIELD_MANDATORY_SID)
 
 //-----------------------------------------------------------------------------
 // Interface for the ACE_HELPER class
@@ -76,6 +76,8 @@ struct ACE_HELPER
     GUID ObjectType;
     GUID InheritedObjectType;
     PSID Sid;                                       // Pointer to SID (need to be freed using FreeSid)
+    LPBYTE Condition;                               // ACE condition
+    DWORD  ConditionLength;                         // Length of the ACE condition
 };
 
 #endif  // __TACEHELPER_H__

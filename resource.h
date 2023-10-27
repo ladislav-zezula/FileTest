@@ -427,6 +427,9 @@
 #define IDS_EMPTY_RELATIVE_FILE_NAME    4091
 #define IDS_NO_RELATIVE_FILE            4092
 #define IDS_TIP_RELATIVE_FILE           4093
+#define IDS_INVALID_ACE_CONDITION       4094
+#define IDS_FORMAT_ACE_CONDITION        4095
+#define IDS_FORMAT_SID                  4096
 #define ID_EDIT_LABEL                   40001
 #define ID_NEW_ACE_BEFORE               40008
 #define ID_NEW_ACE_AFTER                40009

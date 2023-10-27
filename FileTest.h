@@ -16,7 +16,7 @@
 #define _UNICODE
 #endif
 
-#pragma warning(disable: 4091)  // warning C4091: 'typedef ': ignored on left of 'tagGPFIDL_FLAGS' when no variable is declared
+#pragma warning(disable: 4091)      // warning C4091: 'typedef ': ignored on left of 'tagGPFIDL_FLAGS' when no variable is declared
 #define OEMRESOURCE
 #include <tchar.h>
 #include <stdio.h>
@@ -28,10 +28,12 @@
 #include <ShlObj.h>
 #include <winioctl.h>
 #include <strsafe.h>
+#include <sddl.h>
 
 #include "ntstatus.h"
 #include "ntdll.h"
 #include "Utils.h"
+#include "AceCondition.h"
 #include "TFastString.h"
 #include "TFlagString.h"
 #include "TAceHelper.h"
@@ -493,6 +495,9 @@ LPTSTR GuidValueToString(LPTSTR szBuffer, size_t cchBuffer, LPCTSTR szFormat, LP
 void FileIDToString(TFileTestData * pData, ULONGLONG FileId, LPTSTR szBuffer);
 void ObjectIDToString(PBYTE pbObjId, LPCTSTR szFileName, LPTSTR szObjectID);
 int  StringToFileID(LPCTSTR szFileOrObjId, LPTSTR szVolume, PVOID pvFileObjId, PDWORD pLength);
+
+PSID Sid_Allocate(DWORD dwLength);
+void Sid_Free(PSID pSid);
 
 void SidToString(PSID pvSid, LPTSTR szString, size_t cchString, bool bAddUserName);
 bool StringToSid(LPTSTR szSid, PSID* ppSid);

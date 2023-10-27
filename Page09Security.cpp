@@ -34,6 +34,7 @@
 #define TREE_ITEM_ACE_FLAGS         0x3000000C      // ACE:Flags
 #define TREE_ITEM_ACE_OBJ_GUID      0x3000000D      // ACE:ObjectType
 #define TREE_ITEM_ACE_OBJ_GUID2     0x3000000E      // ACE:InheritedObjectType
+#define TREE_ITEM_ACE_CONDITION     0x3000000F      // ACE Condition
 #define TREE_ITEM_TYPE_MASK         0xF0000000
 #define TREE_ITEM_VALUE_MASK        0x0FFFFFFF
 
@@ -42,17 +43,17 @@
 typedef bool (*ACE_FILTER_PROC)(PACE_HEADER pAceHeader);
 
 // Masks for each tre item
-static LPCTSTR szUnknownSid     = _T("<UNKNOWN-SID>");
-static LPCTSTR szNullAcl        = _T("<NULL ACL. Double-click to create new...>");
-static LPCTSTR szEmptyAcl       = _T("<Empty ACL. Double-click to create new...>");
-static LPCTSTR szAceHdrTypeFmt  = _T("AceType: 0x%02lX");
-static LPCTSTR szAceHdrFlagsFmt = _T("AceFlags: 0x%02lX  ");
-static LPCTSTR szAceHdrSizeFmt  = _T("AceSize: 0x%04lX");
-static LPCTSTR szAceMaskFmt     = _T("Mask: 0x%08lX  ");
-static LPCTSTR szIntLevelFmt    = _T("IntLevel: 0x%08lX");
-static LPCTSTR szAceFlagsFmt    = _T("Flags: 0x%08lX ");
-static LPCTSTR szAceObjTypeFmt  = _T("ObjectType: %s");
-static LPCTSTR szAceObjTypeFmt2 = _T("InheritedObjectType: %s");
+static LPCTSTR szUnknownSid      = _T("<UNKNOWN-SID>");
+static LPCTSTR szNullAcl         = _T("<NULL ACL. Double-click to create new...>");
+static LPCTSTR szEmptyAcl        = _T("<Empty ACL. Double-click to create new...>");
+static LPCTSTR szAceHdrTypeFmt   = _T("AceType: 0x%02lX");
+static LPCTSTR szAceHdrFlagsFmt  = _T("AceFlags: 0x%02lX  ");
+static LPCTSTR szAceHdrSizeFmt   = _T("AceSize: 0x%04lX");
+static LPCTSTR szAceMaskFmt      = _T("Mask: 0x%08lX  ");
+static LPCTSTR szIntLevelFmt     = _T("IntLevel: 0x%08lX");
+static LPCTSTR szAceFlagsFmt     = _T("Flags: 0x%08lX ");
+static LPCTSTR szAceObjTypeFmt   = _T("ObjectType: %s");
+static LPCTSTR szAceObjTypeFmt2  = _T("InheritedObjectType: %s");
 
 static SID_IDENTIFIER_AUTHORITY SiaNull  = SECURITY_NULL_SID_AUTHORITY;
 static SID_IDENTIFIER_AUTHORITY SiaWorld = SECURITY_WORLD_SID_AUTHORITY;
@@ -215,25 +216,6 @@ static DWORD AceSidOffsets[] =
 //-----------------------------------------------------------------------------
 // Local functions - SID
 
-static PSID Sid_Allocate(DWORD dwLength)
-{
-#ifdef _DEBUG
-    return (PSID)malloc(dwLength);              // Allocate using malloc, so we can track the leaks
-#else
-    return (PSID)HeapAlloc(g_hHeap, 0, dwLength);
-#endif
-}
-
-// A public function, also used in ACE_HELPER
-void Sid_Free(PSID pSid)
-{
-#ifdef _DEBUG
-    free(pSid);
-#else
-    HeapFree(g_hHeap, 0, pSid);
-#endif
-}
-
 static PSID Sid_AllocateAndInitialize(
     IN PSID_IDENTIFIER_AUTHORITY pIdentifierAuthority,
     IN BYTE nSubAuthorityCount,
@@ -306,6 +288,25 @@ static bool CheckForServiceAccount(LPTSTR szUserName)
     }
 
     return false;
+}
+
+PSID Sid_Allocate(DWORD dwLength)
+{
+#ifdef _DEBUG
+    return (PSID)malloc(dwLength);              // Allocate using malloc, so we can track the leaks
+#else
+    return (PSID)HeapAlloc(g_hHeap, 0, dwLength);
+#endif
+}
+
+// A public function, also used in ACE_HELPER
+void Sid_Free(PSID pSid)
+{
+#ifdef _DEBUG
+    free(pSid);
+#else
+    HeapFree(g_hHeap, 0, pSid);
+#endif
 }
 
 void SidToString(PSID pvSid, LPTSTR szString, size_t cchString, bool bAddUserName)
@@ -687,17 +688,18 @@ static bool TreeView_ItemToGuid(HWND hTreeView, HTREEITEM hItem, LPGUID PtrGuid)
 static HTREEITEM TreeView_SidToItem(HWND hTreeView, HTREEITEM hItem, PSID pSid, LPCTSTR szDefaultText)
 {
     LPARAM lParam = TREE_ITEM_NO_SID;
-    TCHAR szTextBuff[256];
+    TCHAR szItemText[256];
+    TCHAR szSidText[128];
 
     // If the SID is present, convert the SID to the tree item
     if(pSid != NULL)
     {
         // Convert the SID to text
-        SidToString(pSid, szTextBuff, _countof(szTextBuff), true);
-        szDefaultText = szTextBuff;
+        SidToString(pSid, szSidText, _countof(szSidText), true);
+        rsprintf(szItemText, _countof(szItemText), IDS_FORMAT_SID, szSidText);
+        szDefaultText = szItemText;
         lParam = TREE_ITEM_SID;
     }
-
     return TreeView_SetTreeItem(hTreeView, hItem, szDefaultText, lParam);
 }
 
@@ -805,6 +807,32 @@ static bool TreeView_ItemToMandatorySid(HWND hTreeView, HTREEITEM hItem, ACE_HEL
     return bResult;
 }
 
+static HTREEITEM TreeView_InsertAceCondition(HWND hTreeView, HTREEITEM hParentItem, LPBYTE Condition, ULONG ConditionLength)
+{
+    HTREEITEM hItem = NULL;
+    LPTSTR szCondition = NULL;
+    DWORD dwErrCode;
+    TCHAR szItemText[256];
+    TCHAR szBuffer[128];
+
+    dwErrCode = LocalGetStringForCondition(Condition, ConditionLength, &szCondition, NULL, NULL, NULL, NULL, false);
+    if(dwErrCode != ERROR_SUCCESS)
+    {
+        LoadString(g_hInst, IDS_INVALID_ACE_CONDITION, szBuffer, _countof(szBuffer));
+        szCondition = szBuffer;
+    }
+
+    // Make the item text
+    rsprintf(szItemText, _countof(szItemText), IDS_FORMAT_ACE_CONDITION, szCondition);
+    hItem = InsertTreeItem(hTreeView, hParentItem, szItemText, TREE_ITEM_ACE_CONDITION);
+
+    // Free the condition, if needed
+    if(szCondition && szCondition != szBuffer)
+        LocalFree(szCondition);
+    return hItem;
+
+}
+
 static HTREEITEM TreeView_AceToItem(
     HWND hTreeView,
     HTREEITEM hItem,
@@ -816,7 +844,7 @@ static HTREEITEM TreeView_AceToItem(
     if(AceHelper.AceLayout == ACE_LAYOUT_UNKNOWN)
         return NULL;
 
-    // If the parent is valis
+    // If the parent is valid
     if(hItem != NULL)
     {
         // Delete all children
@@ -884,6 +912,10 @@ static HTREEITEM TreeView_AceToItem(
         // Insert the access SID, if present
         if(AceHelper.AceLayout & ACE_FIELD_ACCESS_SID)
             TreeView_InsertSidItem(hTreeView, hItem, AceHelper.Sid, szUnknownSid);
+
+        // Insert the ACE condition, if any
+        if(AceHelper.AceLayout & ACE_FIELD_CONDITION)
+            TreeView_InsertAceCondition(hTreeView, hItem, AceHelper.Condition, AceHelper.ConditionLength);
 
         // Expand the item
         TreeView_Expand(hTreeView, hItem, TVE_EXPAND);

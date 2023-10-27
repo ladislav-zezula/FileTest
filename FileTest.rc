@@ -128,13 +128,13 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Ladislav Zezula"
             VALUE "FileDescription", "Interactive File System API Test"
-            VALUE "FileVersion", "2, 8, 0, 635\0"
+            VALUE "FileVersion", "2, 8, 0, 635"
             VALUE "InternalName", "FileTest"
             VALUE "LegalCopyright", "Copyright © 2004 - 2023 Ladislav Zezula"
             VALUE "LegalTrademarks", "http://www.zezula.net"
             VALUE "OriginalFilename", "FileTest.exe"
             VALUE "ProductName", "FileTest"
-            VALUE "ProductVersion", "2, 8, 0, 635\0"
+            VALUE "ProductVersion", "2, 8, 0, 635"
         END
     END
     BLOCK "VarFileInfo"
@@ -690,7 +690,7 @@ FONT 8, "MS Shell Dlg", 0, 0, 0x1
 BEGIN
     CONTROL         "",IDC_FILE_DATA,"DataEditor",0x20,7,7,431,255,WS_EX_CLIENTEDGE
     LTEXT           "",IDC_INFORMATION,7,268,376,14,SS_CENTERIMAGE
-    PUSHBUTTON      "FlushViewOfFile", IDC_FLUSH_VIEW, 7, 268, 80, 14
+    PUSHBUTTON      "FlushViewOfFile",IDC_FLUSH_VIEW,7,268,80,14
     DEFPUSHBUTTON   "Close",IDOK,388,268,50,14
 END
 
@@ -1243,7 +1243,7 @@ END
 
 STRINGTABLE
 BEGIN
-    IDS_TIP_FLUSH_FILE_BUFFERS
+    IDS_TIP_FLUSH_FILE_BUFFERS 
                             "Flushes all file buffers to disk using FlushFileBuffers API"
     IDS_FLAGS_AND_ATTRIBUTES "Flags and Attributes for CreateFile(Transacted)"
     IDS_OPLOCK_BROKE        "The oplock originally granted to the caller (%s) has been broken to %s."
@@ -1338,9 +1338,9 @@ BEGIN
     IDS_CREATE_OPTIONS_RF   "Create Options (Relative File)"
     IDS_SHARE_ACCESS_RF     "Share Access (Relative File)"
     IDS_EA_SIZE             "Size"
-    IDS_TIP_NT_QUERY_ATTRIBUTES_FILE
+    IDS_TIP_NT_QUERY_ATTRIBUTES_FILE 
                             "Retrieves file attributes using NtQueryAttributesFile API"
-    IDS_TIP_GET_FILE_ATTRIBUTES
+    IDS_TIP_GET_FILE_ATTRIBUTES 
                             "Retrieves file attributes using GetFileAttributes API"
     IDS_ALLOCATION_ATTRIBUTES "Allocation Attributes"
     IDS_ALLOCATION_TYPE     "Allocation Type"
@@ -1363,6 +1363,13 @@ BEGIN
     IDS_EMPTY_RELATIVE_FILE_NAME "(Relative File of an Empty Name)"
     IDS_NO_RELATIVE_FILE    "(No Relative File)"
     IDS_TIP_RELATIVE_FILE   "Click to refine create options for the relative file"
+    IDS_INVALID_ACE_CONDITION "<invalid ACE condition>"
+    IDS_FORMAT_ACE_CONDITION "Condition: %s"
+END
+
+STRINGTABLE
+BEGIN
+    IDS_FORMAT_SID          "Sid: %s"
 END
 
 #endif    // English (United States) resources

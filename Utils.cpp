@@ -508,18 +508,15 @@ LPARAM TreeView_GetItemParam(HWND hTreeView, HTREEITEM hItem)
 
 HTREEITEM TreeView_SetTreeItem(HWND hTreeView, HTREEITEM hItem, LPCTSTR szText, LPARAM lParam)
 {
-    TVITEM tvi;
+    TVITEM tvi = {TVIF_TEXT | TVIF_PARAM};
 
-    // Retrieve the item param
-    tvi.mask    = TVIF_TEXT | TVIF_PARAM;
+    // Prepare the TVITEM structure
     tvi.hItem   = hItem;
     tvi.lParam  = lParam;
     tvi.pszText = (LPTSTR)szText;
-    if(!TreeView_SetItem(hTreeView, &tvi))
-        hItem = NULL;
 
-    // Return the parameter
-    return hItem;
+    // Set the text&param to the tree item
+    return TreeView_SetItem(hTreeView, &tvi) ? hItem : NULL;
 }
 
 BOOL TreeView_EditLabel_ID(HWND hDlg, UINT nID)

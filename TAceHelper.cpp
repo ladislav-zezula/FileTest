@@ -27,14 +27,14 @@ static DWORD AceLayouts[] =
     ACE_LAYOUT_OBJECT,                      // SYSTEM_AUDIT_OBJECT_ACE = {Header-AdsMask-Flags-ObjectType-InheritedObjectType-SidStart}
     ACE_LAYOUT_OBJECT,                      // SYSTEM_ALARM_OBJECT_ACE = {Header-AdsMask-Flags-ObjectType-InheritedObjectType-SidStart}
 
-    ACE_LAYOUT_SIMPLE2,                     // ACCESS_ALLOWED_CALLBACK_ACE = {Header-Mask-SidStart-OpaqueResMgrData}
-    ACE_LAYOUT_SIMPLE2,                     // ACCESS_DENIED_CALLBACK_ACE = {Header-Mask-SidStart-OpaqueResMgrData}
-    ACE_LAYOUT_OBJECT2,                     // ACCESS_ALLOWED_CALLBACK_OBJECT_ACE = {Header-AdsMask-Flags-ObjectType-InheritedObjectType-SidStart-OpaqueResMgrData}
-    ACE_LAYOUT_OBJECT2,                     // ACCESS_DENIED_CALLBACK_OBJECT_ACE = {Header-AdsMask-Flags-ObjectType-InheritedObjectType-SidStart-OpaqueResMgrData}
-    ACE_LAYOUT_SIMPLE2,                     // SYSTEM_AUDIT_CALLBACK_ACE = {Header-Mask-SidStart-OpaqueResMgrData}
-    ACE_LAYOUT_SIMPLE2,                     // SYSTEM_ALARM_CALLBACK_ACE = {Header-Mask-SidStart-OpaqueResMgrData}
-    ACE_LAYOUT_OBJECT2,                     // SYSTEM_AUDIT_CALLBACK_OBJECT_ACE = {Header-AdsMask-Flags-ObjectType-InheritedObjectType-SidStart-OpaqueResMgrData}
-    ACE_LAYOUT_OBJECT2,                     // SYSTEM_ALARM_CALLBACK_OBJECT_ACE = {Header-AdsMask-Flags-ObjectType-InheritedObjectType-SidStart-OpaqueResMgrData}
+    ACE_LAYOUT_SIMPLE_CND,                  // ACCESS_ALLOWED_CALLBACK_ACE = {Header-Mask-SidStart-Condition}
+    ACE_LAYOUT_SIMPLE_CND,                  // ACCESS_DENIED_CALLBACK_ACE = {Header-Mask-SidStart-Condition}
+    ACE_LAYOUT_OBJECT_CND,                  // ACCESS_ALLOWED_CALLBACK_OBJECT_ACE = {Header-AdsMask-Flags-ObjectType-InheritedObjectType-SidStart-Condition}
+    ACE_LAYOUT_OBJECT_CND,                  // ACCESS_DENIED_CALLBACK_OBJECT_ACE = {Header-AdsMask-Flags-ObjectType-InheritedObjectType-SidStart-Condition}
+    ACE_LAYOUT_SIMPLE_CND,                  // SYSTEM_AUDIT_CALLBACK_ACE = {Header-Mask-SidStart-Condition}
+    ACE_LAYOUT_SIMPLE_CND,                  // SYSTEM_ALARM_CALLBACK_ACE = {Header-Mask-SidStart-Condition}
+    ACE_LAYOUT_OBJECT_CND,                  // SYSTEM_AUDIT_CALLBACK_OBJECT_ACE = {Header-AdsMask-Flags-ObjectType-InheritedObjectType-SidStart-Condition}
+    ACE_LAYOUT_OBJECT_CND,                  // SYSTEM_ALARM_CALLBACK_OBJECT_ACE = {Header-AdsMask-Flags-ObjectType-InheritedObjectType-SidStart-Condition}
 
     ACE_LAYOUT_MANDATORY                    // SYSTEM_MANDATORY_LABEL_ACE = {Header-MandatoryMask-MandatorySidStart}
 };
@@ -51,14 +51,15 @@ ACE_HELPER::ACE_HELPER()
 
 ACE_HELPER::~ACE_HELPER()
 {
+    if(Condition != NULL)
+        delete[] Condition;
+    Condition = NULL;
+
     SetAllocatedSid(NULL);
 }
 
 //-----------------------------------------------------------------------------
 // Public functions
-
-// In Page09Security.cpp
-void Sid_Free(PSID pSid);
 
 bool ACE_HELPER::SetAceType(DWORD dwAceType)
 {
@@ -74,57 +75,67 @@ bool ACE_HELPER::SetAceType(DWORD dwAceType)
 
 bool ACE_HELPER::SetAce(PACE_HEADER pAceHeader)
 {
-    LPBYTE PtrAceData;
     bool bResult;
 
     // Verify ACE type and set the ACE layout
-    bResult = SetAceType(pAceHeader->AceType);
-    if(bResult)
+    if((bResult = SetAceType(pAceHeader->AceType)) != FALSE)
     {
+        LPBYTE pbAceEnd = (LPBYTE)(pAceHeader) + pAceHeader->AceSize;
+        LPBYTE pbAcePtr = (LPBYTE)(pAceHeader + 1);
+
         // Fill-in the header (always included)
         AceFlags = pAceHeader->AceFlags;
         AceSize  = pAceHeader->AceSize;
 
-        // Now get ready for variable ACE layouts
-        PtrAceData = (LPBYTE)(pAceHeader + 1);
-
         // Is there the ACE::Mask?
         if(AceLayout & (ACE_FIELD_ACCESS_MASK | ACE_FIELD_ADS_ACCESS_MASK | ACE_FIELD_MANDATORY_MASK))
         {
-            Mask = *(PDWORD)PtrAceData;
-            PtrAceData += sizeof(DWORD);
+            Mask = *(PDWORD)(pbAcePtr);
+            pbAcePtr += sizeof(DWORD);
         }
 
         // Is there the ACE::Flags
         if(AceLayout & ACE_FIELD_FLAGS)
         {
             // Copy the ACE::Flags
-            Flags = *(PDWORD)PtrAceData;
-            PtrAceData += sizeof(DWORD);
+            Flags = *(PDWORD)(pbAcePtr);
+            pbAcePtr += sizeof(DWORD);
 
             // ACE::ObjectType is only present if ACE_OBJECT_TYPE_PRESENT is in the flags
             if(Flags & ACE_OBJECT_TYPE_PRESENT)
             {
-                memcpy(&ObjectType, PtrAceData, sizeof(GUID));
-                PtrAceData += sizeof(GUID);
+                memcpy(&ObjectType, pbAcePtr, sizeof(GUID));
+                pbAcePtr += sizeof(GUID);
             }
 
             // Is there the ACE::InheritedObjectType?
             if(Flags & ACE_INHERITED_OBJECT_TYPE_PRESENT)
             {
-                memcpy(&InheritedObjectType, PtrAceData, sizeof(GUID));
-                PtrAceData += sizeof(GUID);
+                memcpy(&InheritedObjectType, pbAcePtr, sizeof(GUID));
+                pbAcePtr += sizeof(GUID);
             }
         }
 
         // Get the pointer to SID
         if(AceLayout & (ACE_FIELD_ACCESS_SID | ACE_FIELD_MANDATORY_SID))
         {
-            Sid = (PSID)PtrAceData;
             AceLayout &= ~ACE_FIELD_NEED_FREE_SID;
+            Sid = (PSID)(pbAcePtr);
+            pbAcePtr += GetLengthSid(Sid);
+        }
+
+        // Get the ACE condition. Example: C:\Program Files\WindowsApps\<any folder>
+        if((AceLayout & ACE_FIELD_CONDITION) && (pbAcePtr < pbAceEnd))
+        {
+            if((ConditionLength = (DWORD)(pbAceEnd - pbAcePtr)) != 0)
+            {
+                if((Condition = new BYTE[ConditionLength]) != NULL)
+                {
+                    memcpy(Condition, pbAcePtr, ConditionLength);
+                }
+            }
         }
     }
-
     return bResult;
 }
 
