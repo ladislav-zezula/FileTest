@@ -224,13 +224,12 @@
 #define SE_GROUP_INTEGRITY_ENABLED         (0x00000040L)
 #endif // SE_GROUP_INTEGRITY
 
-#ifndef ACCESS_ALLOWED_COMPOUND_ACE_TYPE
+#ifndef ACCESS_MAX_MS_V3_ACE_TYPE
 #define ACCESS_ALLOWED_COMPOUND_ACE_TYPE        (0x4)
 #define ACCESS_MAX_MS_V3_ACE_TYPE               (0x4)
 #endif
 
-#ifndef ACCESS_MIN_MS_OBJECT_ACE_TYPE
-#define ACCESS_MIN_MS_OBJECT_ACE_TYPE           (0x5)
+#ifndef ACCESS_MAX_MS_V4_ACE_TYPE
 #define ACCESS_ALLOWED_OBJECT_ACE_TYPE          (0x5)
 #define ACCESS_DENIED_OBJECT_ACE_TYPE           (0x6)
 #define SYSTEM_AUDIT_OBJECT_ACE_TYPE            (0x7)
@@ -239,7 +238,7 @@
 #define ACCESS_MAX_MS_V4_ACE_TYPE               (0x8)
 #endif
 
-#ifndef ACCESS_ALLOWED_CALLBACK_ACE_TYPE
+#ifndef ACCESS_MAX_MS_V5_ACE_TYPE
 #define ACCESS_ALLOWED_CALLBACK_ACE_TYPE        (0x9)
 #define ACCESS_DENIED_CALLBACK_ACE_TYPE         (0xA)
 #define ACCESS_ALLOWED_CALLBACK_OBJECT_ACE_TYPE (0xB)
@@ -249,7 +248,11 @@
 #define SYSTEM_AUDIT_CALLBACK_OBJECT_ACE_TYPE   (0xF)
 #define SYSTEM_ALARM_CALLBACK_OBJECT_ACE_TYPE   (0x10)
 #define SYSTEM_MANDATORY_LABEL_ACE_TYPE         (0x11)
-#define ACCESS_MAX_MS_V5_ACE_TYPE               (0x11)
+#define SYSTEM_RESOURCE_ATTRIBUTE_ACE_TYPE      (0x12)
+#define SYSTEM_SCOPED_POLICY_ID_ACE_TYPE        (0x13)
+#define SYSTEM_PROCESS_TRUST_LABEL_ACE_TYPE     (0x14)
+#define SYSTEM_ACCESS_FILTER_ACE_TYPE           (0x15)
+#define ACCESS_MAX_MS_V5_ACE_TYPE               (0x15)
 #endif
 
 // Access mask for the mandatory label ACE
@@ -274,69 +277,21 @@
 #endif  // SECURITY_MANDATORY_LABEL_AUTHORITY
 
 //-----------------------------------------------------------------------------
-// Definitions for token mandatory label
+// Additional ACE types version 3 (not included in VS 2005 SDK)
 
-#ifndef ACCESS_MAX_MS_V5_ACE_TYPE
+#ifndef COMPOUND_ACE_IMPERSONATION
+#define COMPOUND_ACE_IMPERSONATION 1
 
-typedef struct _TOKEN_MANDATORY_LABEL
+typedef struct _COMPOUND_ACCESS_ALLOWED_ACE
 {
-    SID_AND_ATTRIBUTES Label;
-
-} TOKEN_MANDATORY_LABEL, *PTOKEN_MANDATORY_LABEL;
-
-typedef enum _TOKEN_ELEVATION_TYPE {
-    TokenElevationTypeDefault = 1,
-    TokenElevationTypeFull,
-    TokenElevationTypeLimited,
-} TOKEN_ELEVATION_TYPE, *PTOKEN_ELEVATION_TYPE;
-
-typedef struct _TOKEN_ELEVATION {
-    DWORD TokenIsElevated;
-} TOKEN_ELEVATION, *PTOKEN_ELEVATION;
-
-#endif  // ACCESS_MAX_MS_V5_ACE_TYPE
-
-//-----------------------------------------------------------------------------
-// Additional ACE types version 4 (not included in VS 2005 SDK)
-
-#ifndef ACCESS_MAX_MS_V4_ACE_TYPE
-
-typedef struct _ACCESS_ALLOWED_OBJECT_ACE {
     ACE_HEADER Header;
     ACCESS_MASK Mask;
-    DWORD Flags;
-    GUID ObjectType;
-    GUID InheritedObjectType;
-    DWORD SidStart;
-} ACCESS_ALLOWED_OBJECT_ACE, *PACCESS_ALLOWED_OBJECT_ACE;
-
-typedef struct _ACCESS_DENIED_OBJECT_ACE {
-    ACE_HEADER Header;
-    ACCESS_MASK Mask;
-    DWORD Flags;
-    GUID ObjectType;
-    GUID InheritedObjectType;
-    DWORD SidStart;
-} ACCESS_DENIED_OBJECT_ACE, *PACCESS_DENIED_OBJECT_ACE;
-
-typedef struct _SYSTEM_AUDIT_OBJECT_ACE {
-    ACE_HEADER Header;
-    ACCESS_MASK Mask;
-    DWORD Flags;
-    GUID ObjectType;
-    GUID InheritedObjectType;
-    DWORD SidStart;
-} SYSTEM_AUDIT_OBJECT_ACE, *PSYSTEM_AUDIT_OBJECT_ACE;
-
-typedef struct _SYSTEM_ALARM_OBJECT_ACE {
-    ACE_HEADER Header;
-    ACCESS_MASK Mask;
-    DWORD Flags;
-    GUID ObjectType;
-    GUID InheritedObjectType;
-    DWORD SidStart;
-} SYSTEM_ALARM_OBJECT_ACE, *PSYSTEM_ALARM_OBJECT_ACE;
-#endif
+    USHORT CompoundAceType;     // Always COMPOUND_ACE_IMPERSONATION
+    USHORT Reserved;
+    ULONG SidStart;             // Server SID
+//                              // Client SID
+} COMPOUND_ACCESS_ALLOWED_ACE, *PCOMPOUND_ACCESS_ALLOWED_ACE;
+#endif  // COMPOUND_ACE_IMPERSONATION
 
 //-----------------------------------------------------------------------------
 // Additional ACE types version 5 (not included in VS 2005 SDK)
@@ -416,6 +371,31 @@ typedef struct _SYSTEM_MANDATORY_LABEL_ACE {
     ACCESS_MASK Mask;
     DWORD SidStart;
 } SYSTEM_MANDATORY_LABEL_ACE, *PSYSTEM_MANDATORY_LABEL_ACE;
+
+#endif  // ACCESS_MAX_MS_V5_ACE_TYPE
+
+//-----------------------------------------------------------------------------
+// Definitions for token mandatory label
+
+#ifndef ACCESS_MAX_MS_V5_ACE_TYPE
+
+typedef struct _TOKEN_MANDATORY_LABEL
+{
+    SID_AND_ATTRIBUTES Label;
+
+} TOKEN_MANDATORY_LABEL, * PTOKEN_MANDATORY_LABEL;
+
+typedef enum _TOKEN_ELEVATION_TYPE
+{
+    TokenElevationTypeDefault = 1,
+    TokenElevationTypeFull,
+    TokenElevationTypeLimited,
+} TOKEN_ELEVATION_TYPE, * PTOKEN_ELEVATION_TYPE;
+
+typedef struct _TOKEN_ELEVATION
+{
+    DWORD TokenIsElevated;
+} TOKEN_ELEVATION, * PTOKEN_ELEVATION;
 
 #endif  // ACCESS_MAX_MS_V5_ACE_TYPE
 

@@ -16,6 +16,8 @@
 #define _UNICODE
 #endif
 
+#define __TEST_MODE__               // Uncomment this to activate test mode
+
 #pragma warning(disable: 4091)      // warning C4091: 'typedef ': ignored on left of 'tagGPFIDL_FLAGS' when no variable is declared
 #define OEMRESOURCE
 #include <tchar.h>
@@ -248,7 +250,9 @@ struct TFileTestData : public TWindowData
     BOOL          bTransactionActive;
     BOOL          bUseTransaction;
     BOOL          bSectionViewMapped;
-    
+
+    ULONG         SecurityInformation;      // Combination of security information flags
+
     UINT_PTR      BlinkTimer;               // If nonzero, this is ID of the blink timer
     HWND          hWndBlink;                // It not NULL, this is the handle of blink window
     BOOL          bEnableResizing;          // TRUE if the dialog is allowed to be resized
@@ -460,6 +464,7 @@ LPTSTR FindNextPathSeparator(LPTSTR szPathPart);
 
 ULONG GetEaEntrySize(PFILE_FULL_EA_INFORMATION EaInfo);
 
+void TreeView_SetItemText(HWND hTreeView, HTREEITEM hItem, LPCTSTR szText);
 DWORD TreeView_GetChildCount(HWND hTreeView, HTREEITEM hItem);
 LPARAM TreeView_GetItemParam(HWND hTreeView, HTREEITEM hItem);
 HTREEITEM TreeView_SetTreeItem(HWND hTreeView, HTREEITEM hItem, LPCTSTR szText, LPARAM lParam);
@@ -467,6 +472,8 @@ BOOL TreeView_EditLabel_ID(HWND hDlg, UINT nID);
 HTREEITEM InsertTreeItem(HWND hTreeView, HTREEITEM hParent, HTREEITEM hInsertAfter, LPCTSTR szText, PVOID pParam);
 HTREEITEM InsertTreeItem(HWND hTreeView, HTREEITEM hParent, LPCTSTR szText, PVOID pParam);
 HTREEITEM InsertTreeItem(HWND hTreeView, HTREEITEM hParent, LPCTSTR szText, LPARAM lParam = 0);
+HTREEITEM InsertTreeItem(HWND hTreeView, HTREEITEM hParent, LPARAM lParam, UINT nID, ...);
+
 void TreeView_DeleteChildren(HWND hTreeView, HTREEITEM hParent);
 void TreeView_CopyToClipboard(HWND hWndTree);
 int OnTVKeyDown_CopyToClipboard(HWND hDlg, LPNMTVKEYDOWN pNMTVKeyDown);
@@ -490,6 +497,7 @@ int      ConvertToWin32Name(HWND hDlg, UINT nIDEdit);
 
 LPTSTR FlagsToString(TFlagInfo * pFlags, LPTSTR szBuffer, size_t cchBuffer, DWORD dwBitMask, bool bNewLineSeparated);
 LPTSTR NamedValueToString(TFlagInfo * pFlags, LPTSTR szBuffer, size_t cchBuffer, LPCTSTR szFormat, DWORD dwBitMask);
+LPTSTR NamedValueToString(TFlagInfo * pFlags, LPTSTR szBuffer, size_t cchBuffer, UINT nIDFormat, DWORD dwBitMask);
 LPTSTR GuidValueToString(LPTSTR szBuffer, size_t cchBuffer, LPCTSTR szFormat, LPGUID PtrGuid);
 
 void FileIDToString(TFileTestData * pData, ULONGLONG FileId, LPTSTR szBuffer);
@@ -601,8 +609,9 @@ INT_PTR CALLBACK PageProc12(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);
 //-----------------------------------------------------------------------------
 // Debugging functions
 
-#ifdef _DEBUG
+#ifdef __TEST_MODE__
 void DebugCode_TEST();
-#endif
+void DebugCode_SecurityDescriptor(LPCTSTR szPath);
+#endif  // __TEST_MODE__
 
 #endif // __FILETEST_H__

@@ -280,8 +280,9 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
         pData->dwSectAllocAttributes = SEC_COMMIT;
         pData->dwSectWin32Protect    = PAGE_READONLY;
 
-#ifdef _DEBUG
-        DebugCode_TEST();
+#ifdef __TEST_MODE__
+        //DebugCode_TEST();
+        //DebugCode_SecurityDescriptor(pData->szFileName1);
 #endif
 
         // Call the dialog

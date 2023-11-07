@@ -473,6 +473,14 @@ ULONG GetEaEntrySize(PFILE_FULL_EA_INFORMATION EaInfo)
     return EntrySize;
 }
 
+void TreeView_SetItemText(HWND hTreeView, HTREEITEM hItem, LPCTSTR szText)
+{
+    TVITEM tvi = {TVIF_TEXT, hItem};
+
+    tvi.pszText = (LPTSTR)(szText);
+    TreeView_SetItem(hTreeView, &tvi);
+}
+
 DWORD TreeView_GetChildCount(HWND hTreeView, HTREEITEM hItem)
 {
     DWORD dwChildCount = 0;
@@ -543,16 +551,12 @@ HTREEITEM InsertTreeItem(HWND hTreeView, HTREEITEM hParent, HTREEITEM hInsertAft
 {
     TVINSERTSTRUCT tvis;
 
-    // If NULL specified as InsertAfter, we insert it after the last item
-    if(hInsertAfter == NULL)
-        hInsertAfter = TVI_LAST;
-    
     // Insert the item to the tree
-    tvis.hParent      = hParent;
-    tvis.hInsertAfter = hInsertAfter;
-    tvis.item.mask    = TVIF_TEXT | TVIF_PARAM;
+    tvis.hParent = (hParent != NULL) ? hParent : TVI_ROOT;
+    tvis.hInsertAfter = (hInsertAfter != NULL) ? hInsertAfter : TVI_LAST;
+    tvis.item.mask = TVIF_TEXT | TVIF_PARAM;
     tvis.item.pszText = (LPTSTR)szText;
-    tvis.item.lParam  = (LPARAM)pParam;
+    tvis.item.lParam = (LPARAM)pParam;
     return TreeView_InsertItem(hTreeView, &tvis);
 }
 
@@ -564,6 +568,20 @@ HTREEITEM InsertTreeItem(HWND hTreeView, HTREEITEM hParent, LPCTSTR szText, PVOI
 HTREEITEM InsertTreeItem(HWND hTreeView, HTREEITEM hParent, LPCTSTR szText, LPARAM lParam)
 {
     return InsertTreeItem(hTreeView, hParent, TVI_LAST, szText, (PVOID)lParam);
+}
+
+HTREEITEM InsertTreeItem(HWND hTreeView, HTREEITEM hParent, LPARAM lParam, UINT nID, ...)
+{
+    va_list argList;
+    TCHAR szItemText[512];
+
+    // Format the text
+    va_start(argList, nID);
+    rsvprintf(szItemText, _countof(szItemText), nID, argList);
+    va_end(argList);
+
+    // Insert the item text
+    return InsertTreeItem(hTreeView, hParent, TVI_LAST, szItemText, (PVOID)lParam);
 }
 
 void TreeView_DeleteChildren(HWND hTreeView, HTREEITEM hParent)
@@ -1671,6 +1689,14 @@ LPTSTR NamedValueToString(TFlagInfo * pFlags, LPTSTR szBuffer, size_t cchBuffer,
 
     // Return the start of the buffer
     return szSaveBuffer;
+}
+
+LPTSTR NamedValueToString(TFlagInfo * pFlags, LPTSTR szBuffer, size_t cchBuffer, UINT nIDFormat, DWORD dwBitMask)
+{
+    TCHAR szFormat[128];
+
+    LoadString(g_hInst, nIDFormat, szFormat, _countof(szFormat));
+    return NamedValueToString(pFlags, szBuffer, cchBuffer, szFormat, dwBitMask);
 }
 
 LPTSTR GuidValueToString(LPTSTR szBuffer, size_t cchBuffer, LPCTSTR szFormat, LPGUID PtrGuid)
