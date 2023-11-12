@@ -104,6 +104,7 @@
 #endif
 
 #define INTEGRITY_LEVEL_NONE        0xFFFFFFFF
+#define INVALID_PAGE_INDEX          0xFFFFFFFF
 
 #define FILETEST_DATA_MAGIC         0x54534554454C4946ULL
 
@@ -252,6 +253,7 @@ struct TFileTestData : public TWindowData
     BOOL          bSectionViewMapped;
 
     ULONG         SecurityInformation;      // Combination of security information flags
+    ULONG         InitialPage;              // Initial page for the main dialog
 
     UINT_PTR      BlinkTimer;               // If nonzero, this is ID of the blink timer
     HWND          hWndBlink;                // It not NULL, this is the handle of blink window
@@ -442,20 +444,20 @@ LPCTSTR NtStatus2Text(NTSTATUS Status);
 
 DWORD StrToInt(LPCTSTR ptr, LPTSTR * szEnd, int nRadix);
 
-int  Text2Bool(LPCTSTR szText, bool * pValue);
+LPCTSTR SkipHexaPrefix(LPCTSTR szString);
+DWORD Text2Bool(LPCTSTR szText, bool * pValue);
+DWORD Text2Hex32(LPCTSTR szText, PDWORD pValue);
+DWORD DlgText2Hex32(HWND hDlg, UINT nIDCtrl, PDWORD pValue);
+void  Hex2Text32(LPTSTR szBuffer, DWORD Value);
+void  Hex2DlgText32(HWND hDlg, UINT nIDCtrl, DWORD Value);
 
-int  Text2Hex32(LPCTSTR szText, PDWORD pValue);
-int  DlgText2Hex32(HWND hDlg, UINT nIDCtrl, PDWORD pValue);
-void Hex2Text32(LPTSTR szBuffer, DWORD Value);
-void Hex2DlgText32(HWND hDlg, UINT nIDCtrl, DWORD Value);
+DWORD Text2HexPtr(LPCTSTR szText, PDWORD_PTR pValue);
+DWORD DlgText2HexPtr(HWND hDlg, UINT nIDCtrl, PDWORD_PTR pValue);
+void  Hex2TextPtr(LPTSTR szBuffer, DWORD_PTR Value);
+void  Hex2DlgTextPtr(HWND hDlg, UINT nIDCtrl, DWORD_PTR Value);
 
-int  Text2HexPtr(LPCTSTR szText, PDWORD_PTR pValue);
-int  DlgText2HexPtr(HWND hDlg, UINT nIDCtrl, PDWORD_PTR pValue);
-void Hex2TextPtr(LPTSTR szBuffer, DWORD_PTR Value);
-void Hex2DlgTextPtr(HWND hDlg, UINT nIDCtrl, DWORD_PTR Value);
-
-int  Text2Hex64(LPCTSTR szText, PLONGLONG pValue);
-int  DlgText2Hex64(HWND hDlg, UINT nIDCtrl, PLONGLONG pValue);
+DWORD Text2Hex64(LPCTSTR szText, PLONGLONG pValue);
+DWORD DlgText2Hex64(HWND hDlg, UINT nIDCtrl, PLONGLONG pValue);
 void Hex2Text64(LPTSTR szBuffer, LONGLONG Value);
 void Hex2DlgText64(HWND hDlg, UINT nIDCtrl, LONGLONG Value);
 
@@ -464,17 +466,18 @@ LPTSTR FindNextPathSeparator(LPTSTR szPathPart);
 
 ULONG GetEaEntrySize(PFILE_FULL_EA_INFORMATION EaInfo);
 
-void TreeView_SetItemText(HWND hTreeView, HTREEITEM hItem, LPCTSTR szText);
-DWORD TreeView_GetChildCount(HWND hTreeView, HTREEITEM hItem);
-LPARAM TreeView_GetItemParam(HWND hTreeView, HTREEITEM hItem);
-HTREEITEM TreeView_SetTreeItem(HWND hTreeView, HTREEITEM hItem, LPCTSTR szText, LPARAM lParam);
+void TreeView_SetItemText(HWND hWndTree, HTREEITEM hItem, LPCTSTR szText);
+DWORD TreeView_GetChildCount(HWND hWndTree, HTREEITEM hItem);
+LPARAM TreeView_GetItemParam(HWND hWndTree, HTREEITEM hItem);
+void TreeView_SetItemParam(HWND hWndTree, HTREEITEM hItem, LPARAM lParam);
+HTREEITEM TreeView_SetTreeItem(HWND hWndTree, HTREEITEM hItem, LPCTSTR szText, LPARAM lParam);
 BOOL TreeView_EditLabel_ID(HWND hDlg, UINT nID);
-HTREEITEM InsertTreeItem(HWND hTreeView, HTREEITEM hParent, HTREEITEM hInsertAfter, LPCTSTR szText, PVOID pParam);
-HTREEITEM InsertTreeItem(HWND hTreeView, HTREEITEM hParent, LPCTSTR szText, PVOID pParam);
-HTREEITEM InsertTreeItem(HWND hTreeView, HTREEITEM hParent, LPCTSTR szText, LPARAM lParam = 0);
-HTREEITEM InsertTreeItem(HWND hTreeView, HTREEITEM hParent, LPARAM lParam, UINT nID, ...);
+HTREEITEM InsertTreeItem(HWND hWndTree, HTREEITEM hParent, HTREEITEM hInsertAfter, LPCTSTR szText, PVOID pParam);
+HTREEITEM InsertTreeItem(HWND hWndTree, HTREEITEM hParent, LPCTSTR szText, PVOID pParam);
+HTREEITEM InsertTreeItem(HWND hWndTree, HTREEITEM hParent, LPCTSTR szText, LPARAM lParam = 0);
+HTREEITEM InsertTreeItem(HWND hWndTree, HTREEITEM hParent, LPARAM lParam, UINT nID, ...);
 
-void TreeView_DeleteChildren(HWND hTreeView, HTREEITEM hParent);
+void TreeView_DeleteChildren(HWND hWndTree, HTREEITEM hParent);
 void TreeView_CopyToClipboard(HWND hWndTree);
 int OnTVKeyDown_CopyToClipboard(HWND hDlg, LPNMTVKEYDOWN pNMTVKeyDown);
 
@@ -561,17 +564,18 @@ BOOL GetSupportedDateTimeFormats(
 //-----------------------------------------------------------------------------
 // Dialogs
 
-INT_PTR HelpAboutDialog(HWND hParent);
+INT_PTR HelpAboutDialog(HWND hWndParent);
+INT_PTR HelpCommandLineDialog(HWND hWndParent);
 INT_PTR FlagsDialog(HWND hWndParent, UINT nIDTitle, TFlagInfo * pFlags, DWORD & dwBitMask);
 INT_PTR FlagsDialog_OnControl(HWND hWndParent, UINT nIDTitle, TFlagInfo * pFlags, UINT nIDCtrl);
 
-INT_PTR EaEditorDialog(HWND hParent, PFILE_FULL_EA_INFORMATION * pEaInfo);
-INT_PTR PrivilegesDialog(HWND hParent);
-INT_PTR ObjectIDActionDialog(HWND hParent);
-INT_PTR ObjectGuidHelpDialog(HWND hParent);
-INT_PTR FileAttributesDialog(HWND hParent, PFILE_BASIC_INFORMATION pBasicInfo);
-INT_PTR NtAttributesDialog(HWND hParent, PFILE_BASIC_INFORMATION pBasicInfo);
-INT_PTR CopyFileDialog(HWND hParent, TFileTestData * pData);
+INT_PTR EaEditorDialog(HWND hWndParent, PFILE_FULL_EA_INFORMATION * pEaInfo);
+INT_PTR PrivilegesDialog(HWND hWndParent);
+INT_PTR ObjectIDActionDialog(HWND hWndParent);
+INT_PTR ObjectGuidHelpDialog(HWND hWndParent);
+INT_PTR FileAttributesDialog(HWND hWndParent, PFILE_BASIC_INFORMATION pBasicInfo);
+INT_PTR NtAttributesDialog(HWND hWndParent, PFILE_BASIC_INFORMATION pBasicInfo);
+INT_PTR CopyFileDialog(HWND hWndParent, TFileTestData * pData);
 
 TApcEntry * CreateApcEntry(TWindowData * pData, UINT ApcType, size_t cbExtraSize = 0);
 bool InsertApcEntry(TWindowData * pData, TApcEntry * pApc);
@@ -579,7 +583,7 @@ void FreeApcEntry(TApcEntry * pApc);
 
 int NtUseFileId(HWND hDlg, LPCTSTR szFileId);
 void DisableCloseDialog(HWND hDlg, BOOL bDisable);
-INT_PTR FileTestDialog(HWND hParent, TFileTestData * pData);
+INT_PTR FileTestDialog(HWND hWndParent, TFileTestData * pData);
 
 //-----------------------------------------------------------------------------
 // Extended attributes dialog (shared functions)
@@ -587,8 +591,8 @@ INT_PTR FileTestDialog(HWND hParent, TFileTestData * pData);
 void ExtendedAttributesToListView(HWND hDlg, PFILE_FULL_EA_INFORMATION pFileEa);
 DWORD ListViewToExtendedAttributes(HWND hDlg, TOpenPacket & OpenPacket);
 INT_PTR CALLBACK ExtendedAttributesEditorProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);
-INT_PTR ExtendedAtributesEditorDialog(HWND hParent, TOpenPacket * pOP);
-INT_PTR DataEditorDialog(HWND hParent, LPVOID BaseAddress, size_t ViewSize);
+INT_PTR ExtendedAtributesEditorDialog(HWND hWndParent, TOpenPacket * pOP);
+INT_PTR DataEditorDialog(HWND hWndParent, LPVOID BaseAddress, size_t ViewSize);
 
 //-----------------------------------------------------------------------------
 // Message handlers for each page

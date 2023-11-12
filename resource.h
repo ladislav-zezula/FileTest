@@ -53,6 +53,7 @@
 #define IDD_NT_ATTRIBUTES               147
 #define IDD_NT_ATTRIBUTES1              148
 #define IDD_PAGE02_NTCREATE_RELFILE     149
+#define IDD_HELP_COMMAND_LINE           150
 #define IDC_DESIRED_ACCESS_BROWSE       1002
 #define IDC_FILE_ATTRIBUTES_BROWSE      1003
 #define IDC_SHARE_ACCESS_BROWSE         1004
@@ -451,6 +452,11 @@
 #define IDS_FORMAT_OBJ_TYPEI            4113
 #define IDS_FORMAT_CONDITION            4114
 #define IDS_FORMAT_INT_LEVEL            4115
+#define IDS_FORMAT_ACL_REVIS            4116
+#define IDS_FORMAT_ACL_SBZ1             4117
+#define IDS_FORMAT_ACL_SIZE             4118
+#define IDS_FORMAT_ACL_COUNT            4119
+#define IDS_FORMAT_ACL_SBZ2             4120
 #define ID_EDIT_LABEL                   40001
 #define ID_NEW_ACE_BEFORE               40008
 #define ID_NEW_ACE_AFTER                40009
@@ -476,13 +482,15 @@
 #define IDC_DELETE_OBJECT_SINGLE        40062
 #define IDC_DELETE_OBJECT_TREE          40063
 #define IDC_FORCE                       40064
+#define ID__EVERYONE                    40065
+#define IDC_SET_FULL_CONTROL            40066
 
 // Next default values for new objects
-//
+// 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        152
-#define _APS_NEXT_COMMAND_VALUE         40065
+#define _APS_NEXT_RESOURCE_VALUE        153
+#define _APS_NEXT_COMMAND_VALUE         40067
 #define _APS_NEXT_CONTROL_VALUE         1262
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
