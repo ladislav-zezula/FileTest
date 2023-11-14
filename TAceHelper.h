@@ -72,10 +72,16 @@ struct ACE_HELPER
     bool SetAceType(DWORD dwAceType);                   // Sets a new ACE type
     bool SetAce(PACE_HEADER pAceHeader);                // Stores an ACE
     void SetAllocatedSid(PSID pSid, size_t nSidIndex);  // Stores a SID that needs to be freed
+    PACE_HEADER BuildAce(LPBYTE pbBuffer, size_t cbBuffer);
     bool AddToAcl(PACL pAcl);                           // Adds itself as an ACE to the ACL
     void Reset();                                       // Resets everything to 0
 
     LPBYTE PutAceValue(LPBYTE PtrAclData, LPBYTE PtrAclEnd, PVOID PtrValue, DWORD dwLayoutMask, DWORD ValueSize);
+    LPBYTE PutAceValueSid(LPBYTE PtrAclData, LPBYTE PtrAclEnd, PSID pSourceSid, DWORD dwLayoutMask);
+
+    // Helpers for creating new SID. Use RtlFreeSid to free the result
+    static PSID CreateAccessSid();
+    static PSID CreateMandatoryLabelSid();
 
     // Field mask for fields that are valid
     DWORD AceLayout;                                    // See ACE_FIELD_XXX

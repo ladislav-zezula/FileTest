@@ -157,6 +157,7 @@ BEGIN
         MENUITEM "Insert new ACE &after",       IDC_NEW_ACE_AFTER
         MENUITEM "Move this ACE &up",           IDC_MOVE_ACE_UP
         MENUITEM "Move this ACE &down",         IDC_MOVE_ACE_DOWN
+        MENUITEM "&Set ACE type ...",           IDC_SET_ACE_TYPE
         MENUITEM "&Delete this ACE",            IDC_DELETE_ACE
     END
 END

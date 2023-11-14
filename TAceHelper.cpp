@@ -160,7 +160,7 @@ void ACE_HELPER::SetAllocatedSid(PSID pNewSid, size_t nSidIndex)
 
     // Free the old SID
     if((Sid[nSidIndex] != NULL) && (FreeFlags & dwFreeFlag))
-        Sid_Free(Sid[nSidIndex]);
+        RtlFreeSid(Sid[nSidIndex]);
     Sid[nSidIndex] = NULL;
 
     // Store the new one
@@ -171,6 +171,88 @@ void ACE_HELPER::SetAllocatedSid(PSID pNewSid, size_t nSidIndex)
     FreeFlags = (pNewSid != NULL) ? (FreeFlags | dwFreeFlag) : (FreeFlags & ~dwFreeFlag);
 }
 
+PACE_HEADER ACE_HELPER::BuildAce(LPBYTE pbBuffer, size_t cbBuffer)
+{
+    PACE_HEADER pAceHeader = (PACE_HEADER)(pbBuffer);
+    LPBYTE pbEnd = pbBuffer + cbBuffer;
+    LPBYTE pbPtr = pbBuffer;
+    ULONG GuidFlags = Flags;
+
+    // We do not support ACEs with condition
+    if((AceLayout & ACE_FIELD_CONDITION) && (Condition != NULL))
+        return NULL;
+
+    // Fill-in the header
+    if(AceLayout & ACE_FIELD_HEADER)
+    {
+        if((pbPtr + sizeof(ACE_HEADER)) > pbEnd)
+            return NULL;
+        pAceHeader->AceType = (BYTE)AceType;
+        pAceHeader->AceFlags = (BYTE)AceFlags;
+        pAceHeader->AceSize = sizeof(ACE_HEADER);
+        pbPtr += sizeof(ACE_HEADER);
+    }
+
+    // Fill-in the ACE:Mask
+    pbPtr = PutAceValue(pbPtr, pbEnd, &Mask, (ACE_FIELD_ACCESS_MASK | ACE_FIELD_ADS_ACCESS_MASK | ACE_FIELD_MANDATORY_MASK), sizeof(ACCESS_MASK));
+    if(pbPtr == NULL)
+        return NULL;
+
+    // Fill-in the ACE::Flags
+    pbPtr = PutAceValue(pbPtr, pbEnd, &GuidFlags, ACE_FIELD_FLAGS, sizeof(GuidFlags));
+    if(pbPtr == NULL)
+        return NULL;
+
+    // Fill-in the ACE::CompoundAceType
+    pbPtr = PutAceValue(pbPtr, pbEnd, &CompoundAceType, ACE_FIELD_CTYPE, sizeof(CompoundAceType));
+    if(pbPtr == NULL)
+        return NULL;
+
+    // Fill-in the ACE::CompoundReserved
+    pbPtr = PutAceValue(pbPtr, pbEnd, &CompoundReserved, ACE_FIELD_CRESERVED, sizeof(CompoundReserved));
+    if(pbPtr == NULL)
+        return NULL;
+
+    // Fill-in the ACE::ObjectType
+    if(GuidFlags & ACE_OBJECT_TYPE_PRESENT)
+    {
+        pbPtr = PutAceValue(pbPtr, pbEnd, &ObjectType, ACE_FIELD_OBJECT_TYPE1, sizeof(ObjectType));
+        if(pbPtr == NULL)
+            return NULL;
+    }
+
+    // Fill-in the ACE::InheritedObjectType
+    if(GuidFlags & ACE_INHERITED_OBJECT_TYPE_PRESENT)
+    {
+        pbPtr = PutAceValue(pbPtr, pbEnd, &InheritedObjectType, ACE_FIELD_OBJECT_TYPE2, sizeof(InheritedObjectType));
+        if(pbPtr == NULL)
+            return NULL;
+    }
+
+    // Fill-in the (server, mandatory) SID
+    pbPtr = PutAceValueSid(pbPtr, pbEnd, Sid[0], (ACE_FIELD_ACCESS_SID | ACE_FIELD_SERVER_SID));
+    if(pbPtr == NULL)
+        return NULL;
+
+    // Fill-in the mandatory SID
+    pbPtr = PutAceValueSid(pbPtr, pbEnd, Sid[0], ACE_FIELD_MANDATORY_SID);
+    if(pbPtr == NULL)
+        return NULL;
+
+    // Fill-in the client SID
+    pbPtr = PutAceValueSid(pbPtr, pbEnd, Sid[1], ACE_FIELD_CLIENT_SID);
+    if(pbPtr == NULL)
+        return NULL;
+
+    //
+    // TODO: Fill-in the condition
+    //
+
+    // Fixup the ACE size
+    pAceHeader->AceSize = (WORD)(pbPtr - (LPBYTE)pAceHeader);
+    return pAceHeader;
+}
+
 // Adds itself as an ACE to the ACL
 bool ACE_HELPER::AddToAcl(PACL pAcl)
 {
@@ -179,7 +261,7 @@ bool ACE_HELPER::AddToAcl(PACL pAcl)
     LPBYTE PtrAclEnd = (LPBYTE)pAcl + pAcl->AclSize;
 
     // Don't try to push in an unsupported ACE
-    if(AceType == ACCESS_ALLOWED_COMPOUND_ACE_TYPE || AceType > SYSTEM_MANDATORY_LABEL_ACE_TYPE)
+    if(AceLayout == 0)
         return false;
 
     // Find the space after all present ACEs.
@@ -190,79 +272,15 @@ bool ACE_HELPER::AddToAcl(PACL pAcl)
         PtrAclData += pAceHeader->AceSize;
     }
 
-    // Now we have the pointer to the ACE. Insert it there
-    pAceHeader = (PACE_HEADER)PtrAclData;
-    if((PtrAclEnd - PtrAclData) < sizeof(ACE_HEADER))
+    // Build the ACE in-place
+    if((pAceHeader = BuildAce(PtrAclData, (PtrAclEnd - PtrAclData))) == NULL)
         return false;
-
-    // Fill-in the header
-    pAceHeader->AceType  = (BYTE)AceType;
-    pAceHeader->AceFlags = (BYTE)AceFlags;
-    pAceHeader->AceSize  = sizeof(ACE_HEADER);
-    PtrAclData = (LPBYTE)(pAceHeader + 1);
-
-    // Fill-in the mask
-    PtrAclData = PutAceValue(PtrAclData, PtrAclEnd, &Mask, (ACE_FIELD_ACCESS_MASK | ACE_FIELD_ADS_ACCESS_MASK | ACE_FIELD_MANDATORY_MASK), sizeof(ACCESS_MASK));
-    if(PtrAclData == NULL)
-        return false;
-
-    // Fill-in the ACE::flags
-    if(AceLayout & ACE_FIELD_FLAGS)
-    {
-        // If we have the object, get the ACE_OBJECT_TYPE_PRESENT flag there
-        if(!(ObjectType == NullGuid))
-            Flags |= ACE_OBJECT_TYPE_PRESENT;
-        if(!(InheritedObjectType == NullGuid))
-            Flags |= ACE_INHERITED_OBJECT_TYPE_PRESENT;
-
-        PtrAclData = PutAceValue(PtrAclData, PtrAclEnd, &Flags, ACE_FIELD_FLAGS, sizeof(DWORD));
-        if(PtrAclData == NULL)
-            return false;
-    }                             
-
-    // Fill-in the object type, only if the ACE_OBJECT_TYPE_PRESENT is present in the ACE::Flags
-    if(Flags & ACE_OBJECT_TYPE_PRESENT)
-    {
-        PtrAclData = PutAceValue(PtrAclData, PtrAclEnd, &ObjectType, ACE_FIELD_OBJECT_TYPE1, sizeof(GUID));
-        if(PtrAclData == NULL)
-            return false;
-    }
-
-    // Fill-in the inherited object type, only if the ACE_INHERITED_OBJECT_TYPE_PRESENT is present in the ACE::Flags
-    if(Flags & ACE_INHERITED_OBJECT_TYPE_PRESENT)
-    {
-        // Fill-in the inherited object type
-        PtrAclData = PutAceValue(PtrAclData, PtrAclEnd, &InheritedObjectType, ACE_FIELD_OBJECT_TYPE2, sizeof(GUID));
-        if(PtrAclData == NULL)
-            return false;
-    }
-
-    // Fill-in the (server, mandatory) SID
-    if(AceLayout & (ACE_FIELD_ACCESS_SID | ACE_FIELD_SERVER_SID | ACE_FIELD_MANDATORY_SID))
-    {
-        PtrAclData = PutAceValue(PtrAclData, PtrAclEnd, Sid[0], (ACE_FIELD_ACCESS_SID | ACE_FIELD_SERVER_SID | ACE_FIELD_MANDATORY_SID), GetLengthSid(Sid[0]));
-        if(PtrAclData == NULL)
-            return false;
-    }
-
-    // Fill-in the client SID
-    if(AceLayout & ACE_FIELD_CLIENT_SID)
-    {
-        PtrAclData = PutAceValue(PtrAclData, PtrAclEnd, Sid[1], ACE_FIELD_SERVER_SID, GetLengthSid(Sid[1]));
-        if(PtrAclData == NULL)
-            return false;
-    }
-
-    // TODO: Fill-in the extra data
+    pAcl->AceCount = pAcl->AceCount + 1;
 
     // The ACL must have ACL_REVISION_DS if it contains any object ACEs
     // https://technet.microsoft.com/cs-cz/aa379293
-    if(ACCESS_ALLOWED_OBJECT_ACE_TYPE <= AceType && AceType <= SYSTEM_ALARM_CALLBACK_OBJECT_ACE_TYPE)
+    if(ACCESS_ALLOWED_OBJECT_ACE_TYPE <= pAceHeader->AceType && pAceHeader->AceType <= SYSTEM_ALARM_CALLBACK_OBJECT_ACE_TYPE)
         pAcl->AclRevision = ACL_REVISION_DS;
-
-    // Get the size of the ACE
-    pAceHeader->AceSize = (WORD)(PtrAclData - (LPBYTE)pAceHeader);
-    pAcl->AceCount = pAcl->AceCount + 1;
     return true;
 }
 
@@ -274,7 +292,7 @@ void ACE_HELPER::Reset()
     for(size_t i = 0; i < _countof(Sid); i++, dwFreeFlag = dwFreeFlag << 1)
     {
         if((Sid[i] != NULL) && (FreeFlags & dwFreeFlag))
-            FreeSid(Sid[i]);
+            RtlFreeSid(Sid[i]);
         Sid[i] = NULL;
     }
 
@@ -303,4 +321,70 @@ LPBYTE ACE_HELPER::PutAceValue(LPBYTE PtrAclData, LPBYTE PtrAclEnd, PVOID PtrVal
 
     // Return the new pointer
     return PtrAclData;
+}
+
+LPBYTE ACE_HELPER::PutAceValueSid(LPBYTE PtrAclData, LPBYTE PtrAclEnd, PSID pSourceSid, DWORD dwLayoutMask)
+{
+    LPBYTE pbResult = PtrAclData;
+    ULONG SidLength;
+    bool bFreeSid = false;
+
+    // Only if we have that SID present
+    if(AceLayout & dwLayoutMask)
+    {
+        // Reset the return pointer for case it fails
+        pbResult = NULL;
+
+        // If no SID is given, create one with Everyone
+        if(pSourceSid == NULL)
+        {
+            if(dwLayoutMask & ACE_FIELD_MANDATORY_SID)
+            {
+                pSourceSid = CreateMandatoryLabelSid();
+                bFreeSid = true;
+            }
+            else
+            {
+                pSourceSid = CreateAccessSid();
+                bFreeSid = true;
+            }
+        }
+
+        // If we have that SID, add it to the ACE data
+        if(pSourceSid != NULL)
+        {
+            SidLength = RtlLengthSid(pSourceSid);
+
+            if((PtrAclData + SidLength) <= PtrAclEnd)
+            {
+                memmove(PtrAclData, pSourceSid, SidLength);
+                pbResult = PtrAclData + SidLength;
+            }
+
+            if(bFreeSid)
+            {
+                RtlFreeSid(pSourceSid);
+            }
+        }
+    }
+    return pbResult;
+}
+
+PSID ACE_HELPER::CreateAccessSid()
+{
+    SID_IDENTIFIER_AUTHORITY SiaWorld = SECURITY_WORLD_SID_AUTHORITY;
+    PSID pSid = NULL;
+
+    RtlAllocateAndInitializeSid(&SiaWorld, 1, SECURITY_WORLD_RID, 0, 0, 0, 0, 0, 0, 0, &pSid);
+    return pSid;
+}
+
+PSID ACE_HELPER::CreateMandatoryLabelSid()
+{
+    SID_IDENTIFIER_AUTHORITY SiaLabel = SECURITY_MANDATORY_LABEL_AUTHORITY;
+
+    PSID pSid = NULL;
+
+    RtlAllocateAndInitializeSid(&SiaLabel, 1, SECURITY_MANDATORY_MEDIUM_RID, 0, 0, 0, 0, 0, 0, 0, &pSid);
+    return pSid;
 }

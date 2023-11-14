@@ -516,12 +516,11 @@ LPARAM TreeView_GetItemParam(HWND hWndTree, HTREEITEM hItem)
 
 void TreeView_SetItemParam(HWND hWndTree, HTREEITEM hItem, LPARAM lParam)
 {
-    TVITEM tvi;
+    TVITEM tvi = {TVIF_PARAM};
 
-    // Retrieve the item param
-    tvi.mask = TVIF_PARAM;
+    // Set the new item param
     tvi.hItem = hItem;
-    tvi.lParam = 0;
+    tvi.lParam = lParam;
     TreeView_SetItem(hWndTree, &tvi);
 }
 
