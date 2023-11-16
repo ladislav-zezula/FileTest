@@ -81,7 +81,7 @@ struct ACE_HELPER
 
     // Helpers for creating new SID. Use RtlFreeSid to free the result
     static PSID CreateAccessSid();
-    static PSID CreateMandatoryLabelSid();
+    static PSID CreateMandatoryLabelSid(ULONG dwIntLevel = SECURITY_MANDATORY_MEDIUM_RID);
 
     // Field mask for fields that are valid
     DWORD AceLayout;                                    // See ACE_FIELD_XXX

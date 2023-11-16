@@ -498,7 +498,7 @@ void     FreeFileNameString(PUNICODE_STRING FileName);
 NTSTATUS ConvertToNtName(HWND hDlg, UINT nIDEdit);
 int      ConvertToWin32Name(HWND hDlg, UINT nIDEdit);
 
-LPTSTR FlagsToString(TFlagInfo * pFlags, LPTSTR szBuffer, size_t cchBuffer, DWORD dwBitMask, bool bNewLineSeparated);
+LPTSTR FlagsToString(TFlagInfo * pFlags, LPTSTR szBuffer, size_t cchBuffer, DWORD dwBitMask, bool bNewLineSeparated = false);
 LPTSTR NamedValueToString(TFlagInfo * pFlags, LPTSTR szBuffer, size_t cchBuffer, LPCTSTR szFormat, DWORD dwBitMask);
 LPTSTR NamedValueToString(TFlagInfo * pFlags, LPTSTR szBuffer, size_t cchBuffer, UINT nIDFormat, DWORD dwBitMask);
 LPTSTR GuidValueToString(LPTSTR szBuffer, size_t cchBuffer, LPCTSTR szFormat, LPGUID PtrGuid);

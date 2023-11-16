@@ -379,12 +379,12 @@ PSID ACE_HELPER::CreateAccessSid()
     return pSid;
 }
 
-PSID ACE_HELPER::CreateMandatoryLabelSid()
+PSID ACE_HELPER::CreateMandatoryLabelSid(ULONG dwIntLevel)
 {
     SID_IDENTIFIER_AUTHORITY SiaLabel = SECURITY_MANDATORY_LABEL_AUTHORITY;
 
     PSID pSid = NULL;
 
-    RtlAllocateAndInitializeSid(&SiaLabel, 1, SECURITY_MANDATORY_MEDIUM_RID, 0, 0, 0, 0, 0, 0, 0, &pSid);
+    RtlAllocateAndInitializeSid(&SiaLabel, 1, dwIntLevel, 0, 0, 0, 0, 0, 0, 0, &pSid);
     return pSid;
 }
