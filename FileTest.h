@@ -60,6 +60,7 @@
 #define MAX_NT_PATH                 32767           // Maximum path name length in NT is 32767
 #define MAX_FILEID_PATH             0x24            // Maximum path name length of File ID string (C:\################ or C:\################################)
 #define MAX_CONTEXT_MENUS           0x08            // Maximum supported number of context menus
+#define MAX_ACL_LENGTH              0xFFF8          // The biggest ACL that can possibly exist
 
 #define OSVER_WINDOWS_NT4           0x0400
 #define OSVER_WINDOWS_2000          0x0500
@@ -505,13 +506,11 @@ LPTSTR GuidValueToString(LPTSTR szBuffer, size_t cchBuffer, LPCTSTR szFormat, LP
 
 void FileIDToString(TFileTestData * pData, ULONGLONG FileId, LPTSTR szBuffer);
 void ObjectIDToString(PBYTE pbObjId, LPCTSTR szFileName, LPTSTR szObjectID);
-int  StringToFileID(LPCTSTR szFileOrObjId, LPTSTR szVolume, PVOID pvFileObjId, PDWORD pLength);
+DWORD StringToFileID(LPCTSTR szFileOrObjId, LPTSTR szVolume, PVOID pvFileObjId, PDWORD pLength);
 
-PSID Sid_Allocate(DWORD dwLength);
-void Sid_Free(PSID pSid);
+PSID CreateNewSid(BYTE AceType = ACCESS_ALLOWED_ACE_TYPE, ULONG dwIntParam = 0);
 
 void SidToString(PSID pvSid, LPTSTR szString, size_t cchString, bool bAddUserName);
-bool StringToSid(LPTSTR szSid, PSID* ppSid);
 
 HMENU FindContextMenu(UINT nIDMenu);
 int ExecuteContextMenu(HWND hWndParent, HMENU hMenu, LPARAM lParam);
@@ -567,6 +566,7 @@ BOOL GetSupportedDateTimeFormats(
 INT_PTR HelpAboutDialog(HWND hWndParent);
 INT_PTR HelpCommandLineDialog(HWND hWndParent);
 INT_PTR FlagsDialog(HWND hWndParent, UINT nIDTitle, TFlagInfo * pFlags, DWORD & dwBitMask);
+INT_PTR FlagsDialog(HWND hWndParent, UINT nIDTitle, TFlagInfo * pFlags, LPCTSTR szFocusText, DWORD & dwBitMask);
 INT_PTR FlagsDialog_OnControl(HWND hWndParent, UINT nIDTitle, TFlagInfo * pFlags, UINT nIDCtrl);
 
 INT_PTR EaEditorDialog(HWND hWndParent, PFILE_FULL_EA_INFORMATION * pEaInfo);

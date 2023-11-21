@@ -259,6 +259,7 @@
     <ClInclude Include="ReparseDataHsm.h" />
     <ClInclude Include="ntstatus.h" />
     <ClInclude Include="resource.h" />
+    <ClInclude Include="TAceHelper.h" />
     <ClInclude Include="TDataEditor.h" />
     <ClInclude Include="TFastString.h" />
     <ClInclude Include="TFlagString.h" />

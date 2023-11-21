@@ -1768,7 +1768,7 @@ void ObjectIDToString(PBYTE pbObjId, LPCTSTR szFileName, LPTSTR szObjectID)
     *szObjectID = 0;
 }
 
-int StringToFileID(
+DWORD StringToFileID(
     LPCTSTR szFileOrObjId,
     LPTSTR szVolume,
     PVOID pvFileObjId,
@@ -1846,6 +1846,50 @@ int StringToFileID(
     if(dwErrCode == ERROR_SUCCESS && pLength != NULL)
         *pLength = dwLength;
     return dwErrCode;
+}
+
+PSID CreateNewSid(BYTE AceType, ULONG dwIntParam)
+{
+    PSID pSid = NULL;
+
+    switch(AceType)
+    {
+        case SYSTEM_MANDATORY_LABEL_ACE_TYPE:       // Mandatory label ACE requires S-1-16-###
+        {
+            SID_IDENTIFIER_AUTHORITY SiaLabel = SECURITY_MANDATORY_LABEL_AUTHORITY;
+            RtlAllocateAndInitializeSid(&SiaLabel, 1, dwIntParam, 0, 0, 0, 0, 0, 0, 0, &pSid);
+            break;
+        }
+
+        case SYSTEM_SCOPED_POLICY_ID_ACE_TYPE:      // System scoped policy requires S-1-17-###
+        {
+            SID_IDENTIFIER_AUTHORITY SiaLabel = SECURITY_SCOPED_POLICY_ID_AUTHORITY;
+            RtlAllocateAndInitializeSid(&SiaLabel, 1, dwIntParam, 0, 0, 0, 0, 0, 0, 0, &pSid);
+            break;
+        }
+
+        case SYSTEM_PROCESS_TRUST_LABEL_ACE_TYPE:   // System process trust label requires S-1-19-###
+        {
+            SID_IDENTIFIER_AUTHORITY SiaLabel = SECURITY_PROCESS_TRUST_AUTHORITY;
+            RtlAllocateAndInitializeSid(&SiaLabel, 1, dwIntParam, 0, 0, 0, 0, 0, 0, 0, &pSid);
+            break;
+        }
+
+        case SYSTEM_ACCESS_FILTER_ACE_TYPE:
+        {
+            SID_IDENTIFIER_AUTHORITY SiaLabel = SECURITY_PROCESS_TRUST_AUTHORITY;
+            RtlAllocateAndInitializeSid(&SiaLabel, 1, dwIntParam, 0, 0, 0, 0, 0, 0, 0, &pSid);
+            break;
+        }
+
+        default:
+        {
+            SID_IDENTIFIER_AUTHORITY SiaWorld = SECURITY_WORLD_SID_AUTHORITY;
+            RtlAllocateAndInitializeSid(&SiaWorld, 1, SECURITY_WORLD_RID, 0, 0, 0, 0, 0, 0, 0, &pSid);
+            break;
+        }
+    }
+    return pSid;
 }
 
 HMENU FindContextMenu(UINT nIDMenu)

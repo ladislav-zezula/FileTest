@@ -45,6 +45,9 @@ struct TFlagDialogData
     UINT        nIDTitle;                   // String ID of the dialog title
     size_t      nColumns;                   // Number of columns in the dialog
     size_t      nColumn1;                   // Number of bits in the first column
+
+    LPCSTR      szFocusText;                // If non-NULL, this string will be focused, if found
+    size_t      ccFocusText;                // Length of the szFocusText
     DWORD       dwBitMask;                  // Flag value (in/out)
 
     // Dialog layout
@@ -70,6 +73,16 @@ typedef void (*CHILD_WINDOW_CALLBACK)(TFlagDialogData * pData, TFlagInfo * pFlag
 
 //-----------------------------------------------------------------------------
 // Local functions
+
+static bool IsThisButtonChecked(TFlagDialogData * pData, TDlgFlagInfo & FlagInfo, DWORD dwFlags)
+{
+    // Is there a focus string?
+    if(pData->szFocusText && pData->ccFocusText)
+        return (_strnicmp(FlagInfo.szFlagText, pData->szFocusText, pData->ccFocusText) == 0);
+
+    // Default behavior
+    return FlagInfo.IsValuePresent(dwFlags);
+}
 
 static size_t BuildFlagList(TFlagDialogData * pData)
 {
@@ -310,7 +323,7 @@ static void CreateDialogLayout(TFlagDialogData * pData)
         // Check/uncheck the box
         if(!FlagInfo.IsSeparator())
         {
-            nChecked = FlagInfo.IsValuePresent(dwFlags) ? BST_CHECKED : BST_UNCHECKED;
+            nChecked = IsThisButtonChecked(pData, FlagInfo, dwFlags) ? BST_CHECKED : BST_UNCHECKED;
             if(nChecked == BST_CHECKED)
                 dwFlags = dwFlags & ~FlagInfo.dwMask;
             Button_SetCheck(hWndChild, nChecked);
@@ -454,16 +467,25 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM l
 //-----------------------------------------------------------------------------
 // Public functions
 
-INT_PTR FlagsDialog(HWND hWndParent, UINT nIDTitle, TFlagInfo * pFlags, DWORD & dwBitMask)
+INT_PTR FlagsDialog(HWND hWndParent, UINT nIDTitle, TFlagInfo * pFlags, LPCTSTR szFocusText, DWORD & dwBitMask)
 {
     TFlagDialogData fdd;
     INT_PTR Result;
+    CHAR szFocusTextA[256];
 
     // Retrieve the flags
     fdd.hWndParent = hWndParent;
-    fdd.pFlags     = pFlags;
-    fdd.dwBitMask  = dwBitMask;
-    fdd.nIDTitle   = nIDTitle;
+    fdd.pFlags = pFlags;
+    fdd.dwBitMask = dwBitMask;
+    fdd.nIDTitle = nIDTitle;
+
+    // Also supply the focus string
+    if(szFocusText && szFocusText[0])
+    {
+        StringCchCopyX(szFocusTextA, _countof(szFocusTextA), szFocusText);
+        fdd.ccFocusText = strlen(szFocusTextA);
+        fdd.szFocusText = szFocusTextA;
+    }
 
     // Execute the dialog
     Result = DialogBoxParam(g_hInst, MAKEINTRESOURCE(IDD_FLAGS_DIALOG), hWndParent, DialogProc, (LPARAM)&fdd);
@@ -475,6 +497,11 @@ INT_PTR FlagsDialog(HWND hWndParent, UINT nIDTitle, TFlagInfo * pFlags, DWORD & 
     }
 
     return Result;
+}
+
+INT_PTR FlagsDialog(HWND hWndParent, UINT nIDTitle, TFlagInfo * pFlags, DWORD & dwBitMask)
+{
+    return FlagsDialog(hWndParent, nIDTitle, pFlags, NULL, dwBitMask);
 }
 
 INT_PTR FlagsDialog_OnControl(HWND hWndParent, UINT nIDTitle, TFlagInfo * pFlags, UINT nIDCtrl)
