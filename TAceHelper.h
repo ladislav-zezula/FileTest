@@ -30,7 +30,8 @@
 #define ACE_FIELD_SERVER_SID        0x00001000      // ACE::SidStart contains a server SID
 #define ACE_FIELD_CLIENT_SID        0x00002000      // ACE::SidStart contains a client SID
 #define ACE_FIELD_MANDATORY_SID     0x00004000      // ACE::SidStart contains a mandatory label SID
-#define ACE_FIELD_CONDITION         0x00008000      // Decode ACE condition
+#define ACE_FIELD_RESOURCE_ATTRIB   0x00008000      // The CLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1 structure
+#define ACE_FIELD_CONDITION         0x00010000      // Decode ACE condition
 
 // Multi flags that are always together
 #define ACE_FIELD_HEADER            (ACE_FIELD_HTYPE|ACE_FIELD_HFLAGS|ACE_FIELD_HSIZE)
@@ -60,6 +61,9 @@
 // ACE Layout for SYSTEM_MANDATORY_LABEL_ACE_TYPE
 #define ACE_LAYOUT_MANDATORY  (ACE_FIELD_HEADER | ACE_FIELD_MANDATORY_MASK | ACE_FIELD_MANDATORY_SID)
 
+// ACE layout for SYSTEM_RESOURCE_ATTRIBUTE_ACE
+#define ACE_LAYOUT_RESOURCE   (ACE_FIELD_HEADER | ACE_FIELD_ACCESS_MASK | ACE_FIELD_ACCESS_SID | ACE_FIELD_RESOURCE_ATTRIB)
+
 //-----------------------------------------------------------------------------
 // Interface for the ACE_HELPER class
 
@@ -78,6 +82,9 @@ struct ACE_HELPER
     LPBYTE PutAceValue(LPBYTE PtrAclData, LPBYTE PtrAclEnd, PVOID PtrValue, DWORD dwLayoutMask, DWORD ValueSize);
     LPBYTE PutAceValueSid(LPBYTE PtrAclData, LPBYTE PtrAclEnd, PSID pSourceSid);
 
+    LPWSTR AceStringRead(LPBYTE pbPtr, LPBYTE pbEnd, ULONG Offset, PULONG pcbMoveBy = NULL);
+    DWORD ParseSecurityAttribute(LPBYTE pbPtr, LPBYTE pbEnd, PULONG pcbMoveBy = NULL);
+
     // Field mask for fields that are valid
     DWORD AceLayout;                                    // See ACE_FIELD_XXX
 
@@ -94,6 +101,8 @@ struct ACE_HELPER
     PSID Sid[2];                                        // Pointer to the first SID (need to be freed using FreeSid)
     LPBYTE Condition;                                   // ACE condition
     DWORD ConditionLength;                              // Length of the ACE condition
+    PCLAIM_SECURITY_ATTRIBUTE_V1 pSecurityAttrs;        // The parsed security attribute structure
+
     DWORD FreeFlags;                                    // Free SID flags
 };
 

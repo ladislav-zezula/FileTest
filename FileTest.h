@@ -36,6 +36,7 @@
 #include "ntdll.h"
 #include "Utils.h"
 #include "AceCondition.h"
+#include "AceResource.h"
 #include "TFastString.h"
 #include "TFlagString.h"
 #include "TAceHelper.h"

@@ -71,6 +71,10 @@ bool ACE_HELPER::SetAceType(DWORD dwAceType)
             AceLayout = ACE_LAYOUT_MANDATORY;
             break;
 
+        case SYSTEM_RESOURCE_ATTRIBUTE_ACE_TYPE:
+            AceLayout = ACE_LAYOUT_RESOURCE;
+            break;
+
         default:
             AceLayout = ACE_FIELD_HEADER | ACE_FIELD_ACCESS_MASK;
             break;
@@ -83,6 +87,7 @@ bool ACE_HELPER::SetAceType(DWORD dwAceType)
 
 bool ACE_HELPER::SetAce(PACE_HEADER pAceHeader)
 {
+    ULONG cbResourceAttribute = 0;
     bool bResult;
 
     // Verify ACE type and set the ACE layout
@@ -147,6 +152,13 @@ bool ACE_HELPER::SetAce(PACE_HEADER pAceHeader)
         {
             pbAcePtr += GetLengthSid(Sid[1] = (PSID)(pbAcePtr));
             FreeFlags &= ~ACE_HELPER_NEED_FREE_SID1;
+        }
+
+        // Get the CLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1 and convert it to pointer-based structure
+        if((AceLayout & ACE_FIELD_RESOURCE_ATTRIB) && (pbAcePtr < pbAceEnd))
+        {
+            if(ParseSecurityAttribute(pbAcePtr, pbAceEnd, &cbResourceAttribute) == ERROR_SUCCESS)
+                pbAcePtr += cbResourceAttribute;
         }
 
         // Get the ACE condition. Example: C:\Program Files\WindowsApps\<any folder>
@@ -292,6 +304,11 @@ void ACE_HELPER::Reset()
         delete[] Condition;
     Condition = NULL;
 
+    // Free the security attributes
+    if(pSecurityAttrs != NULL)
+        LocalFree(pSecurityAttrs);
+    pSecurityAttrs = NULL;
+
     // Reset everything to zero
     memset(this, 0, sizeof(ACE_HELPER));
 }
@@ -344,4 +361,10 @@ LPBYTE ACE_HELPER::PutAceValueSid(LPBYTE PtrAclData, LPBYTE PtrAclEnd, PSID pSou
         }
     }
     return pbResult;
+}
+
+DWORD ACE_HELPER::ParseSecurityAttribute(LPBYTE pbPtr, LPBYTE pbEnd, PULONG pcbMoveBy)
+{
+    pSecurityAttrs = ClaimSecurityAttributeRel2Abs(pbPtr, pbEnd, pcbMoveBy);
+    return (pSecurityAttrs != NULL) ? ERROR_SUCCESS : GetLastError();
 }

@@ -210,6 +210,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="AceCondition.cpp" />
+    <ClCompile Include="AceResource.cpp" />
     <ClCompile Include="DateTime.cpp" />
     <ClCompile Include="DlgCopyFile.cpp" />
     <ClCompile Include="DlgDataEditor.cpp" />
@@ -255,6 +256,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AceCondition.h" />
+    <ClInclude Include="AceResource.h" />
     <ClInclude Include="FileTest.h" />
     <ClInclude Include="ReparseDataHsm.h" />
     <ClInclude Include="ntstatus.h" />
