@@ -72,7 +72,7 @@ bool ACE_HELPER::SetAceType(DWORD dwAceType)
             break;
 
         case SYSTEM_RESOURCE_ATTRIBUTE_ACE_TYPE:
-            AceLayout = ACE_LAYOUT_RESOURCE;
+            AceLayout = ACE_LAYOUT_RESOURCE;            // Contains the CLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1 structure
             break;
 
         default:
@@ -87,7 +87,6 @@ bool ACE_HELPER::SetAceType(DWORD dwAceType)
 
 bool ACE_HELPER::SetAce(PACE_HEADER pAceHeader)
 {
-    ULONG cbResourceAttribute = 0;
     bool bResult;
 
     // Verify ACE type and set the ACE layout
@@ -155,22 +154,17 @@ bool ACE_HELPER::SetAce(PACE_HEADER pAceHeader)
         }
 
         // Get the CLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1 and convert it to pointer-based structure
-        if((AceLayout & ACE_FIELD_RESOURCE_ATTRIB) && (pbAcePtr < pbAceEnd))
+        if((AceLayout & ACE_FIELD_CSA_V1) && (pbAcePtr < pbAceEnd))
         {
-            if(ParseSecurityAttribute(pbAcePtr, pbAceEnd, &cbResourceAttribute) == ERROR_SUCCESS)
-                pbAcePtr += cbResourceAttribute;
+            AttrRel = CaptureExtraStructure(pbAcePtr, pbAceEnd, &AttrRelLength);
+            pbAcePtr += AttrRelLength;
         }
 
         // Get the ACE condition. Example: C:\Program Files\WindowsApps\<any folder>
         if((AceLayout & ACE_FIELD_CONDITION) && (pbAcePtr < pbAceEnd))
         {
-            if((ConditionLength = (DWORD)(pbAceEnd - pbAcePtr)) != 0)
-            {
-                if((Condition = new BYTE[ConditionLength]) != NULL)
-                {
-                    memcpy(Condition, pbAcePtr, ConditionLength);
-                }
-            }
+            Condition = CaptureExtraStructure(pbAcePtr, pbAceEnd, &ConditionLength);
+            pbAcePtr += ConditionLength;
         }
     }
     return bResult;
@@ -305,9 +299,9 @@ void ACE_HELPER::Reset()
     Condition = NULL;
 
     // Free the security attributes
-    if(pSecurityAttrs != NULL)
-        LocalFree(pSecurityAttrs);
-    pSecurityAttrs = NULL;
+    if(AttrRel != NULL)
+        delete [] AttrRel;
+    AttrRel = NULL;
 
     // Reset everything to zero
     memset(this, 0, sizeof(ACE_HELPER));
@@ -363,8 +357,23 @@ LPBYTE ACE_HELPER::PutAceValueSid(LPBYTE PtrAclData, LPBYTE PtrAclEnd, PSID pSou
     return pbResult;
 }
 
-DWORD ACE_HELPER::ParseSecurityAttribute(LPBYTE pbPtr, LPBYTE pbEnd, PULONG pcbMoveBy)
+LPBYTE ACE_HELPER::CaptureExtraStructure(LPBYTE pbPtr, LPBYTE pbEnd, size_t * pcbMoveBy)
 {
-    pSecurityAttrs = ClaimSecurityAttributeRel2Abs(pbPtr, pbEnd, pcbMoveBy);
-    return (pSecurityAttrs != NULL) ? ERROR_SUCCESS : GetLastError();
+    LPBYTE pbExtraStructure = NULL;
+    size_t cbExtraStructure = 0;
+
+    // Allocate copy of the values
+    if(pbPtr < pbEnd)
+    {
+        if((pbExtraStructure = new BYTE[pbEnd - pbPtr]) != NULL)
+        {
+            memmove(pbExtraStructure, pbPtr, pbEnd - pbPtr);
+            cbExtraStructure = pbEnd - pbPtr;
+        }
+    }
+
+    // Give the values to the caller
+    if(pcbMoveBy != NULL)
+        pcbMoveBy[0] = cbExtraStructure;
+    return pbExtraStructure;
 }

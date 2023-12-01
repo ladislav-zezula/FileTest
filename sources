@@ -51,6 +51,7 @@ SOURCES=AceCondition.cpp \
 		Page11Streams.cpp \
 		Page12Ioctl.cpp \
 		ReparseDataHsm.cpp \
+		TestCode.cpp \
 		TAceHelper.cpp \
 		TDataEditor.cpp \
 		TToolTip.cpp \

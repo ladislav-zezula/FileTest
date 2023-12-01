@@ -242,6 +242,7 @@
     <ClCompile Include="ReparseDataHsm.cpp" />
     <ClCompile Include="TAceHelper.cpp" />
     <ClCompile Include="TDataEditor.cpp" />
+    <ClCompile Include="TestCode.cpp" />
     <ClCompile Include="TToolTip.cpp" />
     <ClCompile Include="Utils.cpp" />
     <ClCompile Include="WinMain.cpp">

@@ -1452,6 +1452,17 @@ BEGIN
     IDS_FORMAT_ACL_SIZE     "AclSize: %s"
     IDS_FORMAT_ACL_COUNT    "AceCount: %s"
     IDS_FORMAT_ACL_SBZ2     "Sbz2: %s"
+    IDS_FORMAT_CSA_V1       "CLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1"
+    IDS_FORMAT_NAME         "Name: %s"
+    IDS_FORMAT_VALTYPE      "ValueType: %s"
+    IDS_FORMAT_FLAGS        "Flags: %s"
+    IDS_FORMAT_VALCOUNT     "ValueCount: %s"
+    IDS_FORMAT_VALUE        "Value"
+END
+
+STRINGTABLE
+BEGIN
+    IDS_FORMAT_VALINDEX     "Value[0x%02x]: %s"
 END
 
 #endif    // English (United States) resources

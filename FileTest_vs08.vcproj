@@ -501,6 +501,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\TestCode.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\TToolTip.cpp"
 				>
 			</File>

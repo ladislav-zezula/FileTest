@@ -107,6 +107,7 @@
 
 #define INTEGRITY_LEVEL_NONE        0xFFFFFFFF
 #define INVALID_PAGE_INDEX          0xFFFFFFFF
+#define INVALID_ITEM_INDEX          (size_t)(-1)
 
 #define FILETEST_DATA_MAGIC         0x54534554454C4946ULL
 

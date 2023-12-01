@@ -41,7 +41,7 @@ inline const char * GetNewLineSeparator()
 
 struct TFlagInfo
 {
-    bool IsValuePresent(unsigned int dwBitMask)
+    bool IsValuePresent(ULONG64 dwBitMask)
     {
         return (IsSeparator() == false) && ((dwBitMask & dwMask) == (dwValue & dwMask));
     }
@@ -84,7 +84,7 @@ class TFlagString : public TFastString<TCHAR>
 {
     public:
 
-    TFlagString(TFlagInfo * pFlags, unsigned int dwBitMask, const char * szNextSep = NULL) : TFastString<TCHAR>()
+    TFlagString(TFlagInfo * pFlags, ULONG64 dwBitMask, const char * szNextSep = NULL) : TFastString<TCHAR>()
     {
         // Reset the number of flags that were converted to text
         dwFlagsConverted = 0;

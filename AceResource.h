@@ -162,9 +162,14 @@ typedef struct _CLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1
 // Helpers
 
 PCLAIM_SECURITY_ATTRIBUTE_V1 ClaimSecurityAttributeRel2Abs(
-    LPBYTE pbPtr,
-    LPBYTE pbEnd,
+    PCLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1 pAttrRel,
+    ULONG cbAttrRel,
     PULONG pcbMoveBy
+    );
+
+PCLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1 ClaimSecurityAttributeAbs2Rel(
+    PCLAIM_SECURITY_ATTRIBUTE_V1 pAttrAbs,
+    PULONG pcbLength
     );
 
 #endif // __ACE_RESOURCE_H__

@@ -297,17 +297,17 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
             switch(nFileNameIndex)
             {
                 case 0: // The first file name argument
-                    StringCchCopy(pData->szFileName1, MAX_NT_PATH, __targv[i]);
+                    ExpandEnvironmentStrings(__targv[i], pData->szFileName1, MAX_NT_PATH);
                     nFileNameIndex++;
                     break;
 
                 case 1: // The second file name argument
-                    StringCchCopy(pData->szFileName2, MAX_NT_PATH, __targv[i]);
+                    ExpandEnvironmentStrings(__targv[i], pData->szFileName2, MAX_NT_PATH);
                     nFileNameIndex++;
                     break;
 
                 case 2: // The directory file name argument
-                    StringCchCopy(pData->szDirName, MAX_NT_PATH, __targv[i]);
+                    ExpandEnvironmentStrings(__targv[i], pData->szDirName, MAX_NT_PATH);
                     nFileNameIndex++;
                     break;
             }

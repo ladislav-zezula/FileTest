@@ -457,6 +457,13 @@
 #define IDS_FORMAT_ACL_SIZE             4118
 #define IDS_FORMAT_ACL_COUNT            4119
 #define IDS_FORMAT_ACL_SBZ2             4120
+#define IDS_FORMAT_CSA_V1               4121
+#define IDS_FORMAT_NAME                 4122
+#define IDS_FORMAT_VALTYPE              4123
+#define IDS_FORMAT_FLAGS                4124
+#define IDS_FORMAT_VALCOUNT             4125
+#define IDS_FORMAT_VALUE                4127
+#define IDS_FORMAT_VALINDEX             4128
 #define ID_EDIT_LABEL                   40001
 #define ID_NEW_ACE_BEFORE               40008
 #define ID_NEW_ACE_AFTER                40009

@@ -36,9 +36,12 @@ typedef enum _ITEM_TYPE
     ItemTypeUint16,                                 // The item contains 16-bit integer
     ItemTypeUint32,                                 // The item contains 32-bit integer
     ItemTypeUint64,                                 // The item contains 64-bit integer
+    ItemTypeLPWSTR,                                 // The item is pointer to a zero-terminate unicode string (LPWSTR)
     ItemTypeGuid,                                   // The item is an object GUID
     ItemTypeGuid2,                                  // The item is an inherited object GUID
     ItemTypeMSid,                                   // The item is a mandatory label SID
+    ItemTypeCSA_V1,                                 // The item is the CLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1 structure
+    ItemTypeCSAVal,                                 // One of the values of the CSA
     ItemTypeCondition,                              // The item is an ACE condition
 } ITEM_TYPE, *PITEM_TYPE;
 
@@ -110,7 +113,6 @@ static TFlagInfo SecurityInformations[] =
     FLAGINFO_BITV(UNPROTECTED_SACL_SECURITY_INFORMATION),
     FLAGINFO_END()
 };
-
 
 static TFlagInfo AclRevFlags[] =
 {
@@ -244,29 +246,32 @@ static TFlagInfo IntgrLevels[] =
     FLAGINFO_END()
 };
 
-static DWORD AceSizes[] =
+static TFlagInfo CSA_ValTypes[] =
 {
-    sizeof(ACCESS_ALLOWED_ACE),                 // ACCESS_ALLOWED_ACE_TYPE
-    sizeof(ACCESS_DENIED_ACE),                  // ACCESS_DENIED_ACE_TYPE
-    sizeof(SYSTEM_AUDIT_ACE),                   // SYSTEM_AUDIT_ACE_TYPE
-    sizeof(SYSTEM_ALARM_ACE),                   // SYSTEM_ALARM_ACE_TYPE
-    sizeof(COMPOUND_ACCESS_ALLOWED_ACE),        // COMPOUND_ACCESS_ALLOWED_ACE_TYPE
-    sizeof(ACCESS_ALLOWED_OBJECT_ACE),          // ACCESS_ALLOWED_OBJECT_ACE_TYPE
-    sizeof(ACCESS_DENIED_OBJECT_ACE),           // ACCESS_DENIED_OBJECT_ACE_TYPE
-    sizeof(SYSTEM_AUDIT_OBJECT_ACE),            // SYSTEM_AUDIT_OBJECT_ACE_TYPE
-    sizeof(SYSTEM_ALARM_OBJECT_ACE),            // SYSTEM_ALARM_OBJECT_ACE_TYPE
-    sizeof(ACCESS_ALLOWED_CALLBACK_ACE),        // ACCESS_ALLOWED_CALLBACK_ACE_TYPE
-    sizeof(ACCESS_DENIED_CALLBACK_ACE),         // ACCESS_DENIED_CALLBACK_ACE_TYPE
-    sizeof(ACCESS_ALLOWED_CALLBACK_OBJECT_ACE), // ACCESS_ALLOWED_CALLBACK_OBJECT_ACE_TYPE
-    sizeof(ACCESS_DENIED_CALLBACK_OBJECT_ACE),  // ACCESS_DENIED_CALLBACK_OBJECT_ACE_TYPE
-    sizeof(SYSTEM_AUDIT_CALLBACK_ACE),          // SYSTEM_AUDIT_CALLBACK_ACE_TYPE
-    sizeof(SYSTEM_ALARM_CALLBACK_ACE),          // SYSTEM_ALARM_CALLBACK_ACE_TYPE
-    sizeof(SYSTEM_AUDIT_CALLBACK_OBJECT_ACE),   // SYSTEM_AUDIT_CALLBACK_OBJECT_ACE_TYPE
-    sizeof(SYSTEM_ALARM_CALLBACK_OBJECT_ACE),   // SYSTEM_ALARM_CALLBACK_OBJECT_ACE_TYPE
-    sizeof(SYSTEM_MANDATORY_LABEL_ACE),         // SYSTEM_MANDATORY_LABEL_ACE_TYPE
+    FLAGINFO_NUMV(CLAIM_SECURITY_ATTRIBUTE_TYPE_INVALID),
+    FLAGINFO_NUMV(CLAIM_SECURITY_ATTRIBUTE_TYPE_INT64),
+    FLAGINFO_NUMV(CLAIM_SECURITY_ATTRIBUTE_TYPE_UINT64),
+    FLAGINFO_NUMV(CLAIM_SECURITY_ATTRIBUTE_TYPE_STRING),
+    FLAGINFO_NUMV(CLAIM_SECURITY_ATTRIBUTE_TYPE_FQBN),
+    FLAGINFO_NUMV(CLAIM_SECURITY_ATTRIBUTE_TYPE_SID),
+    FLAGINFO_NUMV(CLAIM_SECURITY_ATTRIBUTE_TYPE_BOOLEAN),
+    FLAGINFO_NUMV(CLAIM_SECURITY_ATTRIBUTE_TYPE_OCTET_STRING),
+    FLAGINFO_END()
 };
 
-static ULONG OBJECT_ACE_Flags = 0;              // XXX_YYY_OBJECT_ACE::Flags, used during parsing ACE to tree items
+static TFlagInfo CSA_Flags[] =
+{
+    FLAGINFO_BITV(CLAIM_SECURITY_ATTRIBUTE_NON_INHERITABLE),
+    FLAGINFO_BITV(CLAIM_SECURITY_ATTRIBUTE_VALUE_CASE_SENSITIVE),
+    FLAGINFO_BITV(CLAIM_SECURITY_ATTRIBUTE_USE_FOR_DENY_ONLY),
+    FLAGINFO_BITV(CLAIM_SECURITY_ATTRIBUTE_DISABLED_BY_DEFAULT),
+    FLAGINFO_BITV(CLAIM_SECURITY_ATTRIBUTE_DISABLED),
+    FLAGINFO_BITV(CLAIM_SECURITY_ATTRIBUTE_MANDATORY),
+    FLAGINFO_END()
+};
+
+static size_t GLOBAL_ItemIndex = INVALID_ITEM_INDEX;    // If we're inserting indexed item
+static ULONG GLOBAL_ObjAceFlags = 0;                    // XXX_YYY_OBJECT_ACE::Flags, used during parsing ACE to tree items
 static BYTE ACL_AclRevision = 0;
 static WORD ACL_AceCount = 0;
 
@@ -435,7 +440,7 @@ static void UpdateGlobalVariables(PACE_HEADER pAceHeader)
 
         // If this ACE contains GUID flags, put them in
         if(AceHelper.AceLayout & ACE_FIELD_FLAGS)
-            ((PACCESS_ALLOWED_OBJECT_ACE)(pAceHeader))->Flags = OBJECT_ACE_Flags;
+            ((PACCESS_ALLOWED_OBJECT_ACE)(pAceHeader))->Flags = GLOBAL_ObjAceFlags;
 
         // Increment the number of ACEs
         ACL_AceCount++;
@@ -496,6 +501,7 @@ static void TV_MakeItemText(
     ULONG cbMoveBy = 0;
     TCHAR szDataText[0x400] = {0};
     UINT nIDFormat = pItemInfo->nIDFormat1;
+    bool bApplyIndex = false;
 
     // Do we have data and format for it?
     if(pItemInfo->nIDFormat2)
@@ -506,6 +512,7 @@ static void TV_MakeItemText(
             if(pItemInfo->ToString(pItemInfo, szDataText, _countof(szDataText), pbPtr, pbEnd, &cbMoveBy))
             {
                 nIDFormat = pItemInfo->nIDFormat2;
+                bApplyIndex = true;
             }
         }
     }
@@ -513,7 +520,12 @@ static void TV_MakeItemText(
     // Finally, format the data to the item
     if(pcbMoveBy != NULL)
         pcbMoveBy[0] = cbMoveBy;
-    rsprintf(szBuffer, ccBuffer, nIDFormat, szDataText);
+    
+    // Format the final value
+    if(GLOBAL_ItemIndex != INVALID_ITEM_INDEX && bApplyIndex)
+        rsprintf(szBuffer, ccBuffer, nIDFormat, GLOBAL_ItemIndex, szDataText);
+    else
+        rsprintf(szBuffer, ccBuffer, nIDFormat, szDataText);
 }
 
 //-----------------------------------------------------------------------------
@@ -521,13 +533,13 @@ static void TV_MakeItemText(
 
 static bool ToString_Hex(PTREE_ITEM_INFO pItemInfo, LPTSTR szBuffer, size_t ccBuffer, LPBYTE pbPtr, LPBYTE pbEnd, PULONG pcbMoveBy = NULL)
 {
-    ULONG dwIntValue = 0;
+    ULONG64 dwIntValue = 0;
     ULONG cbMoveBy = 0;
 
-#define FORMAT_VALUE_INTEGER(format, type)                       \
-    if((pbPtr + sizeof(type)) > pbEnd) { return false; }         \
-    dwIntValue = *(type *)(pbPtr);                               \
-    StringCchPrintf(szBuffer, ccBuffer, _T(format), dwIntValue); \
+#define FORMAT_VALUE_INTEGER(format, type)                               \
+    if((pbPtr + sizeof(type)) > pbEnd) { return false; }                 \
+    dwIntValue = *(type *)(pbPtr);                                       \
+    StringCchPrintf(szBuffer, ccBuffer, _T(format), (type)(dwIntValue)); \
     cbMoveBy = sizeof(type);
 
     // Determine the integer size
@@ -543,6 +555,10 @@ static bool ToString_Hex(PTREE_ITEM_INFO pItemInfo, LPTSTR szBuffer, size_t ccBu
 
         case ItemTypeUint32:
             FORMAT_VALUE_INTEGER("0x%08x", ULONG);
+            break;
+
+        case ItemTypeUint64:
+            FORMAT_VALUE_INTEGER("0x%08I64x", ULONG64);
             break;
 
         default:
@@ -608,6 +624,26 @@ static bool StringTo_Hex(PTREE_ITEM_INFO pItemInfo, LPCTSTR szString, LPBYTE pbP
     if(pcbMoveBy != NULL)
         pcbMoveBy[0] = cbMoveBy;
     return (cbMoveBy != 0);
+}
+
+//-----------------------------------------------------------------------------
+// Conversion of LPWSTR to String
+
+static bool ToString_STR(PTREE_ITEM_INFO /* pItemInfo */, LPTSTR szBuffer, size_t ccBuffer, LPBYTE pbPtr, LPBYTE pbEnd, PULONG pcbMoveBy = NULL)
+{
+    bool bResult = false;
+
+    if((pbPtr + sizeof(LPWSTR)) <= pbEnd)
+    {
+        PWSTR szString = *(PWSTR *)(pbPtr);
+
+        StringCchCopyW(szBuffer, ccBuffer, szString);
+        bResult = true;
+    }
+
+    if(pcbMoveBy != NULL)
+        pcbMoveBy[0] = sizeof(LPWSTR);
+    return bResult;
 }
 
 //-----------------------------------------------------------------------------
@@ -741,7 +777,7 @@ static bool ToString_Guid(PTREE_ITEM_INFO pItemInfo, LPTSTR szBuffer, size_t ccB
     bool bResult = false;
 
     // Only present if the 
-    if(OBJECT_ACE_Flags & FlagToTest)
+    if(GLOBAL_ObjAceFlags & FlagToTest)
     {
         if((pbPtr + sizeof(GUID)) <= pbEnd)
         {
@@ -779,9 +815,9 @@ static bool StringTo_Guid(PTREE_ITEM_INFO pItemInfo, LPCTSTR szString, LPBYTE pb
         if(StringToGuid(szString, (LPGUID)(pbPtr)))
         {
             if(pItemInfo->ItemType == ItemTypeGuid)
-                OBJECT_ACE_Flags |= ACE_OBJECT_TYPE_PRESENT;
+                GLOBAL_ObjAceFlags |= ACE_OBJECT_TYPE_PRESENT;
             if(pItemInfo->ItemType == ItemTypeGuid2)
-                OBJECT_ACE_Flags |= ACE_INHERITED_OBJECT_TYPE_PRESENT;
+                GLOBAL_ObjAceFlags |= ACE_INHERITED_OBJECT_TYPE_PRESENT;
             cbMoveBy = sizeof(GUID);
         }
     }
@@ -803,7 +839,7 @@ static bool CreateNew_Guid(PTREE_ITEM_INFO pItemInfo, LPBYTE pbDataBuffer, size_
     if(cbDataBuffer >= sizeof(GUID))
     {
         memset(pbDataBuffer, 0, sizeof(GUID));
-        OBJECT_ACE_Flags |= FlagToSet;
+        GLOBAL_ObjAceFlags |= FlagToSet;
         pcbDataBuffer[0] = sizeof(GUID);
         bResult = true;
     }
@@ -961,15 +997,17 @@ static TREE_ITEM_INFO TreeItem_Owner    = {ItemTypeOwner,   IDS_OWNER_SECURITY_I
 static TREE_ITEM_INFO TreeItem_Group    = {ItemTypeGroup,   IDS_GROUP_SECURITY_INFORMATION};
 static TREE_ITEM_INFO TreeItem_Dacl     = {ItemTypeDacl,    IDS_DACL_SECURITY_INFORMATION};
 static TREE_ITEM_INFO TreeItem_Sacl     = {ItemTypeSacl,    IDS_SACL_SECURITY_INFORMATION};
-static TREE_ITEM_INFO TreeItem_NullAcl  = {ItemTypeNullAcl, IDS_NULL_ACL,    IDS_FORMAT_STR,       NULL,        NULL,         NULL,         CreateNew_Acl};
-static TREE_ITEM_INFO TreeItem_NoAcl    = {ItemTypeNoAcl,   IDS_NOT_PRESENT, IDS_FORMAT_STR,       NULL,        NULL,         NULL,         CreateNew_Acl};
-static TREE_ITEM_INFO TreeItem_UserSid  = {ItemTypeSid,     IDS_NOT_PRESENT, IDS_FORMAT_SID,       NULL,        ToString_Sid, StringTo_Sid, CreateNew_Sid};
-static TREE_ITEM_INFO TreeItem_AclRev   = {ItemTypeUint08,  0,               IDS_FORMAT_ACL_REVIS, AclRevFlags, ToString_Hex, StringTo_Hex};
-static TREE_ITEM_INFO TreeItem_AclSbz1  = {ItemTypeUint08,  0,               IDS_FORMAT_ACL_SBZ1,  NULL,        ToString_Hex, StringTo_Hex};
-static TREE_ITEM_INFO TreeItem_AclSize  = {ItemTypeUint16,  0,               IDS_FORMAT_ACL_SIZE,  NULL,        ToString_Hex, StringTo_Hex};
-static TREE_ITEM_INFO TreeItem_AceCnt   = {ItemTypeUint16,  0,               IDS_FORMAT_ACL_COUNT, NULL,        ToString_Hex, StringTo_Hex};
-static TREE_ITEM_INFO TreeItem_AclSbz2  = {ItemTypeUint16,  0,               IDS_FORMAT_ACL_SBZ2,  NULL,        ToString_Hex, StringTo_Hex};
-static TREE_ITEM_INFO TreeItem_Ace      = {ItemTypeAce,     IDS_NULL_ACL,    IDS_FORMAT_STR,       NULL,        ToString_Ace};
+static TREE_ITEM_INFO TreeItem_NullAcl  = {ItemTypeNullAcl, IDS_NULL_ACL,     IDS_FORMAT_STR,       NULL,        NULL,         NULL,         CreateNew_Acl};
+static TREE_ITEM_INFO TreeItem_NoAcl    = {ItemTypeNoAcl,   IDS_NOT_PRESENT,  IDS_FORMAT_STR,       NULL,        NULL,         NULL,         CreateNew_Acl};
+static TREE_ITEM_INFO TreeItem_UserSid  = {ItemTypeSid,     IDS_NOT_PRESENT,  IDS_FORMAT_SID,       NULL,        ToString_Sid, StringTo_Sid, CreateNew_Sid};
+static TREE_ITEM_INFO TreeItem_AclRev   = {ItemTypeUint08,  0,                IDS_FORMAT_ACL_REVIS, AclRevFlags, ToString_Hex, StringTo_Hex};
+static TREE_ITEM_INFO TreeItem_AclSbz1  = {ItemTypeUint08,  0,                IDS_FORMAT_ACL_SBZ1,  NULL,        ToString_Hex, StringTo_Hex};
+static TREE_ITEM_INFO TreeItem_AclSize  = {ItemTypeUint16,  0,                IDS_FORMAT_ACL_SIZE,  NULL,        ToString_Hex, StringTo_Hex};
+static TREE_ITEM_INFO TreeItem_AceCnt   = {ItemTypeUint16,  0,                IDS_FORMAT_ACL_COUNT, NULL,        ToString_Hex, StringTo_Hex};
+static TREE_ITEM_INFO TreeItem_AclSbz2  = {ItemTypeUint16,  0,                IDS_FORMAT_ACL_SBZ2,  NULL,        ToString_Hex, StringTo_Hex};
+static TREE_ITEM_INFO TreeItem_Ace      = {ItemTypeAce,     IDS_NULL_ACL,     IDS_FORMAT_STR,       NULL,        ToString_Ace};
+static TREE_ITEM_INFO TreeItem_CSA_U64  = {ItemTypeUint64,  IDS_FORMAT_VALUE, IDS_FORMAT_VALINDEX,  NULL,        ToString_Hex};
+static TREE_ITEM_INFO TreeItem_CSA_STR  = {ItemTypeLPWSTR,  IDS_FORMAT_VALUE, IDS_FORMAT_VALINDEX,  NULL,        ToString_STR};
 
 static PCTREE_ITEM_INFO AclFieldInfos[] =
 {
@@ -997,7 +1035,17 @@ static ACE_FIELD_INFO AceFieldInfos[] =
     {ACE_FIELD_SERVER_SID,      {ItemTypeSid,       0, IDS_FORMAT_SSID,       NULL,        ToString_Sid,  StringTo_Sid}},
     {ACE_FIELD_CLIENT_SID,      {ItemTypeSid,       0, IDS_FORMAT_CSID,       NULL,        ToString_Sid,  StringTo_Sid}},
     {ACE_FIELD_MANDATORY_SID,   {ItemTypeMSid,      0, IDS_FORMAT_INT_LEVEL,  IntgrLevels, ToString_Sid,  StringTo_Sid}},
-    {ACE_FIELD_CONDITION,       {ItemTypeCondition, 0, IDS_FORMAT_CONDITION,  NULL,        ToString_Cnd,  StringTo_Cnd}}
+    {ACE_FIELD_CSA_V1,          {ItemTypeCSA_V1,       IDS_FORMAT_CSA_V1}},
+    {ACE_FIELD_CONDITION,       {ItemTypeCondition, 0, IDS_FORMAT_CONDITION,  NULL,        ToString_Cnd,  StringTo_Cnd} }
+};
+
+static TREE_ITEM_INFO CSA_V1_Fields[] =
+{
+    {ItemTypeLPWSTR,  0, IDS_FORMAT_NAME,     NULL,         ToString_STR},
+    {ItemTypeUint16,  0, IDS_FORMAT_VALTYPE,  CSA_ValTypes, ToString_Hex},
+    {ItemTypeUint16,  0, IDS_FORMAT_RESERVED, NULL,         ToString_Hex},
+    {ItemTypeUint32,  0, IDS_FORMAT_FLAGS,    CSA_Flags,    ToString_Hex},
+    {ItemTypeUint32,  0, IDS_FORMAT_VALCOUNT, NULL,         ToString_Hex},
 };
 
 //-----------------------------------------------------------------------------
@@ -1030,8 +1078,8 @@ static void TV_AllocateItemData(HWND hWndTree, HTREEITEM hItem, LPBYTE pbPtr, LP
 
     if((pItemInfo = TV_GetItemParam(hWndTree, hItem)) != NULL)
     {
-        // The data must be valid at this point
-        assert(pItemInfo->ItemData == ItemDataValid);
+        // There must be no data yet
+        assert(pItemInfo->ItemData == ItemDataNULL || pItemInfo->ItemData == ItemDataValid);
 
         // Are there data of non-zero length?
         if(pbEnd > pbPtr)
@@ -1117,6 +1165,27 @@ static HTREEITEM TV_InsertNewItem(
     return hItem;
 }
 
+template <typename ELEMENT>
+static HTREEITEM TV_InsertIndexedItem(
+    HWND hWndTree,
+    HTREEITEM hParent,
+    HTREEITEM hInsertAfter,
+    PTREE_ITEM_INFO pItemInfo,
+    ELEMENT & Element,
+    size_t nIndex)
+{
+    HTREEITEM hItem;
+    LPBYTE pbPtr = (LPBYTE)(&Element);
+    LPBYTE pbEnd = pbPtr + sizeof(Element);
+    size_t SaveIndex = GLOBAL_ItemIndex;
+
+    GLOBAL_ItemIndex = nIndex;
+    hItem = TV_InsertNewItem(hWndTree, hParent, hInsertAfter, pItemInfo, pbPtr, pbEnd);
+    GLOBAL_ItemIndex = SaveIndex;
+
+    return hItem;
+}
+
 static HTREEITEM TV_InsertNewItemSid(
     HWND hWndTree,
     HTREEITEM hParent,
@@ -1136,6 +1205,75 @@ static HTREEITEM TV_InsertNewItemSid(
     return TV_InsertNewItem(hWndTree, hParent, hInsertAfter, pItemInfo, pbSid, pbEnd);
 }
 
+static HTREEITEM TV_InsertNewItemCSA_V1(
+    HWND hWndTree,
+    HTREEITEM hParent,
+    LPBYTE pbPtr,
+    LPBYTE pbEnd,
+    PULONG pcbMoveBy)
+{
+    PCLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1 pAttrRel = (PCLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1)(pbPtr);
+    PCLAIM_SECURITY_ATTRIBUTE_V1 pAttrAbs;
+    HTREEITEM hInsertAfter = TVI_FIRST;
+    size_t cbAttrRel = (pbEnd - pbPtr);
+    size_t SaveIndex = GLOBAL_ItemIndex;
+
+    // Verify the structure
+    if(cbAttrRel < sizeof(PCLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1))
+        return NULL;
+
+    // Convert the security attribute to absolute security attribute
+    pAttrAbs = ClaimSecurityAttributeRel2Abs(pAttrRel, cbAttrRel, pcbMoveBy);
+    if(pAttrAbs != NULL)
+    {
+        // Update pointers
+        pbPtr = (LPBYTE)(pAttrAbs);
+        pbEnd = pbPtr + sizeof(CLAIM_SECURITY_ATTRIBUTE_V1);
+
+        // Parse all members
+        for(size_t i = 0; i < _countof(CSA_V1_Fields); i++)
+        {
+            ULONG cbMoveBy = 0;
+
+            // Insert the new item
+            hInsertAfter = TV_InsertNewItem(hWndTree, hParent, hInsertAfter, &CSA_V1_Fields[i], pbPtr, pbEnd, &cbMoveBy);
+            if(hInsertAfter == NULL)
+                break;
+
+            // Move the pointer
+            pbPtr = pbPtr + cbMoveBy;
+        }
+
+        // Parse all values
+        if(hInsertAfter != NULL)
+        {
+            // Insert all values
+            for(ULONG i = 0; i < pAttrAbs->ValueCount; i++)
+            {
+                switch(pAttrAbs->ValueType)
+                {
+                    case CLAIM_SECURITY_ATTRIBUTE_TYPE_INT64:
+                    case CLAIM_SECURITY_ATTRIBUTE_TYPE_UINT64:
+                        hInsertAfter = TV_InsertIndexedItem(hWndTree, hParent, hInsertAfter, &TreeItem_CSA_U64, pAttrAbs->Values.pUint64[i], i);
+                        break;
+
+                    case CLAIM_SECURITY_ATTRIBUTE_TYPE_STRING:
+                        hInsertAfter = TV_InsertIndexedItem(hWndTree, hParent, hInsertAfter, &TreeItem_CSA_STR, pAttrAbs->Values.ppString[i], i);
+                        break;
+
+                    default:
+                        assert(false);
+                        break;
+                }
+            }
+        }
+        LocalFree(pAttrAbs);
+    }
+
+    GLOBAL_ItemIndex = SaveIndex;
+    return hInsertAfter;
+}
+
 static void TV_InsertNewItemAceFields(
     HWND hWndTree,
     HTREEITEM hParent,
@@ -1150,7 +1288,7 @@ static void TV_InsertNewItemAceFields(
 
     // Special: Save the value of XXX_YYY_OBJECT_ACE::Flags
     if(AceHelper.AceLayout & ACE_FIELD_FLAGS)
-        OBJECT_ACE_Flags = AceHelper.Flags;
+        GLOBAL_ObjAceFlags = AceHelper.Flags;
 
     // Insert all ACE members according to the bit mask in the ace helper
     for(size_t i = 0; i < _countof(AceFieldInfos); i++)
@@ -1159,11 +1297,12 @@ static void TV_InsertNewItemAceFields(
 
         // Special: Save the value of XXX_YYY_OBJECT_ACE::Flags
         if((AceHelper.AceLayout & ACE_FIELD_FLAGS) && (AceFieldInfos[i].AceLayoutFlag == ACE_FIELD_FLAGS))
-            OBJECT_ACE_Flags = AceHelper.Flags;
+            GLOBAL_ObjAceFlags = AceHelper.Flags;
 
         // Is that flag present there?
         if(AceHelper.AceLayout & AceFieldInfos[i].AceLayoutFlag)
         {
+            // Insert the ACE field
             hInsertAfter = TV_InsertNewItem(hWndTree,
                                             hParent,
                                             hInsertAfter,
@@ -1172,6 +1311,21 @@ static void TV_InsertNewItemAceFields(
             if(hInsertAfter == NULL)
                 break;
             pbPtr += cbMoveBy;
+
+            // Insert the ACE field sub structure
+            switch(AceFieldInfos[i].TreeItem.ItemType)
+            {
+                case ItemTypeCSA_V1:
+                    TV_InsertNewItemCSA_V1(hWndTree, hInsertAfter, AceHelper.AttrRel, AceHelper.AttrRel + AceHelper.AttrRelLength, &cbMoveBy);
+                    pbPtr += cbMoveBy;
+                    break;
+            }
+        }
+
+        // Special: The CLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1 structure
+        if((AceHelper.AceLayout & ACE_FIELD_CSA_V1) && (AceFieldInfos[i].AceLayoutFlag == ACE_FIELD_CSA_V1))
+        {
+            TV_AllocateItemData(hWndTree, hInsertAfter, pbPtr - cbMoveBy, pbEnd);
         }
 
         // Special: Allocate the item data for condition
@@ -1194,7 +1348,7 @@ static HTREEITEM TV_InsertNewItemAce(
     LPBYTE pbEnd = pbPtr + pAceHeader->AceSize;
 
     // Reset the XXX_YYY_OBJECT_ACE::Flags
-    OBJECT_ACE_Flags = 0;
+    GLOBAL_ObjAceFlags = 0;
 
     // Insert the main ACE item
     hAceItem = TV_InsertNewItem(hWndTree, hParent, hInsertAfter, &TreeItem_Ace, pbPtr, pbEnd);
@@ -1208,7 +1362,7 @@ static HTREEITEM TV_InsertNewItemAce(
     }
     
     // Reset the XXX_YYY_OBJECT_ACE::Flags
-    OBJECT_ACE_Flags = 0;
+    GLOBAL_ObjAceFlags = 0;
     return hAceItem;
 }
 
@@ -1218,8 +1372,8 @@ static HTREEITEM TV_InsertNewItemAclFields(
     HTREEITEM hInsertAfter,
     const ACL * pAcl)
 {
-    LPBYTE pbPtr = (LPBYTE)(pAcl);
-    LPBYTE pbEnd = pbPtr + pAcl->AclSize;
+    LPBYTE pbAclPtr = (LPBYTE)(pAcl);
+    LPBYTE pbAclEnd = pbAclPtr + pAcl->AclSize;
     ULONG AceCount = pAcl->AceCount;
 
     // Insert fields from the ACE header
@@ -1231,23 +1385,30 @@ static HTREEITEM TV_InsertNewItemAclFields(
                                         hParent,
                                         hInsertAfter,
                                         AclFieldInfos[i],
-                                        pbPtr, pbEnd, &cbMoveBy);
+                                        pbAclPtr,
+                                        pbAclEnd,
+                                       &cbMoveBy);
         if(hInsertAfter == NULL)
             break;
-        pbPtr += cbMoveBy;
+        pbAclPtr += cbMoveBy;
     }
 
     // Parse the ACEs
-    while(AceCount > 0 && (pbPtr + sizeof(ACE_HEADER)) < pbEnd)
+    while(AceCount > 0 && (pbAclPtr + sizeof(ACE_HEADER)) < pbAclEnd)
     {
-        PACE_HEADER pAceHeader = (PACE_HEADER)(pbPtr);
+        PACE_HEADER pAceHeader = (PACE_HEADER)(pbAclPtr);
+        LPBYTE pbAceEnd = (LPBYTE)(pAceHeader) + pAceHeader->AceSize;
+
+        // The ACE should not go past the end of ACL
+        if(pbAceEnd > pbAclEnd)
+            break;
 
         // Insert the ACE to the list
         if((hInsertAfter = TV_InsertNewItemAce(hWndTree, hParent, hInsertAfter, pAceHeader)) == NULL)
             break;
 
         // Move the data pointer by the size of the ACE
-        pbPtr += pAceHeader->AceSize;
+        pbAclPtr += pAceHeader->AceSize;
         AceCount--;
     }
     return hInsertAfter;
@@ -1305,20 +1466,21 @@ static bool TV_ItemsToData(HWND hWndTree, HTREEITEM hItem, LPBYTE pbPtr, LPBYTE 
         // Retrieve the item info
         if((pItemInfo = TV_GetItemParamAndText(hWndTree, hItem, szItemText, _countof(szItemText))) != NULL)
         {
-            if(pItemInfo->ItemType == ItemTypeAce)
+            // If there is a child item, go recursively on the children
+            if((hChildItem = TreeView_GetChild(hWndTree, hItem)) != NULL)
             {
-                // Retrieve the first child item
-                if((hChildItem = TreeView_GetChild(hWndTree, hItem)) != NULL)
+                // Reset the ACE object flags
+                GLOBAL_ObjAceFlags = 0;
+
+                // Retrieve items from all children
+                bResult = TV_ItemsToData(hWndTree, hChildItem, pbPtr, pbEnd, &cbMoveBy);
+                if(bResult)
                 {
-                    PACE_HEADER pAceHeader = (PACE_HEADER)(pbPtr);
-
-                    // Reset the ACE object flags
-                    OBJECT_ACE_Flags = 0;
-
-                    // Retrieve items from all children
-                    bResult = TV_ItemsToData(hWndTree, hChildItem, pbPtr, pbEnd, &cbMoveBy);
-                    if(bResult)
+                    // Update ACE size, if the item is an ACE
+                    if(pItemInfo->ItemType == ItemTypeAce)
                     {
+                        PACE_HEADER pAceHeader = (PACE_HEADER)(pbPtr);
+
                         pAceHeader->AceSize = (WORD)(cbMoveBy);
                         UpdateGlobalVariables(pAceHeader);
                     }
@@ -2206,7 +2368,7 @@ static int OnTVDoubleClick(HWND hDlg)
     size_t cbDataBuffer = sizeof(DataBuffer);
 
     // Reset the XXX_YYY_OBJECT_ACE::Flags
-    OBJECT_ACE_Flags = 0;
+    GLOBAL_ObjAceFlags = 0;
 
     // Get the handle to the selected item
     if((hItem = TreeView_GetSelection(hWndTree)) != NULL)
@@ -2414,383 +2576,3 @@ INT_PTR CALLBACK PageProc09(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
     }
     return FALSE;
 }
-
-//-----------------------------------------------------------------------------
-// Testing code
-
-#ifdef __TEST_MODE__
-
-static const BYTE Condition1[] =
-{
-    0x61, 0x72, 0x74, 0x78, 0xF8, 0x1C, 0x00, 0x00, 0x00, 0x57, 0x00, 0x49,
-    0x00, 0x4E, 0x00, 0x3A, 0x00, 0x2F, 0x00, 0x2F, 0x00, 0x53, 0x00, 0x59,
-    0x00, 0x53, 0x00, 0x41, 0x00, 0x50, 0x00, 0x50, 0x00, 0x49, 0x00, 0x44,
-    0x00, 0x10, 0x46, 0x00, 0x00, 0x00, 0x4D, 0x00, 0x69, 0x00, 0x63, 0x00,
-    0x72, 0x00, 0x6F, 0x00, 0x73, 0x00, 0x6F, 0x00, 0x66, 0x00, 0x74, 0x00,
-    0x2E, 0x00, 0x42, 0x00, 0x69, 0x00, 0x6E, 0x00, 0x67, 0x00, 0x57, 0x00,
-    0x65, 0x00, 0x61, 0x00, 0x74, 0x00, 0x68, 0x00, 0x65, 0x00, 0x72, 0x00,
-    0x5F, 0x00, 0x38, 0x00, 0x77, 0x00, 0x65, 0x00, 0x6B, 0x00, 0x79, 0x00,
-    0x62, 0x00, 0x33, 0x00, 0x64, 0x00, 0x38, 0x00, 0x62, 0x00, 0x62, 0x00,
-    0x77, 0x00, 0x65, 0x00, 0x86, 0x00, 0x00, 0x00
-};
-
-static const BYTE Condition2[] =
-{
-    0x61, 0x72, 0x74, 0x78, 0xF8, 0x1C, 0x00, 0x00, 0x00, 0x57, 0x00, 0x49,
-    0x00, 0x4E, 0x00, 0x3A, 0x00, 0x2F, 0x00, 0x2F, 0x00, 0x53, 0x00, 0x59,
-    0x00, 0x53, 0x00, 0x41, 0x00, 0x50, 0x00, 0x50, 0x00, 0x49, 0x00, 0x44,
-    0x00, 0x10, 0x46, 0x00, 0x00, 0x00, 0x4D, 0x00, 0x69, 0x00, 0x63, 0x00,
-    0x72, 0x00, 0x6F, 0x00, 0x73, 0x00, 0x6F, 0x00, 0x66, 0x00, 0x74, 0x00,
-    0x2E, 0x00, 0x42, 0x00, 0x69, 0x00, 0x6E, 0x00, 0x67, 0x00, 0x57, 0x00,
-    0x65, 0x00, 0x61, 0x00, 0x74, 0x00, 0x68, 0x00, 0x65, 0x00, 0x72, 0x00,
-    0x5F, 0x00, 0x38, 0x00, 0x77, 0x00, 0x65, 0x00, 0x6B, 0x00, 0x79, 0x00,
-    0x62, 0x00, 0x33, 0x00, 0x64, 0x00, 0x38, 0x00, 0x62, 0x00, 0x62, 0x00,
-    0x77, 0x00, 0x65, 0x00, 0x80, 0xF8, 0x1C, 0x00, 0x00, 0x00, 0x57, 0x00,
-    0x49, 0x00, 0x4E, 0x00, 0x3A, 0x00, 0x2F, 0x00, 0x2F, 0x00, 0x53, 0x00,
-    0x59, 0x00, 0x53, 0x00, 0x41, 0x00, 0x50, 0x00, 0x50, 0x00, 0x49, 0x00,
-    0x44, 0x00, 0x01, 0xAA, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x81, 0xA1, 0x00, 0x00, 0x00, 0x00, 0x00
-};
-
-static PSID GetSid(LPCTSTR szUserName, LPDWORD pcbSid)
-{
-    SID_NAME_USE SidNameUse;
-    PSID pSid = NULL;
-    DWORD cbSid = 0;
-    DWORD cbDomain = 128;
-    TCHAR szDomain[128];
-
-    LookupAccountName(NULL, szUserName, pSid, &cbSid, szDomain, &cbDomain, &SidNameUse);
-    if(cbSid != 0)
-    {
-        if((pSid = LocalAlloc(LPTR, cbSid)) != NULL)
-        {
-            if(LookupAccountName(NULL, szUserName, pSid, &cbSid, szDomain, &cbDomain, &SidNameUse))
-            {
-                pcbSid[0] = cbSid;
-                return pSid;
-            }
-            LocalFree(pSid);
-        }
-    }
-    return NULL;
-}
-
-static bool AppendAceGuid(PVOID pvAce, LPGUID pGuid, ULONG AddFlag)
-{
-    PACCESS_ALLOWED_OBJECT_ACE pAce = (PACCESS_ALLOWED_OBJECT_ACE)(pvAce);
-    LPBYTE pbAce = (LPBYTE)(pAce);
-    LPBYTE pbPtr = pbAce + pAce->Header.AceSize;
-
-    if(pGuid != NULL)
-    {
-        memcpy(pbPtr, pGuid, sizeof(GUID));
-        pAce->Flags |= AddFlag;
-        pbPtr += sizeof(GUID);
-    }
-
-    // Fixup the ACE size
-    pAce->Header.AceSize = (WORD)(pbPtr - pbAce);
-    return true;
-}
-
-static bool AppendAceSid(PACE_HEADER pAceHeader, PSID pSid)
-{
-    LPBYTE pbAceStart = (LPBYTE)(pAceHeader);
-    LPBYTE pbAcePtr = pbAceStart + pAceHeader->AceSize;
-    ULONG SidLength;
-
-    // Copy the SID, if any
-    if(pSid != NULL && (SidLength = RtlLengthSid(pSid)) != 0)
-    {
-        memcpy(pbAcePtr, pSid, SidLength);
-        pbAcePtr += SidLength;
-    }
-
-    // Update the ACE size
-    pAceHeader->AceSize = (WORD)(pbAcePtr - pbAceStart);
-    return true;
-}
-
-static bool AppendAceData(PACE_HEADER pAceHeader, LPCBYTE pbCondition, ULONG cbCondition)
-{
-    LPBYTE pbAceStart = (LPBYTE)(pAceHeader);
-    LPBYTE pbAcePtr = pbAceStart + pAceHeader->AceSize;
-
-    // Copy the SID, if any
-    if(pbCondition && cbCondition)
-    {
-        memcpy(pbAcePtr, pbCondition, cbCondition);
-        pbAcePtr += cbCondition;
-    }
-
-    // Update the ACE size
-    pAceHeader->AceSize = (WORD)(pbAcePtr - pbAceStart);
-    return true;
-}
-
-
-template <typename ACE_TYPE>
-static ACE_TYPE * AddAce0(PACL pAcl, BYTE AceType, ACCESS_MASK AccessMask, PSID pSid = NULL)
-{
-    ACE_TYPE * pAce = NULL;
-    LPBYTE pbNextAce = (LPBYTE)(pAcl + 1);
-
-    // Get the pointer to the next free ACE
-    if(pAcl->AceCount > 0)
-    {
-        PACE_HEADER pLastAce;
-
-        RtlGetAce(pAcl, pAcl->AceCount - 1, (PVOID *)(&pLastAce));
-        pbNextAce = (LPBYTE)(pLastAce) + pLastAce->AceSize;
-    }
-
-    if((pAce = (ACE_TYPE *)pbNextAce) != NULL)
-    {
-        // Configure the ACE
-        memset(pAce, 0, sizeof(ACE_TYPE));
-        pAce->Header.AceType = AceType;
-        pAce->Header.AceSize = FIELD_OFFSET(ACE_TYPE, SidStart);
-        pAce->Mask = AccessMask;
-
-        // Copy the SID, if any
-        AppendAceSid(&pAce->Header, pSid);
-        pAcl->AceCount++;
-    }
-    return pAce;
-}
-
-static PCOMPOUND_ACCESS_ALLOWED_ACE AddAce4(PACL pAcl, ACCESS_MASK AccessMask, PSID pSid1, PSID pSid2 = NULL)
-{
-    PCOMPOUND_ACCESS_ALLOWED_ACE pAce;
-
-    if((pAce = AddAce0<COMPOUND_ACCESS_ALLOWED_ACE>(pAcl, ACCESS_ALLOWED_COMPOUND_ACE_TYPE, AccessMask, pSid1)) != NULL)
-    {
-        // Append the second SID, if any
-        AppendAceSid(&pAce->Header, pSid2);
-        pAce->CompoundAceType = COMPOUND_ACE_IMPERSONATION;
-    }
-    return pAce;
-}
-
-static PACCESS_ALLOWED_OBJECT_ACE AddAce5(PACL pAcl, BYTE AceType, ACCESS_MASK AccessMask, LPGUID pGuid1, LPGUID pGuid2, PSID pSid)
-{
-    PACCESS_ALLOWED_OBJECT_ACE pAce;
-
-    if((pAce = AddAce0<ACCESS_ALLOWED_OBJECT_ACE>(pAcl, AceType, AccessMask)) != NULL)
-    {
-        // Fixup the ACE size
-        pAce->Header.AceSize = FIELD_OFFSET(ACCESS_ALLOWED_OBJECT_ACE, ObjectType);
-
-        // Append both GUIDs and the SID
-        AppendAceGuid(pAce, pGuid1, ACE_OBJECT_TYPE_PRESENT);
-        AppendAceGuid(pAce, pGuid2, ACE_INHERITED_OBJECT_TYPE_PRESENT);
-        AppendAceSid(&pAce->Header, pSid);
-    }
-    return pAce;
-}
-
-static PACCESS_ALLOWED_CALLBACK_ACE AddAce9(PACL pAcl, BYTE AceType, ACCESS_MASK AccessMask, PSID pSid, LPCBYTE pbCondition, ULONG cbCondition)
-{
-    PACCESS_ALLOWED_CALLBACK_ACE pAce;
-
-    if((pAce = AddAce0<ACCESS_ALLOWED_CALLBACK_ACE>(pAcl, AceType, AccessMask, pSid)) != NULL)
-        AppendAceData(&pAce->Header, pbCondition, cbCondition);
-    return pAce;
-}
-
-/*
-static PACCESS_ALLOWED_CALLBACK_OBJECT_ACE AddAce12(
-    PACL pAcl,
-    BYTE AceType,
-    ACCESS_MASK AccessMask,
-    LPGUID pGuid1,
-    LPGUID pGuid2,
-    PSID pSid,
-    LPCBYTE pbCondition,
-    ULONG cbCondition)
-{
-    PACCESS_ALLOWED_CALLBACK_OBJECT_ACE pAce;
-
-    if((pAce = AddAce0<ACCESS_ALLOWED_CALLBACK_OBJECT_ACE>(pAcl, AceType, AccessMask)) != NULL)
-    {
-        // Fixup the ACE size
-        pAce->Header.AceSize = FIELD_OFFSET(ACCESS_ALLOWED_CALLBACK_OBJECT_ACE, ObjectType);
-
-        // Append both GUIDs, SID and the condition
-        AppendAceGuid(pAce, pGuid1, ACE_OBJECT_TYPE_PRESENT);
-        AppendAceGuid(pAce, pGuid2, ACE_INHERITED_OBJECT_TYPE_PRESENT);
-        AppendAceSid (&pAce->Header, pSid);
-        AppendAceData(&pAce->Header, pbCondition, cbCondition);
-    }
-    return pAce;
-}
-*/
-
-PACL CreateEmptyDacl()
-{
-    PACL pAcl;
-
-    if((pAcl = (PACL)LocalAlloc(LPTR, sizeof(ACL))) != NULL)
-    {
-        if(RtlCreateAcl(pAcl, sizeof(ACL), ACL_REVISION_DS) != STATUS_SUCCESS)
-        {
-            LocalFree(pAcl);
-            pAcl = NULL;
-        }
-    }
-    return pAcl;
-}
-
-PACL CreateDacl(PSID pSidEveryone, PSID pSidUser, PSID pSidAdmin)
-{
-    PACL pAcl;
-    ULONG cbAclSize = 0x1000;
-    NTSTATUS Status = STATUS_INSUFFICIENT_RESOURCES;
-
-    // Allocate space for ACL
-    if((pAcl = (PACL)LocalAlloc(LPTR, cbAclSize)) != NULL)
-    {
-        if((Status = RtlCreateAcl(pAcl, cbAclSize, ACL_REVISION_DS)) == STATUS_SUCCESS)
-        {
-            PACE_HEADER pAceHeader;
-            GUID Guid1 = {0};
-            GUID Guid2 = {0};
-
-            pAceHeader = &AddAce0<ACCESS_ALLOWED_ACE>(pAcl, ACCESS_ALLOWED_ACE_TYPE, GENERIC_ALL, pSidEveryone)->Header;
-            cbAclSize = sizeof(ACL) + pAceHeader->AceSize;
-
-            pAceHeader = &AddAce0<ACCESS_DENIED_ACE>(pAcl, ACCESS_DENIED_ACE_TYPE, FILE_EXECUTE, pSidAdmin)->Header;
-            cbAclSize = cbAclSize + pAceHeader->AceSize;
-
-            pAceHeader = &AddAce4(pAcl, FILE_EXECUTE, pSidAdmin, pSidUser)->Header;
-            cbAclSize = cbAclSize + pAceHeader->AceSize;
-
-            pAceHeader = &AddAce5(pAcl, ACCESS_ALLOWED_OBJECT_ACE_TYPE, ADS_RIGHT_DS_READ_PROP, NULL, NULL, pSidEveryone)->Header;
-            cbAclSize = cbAclSize + pAceHeader->AceSize;
-
-            pAceHeader = &AddAce5(pAcl, ACCESS_ALLOWED_OBJECT_ACE_TYPE, ADS_RIGHT_DS_READ_PROP, &Guid1, NULL, pSidEveryone)->Header;
-            cbAclSize = cbAclSize + pAceHeader->AceSize;
-
-            pAceHeader = &AddAce5(pAcl, ACCESS_DENIED_OBJECT_ACE_TYPE, ADS_RIGHT_DS_WRITE_PROP, &Guid1, &Guid2, pSidEveryone)->Header;
-            cbAclSize = cbAclSize + pAceHeader->AceSize;
-
-            pAceHeader = &AddAce5(pAcl, ACCESS_DENIED_OBJECT_ACE_TYPE, ADS_RIGHT_DS_WRITE_PROP, &Guid1, &Guid2, pSidEveryone)->Header;
-            cbAclSize = cbAclSize + pAceHeader->AceSize;
-
-            pAceHeader = &AddAce9(pAcl, ACCESS_ALLOWED_CALLBACK_ACE_TYPE, FILE_READ_DATA, pSidUser, Condition1, sizeof(Condition1))->Header;
-            cbAclSize = cbAclSize + pAceHeader->AceSize;
-
-            pAceHeader = &AddAce9(pAcl, ACCESS_DENIED_CALLBACK_ACE_TYPE, FILE_EXECUTE, pSidUser, Condition2, sizeof(Condition2))->Header;
-            cbAclSize = cbAclSize + pAceHeader->AceSize;
-
-            pAcl->AclSize = (WORD)(cbAclSize);
-        }
-    }
-    return pAcl;
-}
-
-static DWORD SetCustomSecurityDescriptor(HANDLE hObject, ULONG AclType)
-{
-    SECURITY_INFORMATION SecurityInfo = 0;
-    SECURITY_DESCRIPTOR sd;
-    NTSTATUS Status = STATUS_SUCCESS;
-    PSID pSidEveryone = NULL;
-    PSID pSidAdmin = NULL;
-    PSID pSidUser = NULL;
-    PACL pDacl = NULL;
-    ULONG ccUserName = 0;
-    ULONG cbSidEveryone = 0;
-    ULONG cbSidAdmin = 0;
-    ULONG cbSidUser = 0;
-    TCHAR szUserName[128];
-
-    // Get two sids: Admins and current user
-    ccUserName = _countof(szUserName);
-    GetUserName(szUserName, &ccUserName);
-    pSidAdmin = GetSid(_T("Administrator"), &cbSidAdmin);
-    pSidUser = GetSid(szUserName, &cbSidUser);
-
-    // Get the SID of Everyone
-    RtlAllocateAndInitializeSid(&SiaWorld, 1, 0, 0, 0, 0, 0, 0, 0, 0, &pSidEveryone);
-    cbSidEveryone = RtlLengthSid(pSidEveryone);
-
-    // Initialize the blank security descriptor
-    if(NT_SUCCESS(Status))
-    {
-        Status = RtlCreateSecurityDescriptor(&sd, SECURITY_DESCRIPTOR_REVISION);
-    }
-
-    // Set the appropriate DACL
-    if(NT_SUCCESS(Status))
-    {
-        switch(AclType)
-        {
-            case 0:
-                if((Status = RtlSetDaclSecurityDescriptor(&sd, TRUE, NULL, FALSE)) == STATUS_SUCCESS)
-                {
-                    SecurityInfo |= DACL_SECURITY_INFORMATION;
-                }
-                break;
-
-            case 1:
-                if((pDacl = CreateEmptyDacl()) != NULL)
-                {
-                    if((Status = RtlSetDaclSecurityDescriptor(&sd, TRUE, pDacl, FALSE)) == STATUS_SUCCESS)
-                    {
-                        SecurityInfo |= DACL_SECURITY_INFORMATION;
-                    }
-                }
-                break;
-
-            case 2:
-                if((pDacl = CreateDacl(pSidEveryone, pSidUser, pSidAdmin)) != NULL)
-                {
-                    if((Status = RtlSetDaclSecurityDescriptor(&sd, TRUE, pDacl, FALSE)) == STATUS_SUCCESS)
-                    {
-                        SecurityInfo |= DACL_SECURITY_INFORMATION;
-                    }
-                }
-                break;
-        }
-    }
-
-    // Apply the security information to the handle
-    if(NT_SUCCESS(Status))
-    {
-        Status = NtSetSecurityObject(hObject, SecurityInfo, &sd);
-    }
-
-    // Free buffers
-    if(pDacl != NULL)
-        LocalFree(pDacl);
-    if(pSidUser != NULL)
-        LocalFree(pSidUser);
-    if(pSidAdmin != NULL)
-        LocalFree(pSidAdmin);
-    return Status;
-}
-
-void SetCustomSecurityDescriptor(LPCTSTR szPath, ULONG AclType)
-{
-    HANDLE hFolder;
-
-    // Make sure that the folder exists
-    CreateDirectory(szPath, NULL);
-
-    // Open the folder and set security descriptor
-    hFolder = CreateFile(szPath, GENERIC_ALL | READ_CONTROL | WRITE_DAC | WRITE_OWNER, 0, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
-    if(hFolder != INVALID_HANDLE_VALUE)
-    {
-        SetCustomSecurityDescriptor(hFolder, AclType);
-        CloseHandle(hFolder);
-    }
-}
-
-void DebugCode_SecurityDescriptor(LPCTSTR /* szPath */)
-{
-    SetCustomSecurityDescriptor(_T("c:\\VMWARE\\Test-001-NULL_ACL"), 0);
-    SetCustomSecurityDescriptor(_T("c:\\VMWARE\\Test-002-EMPTY_ACL"), 1);
-    SetCustomSecurityDescriptor(_T("c:\\VMWARE\\Test-003-VALID_ACL"), 2);
-}
-#endif
