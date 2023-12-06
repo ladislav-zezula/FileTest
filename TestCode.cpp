@@ -13,6 +13,12 @@
 
 #ifdef __TEST_MODE__
 
+static const GUID NullGuid = {0, 0, 0, {0, 0, 0, 0, 0, 0, 0, 0}};
+
+static const BYTE SidEveryone[]  = {0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00};
+static const BYTE SidLocAdmins[] = {0x01, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0x20, 0x00, 0x00, 0x00, 0x20, 0x02, 0x00, 0x00};
+static const BYTE SidLocUsers[]  = {0x01, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0x20, 0x00, 0x00, 0x00, 0x21, 0x02, 0x00, 0x00};
+
 static const BYTE Condition1[] =
 {
     0x61, 0x72, 0x74, 0x78, 0xF8, 0x1C, 0x00, 0x00, 0x00, 0x57, 0x00, 0x49,
@@ -45,7 +51,7 @@ static const BYTE Condition2[] =
     0x00, 0x81, 0xA1, 0x00, 0x00, 0x00, 0x00, 0x00
 };
 
-static PSID GetSid(LPCTSTR szUserName, LPDWORD pcbSid)
+static PSID GetUserSid(LPCTSTR szUserName, LPDWORD pcbSid)
 {
     SID_NAME_USE SidNameUse;
     PSID pSid = NULL;
@@ -69,144 +75,81 @@ static PSID GetSid(LPCTSTR szUserName, LPDWORD pcbSid)
     return NULL;
 }
 
-static bool AppendAceGuid(PVOID pvAce, LPGUID pGuid, ULONG AddFlag)
+static PACE_HEADER AddAce(
+    PACL pAcl,
+    BYTE AceType,
+    ACCESS_MASK AccessMask = GENERIC_ALL,
+    PSID pSid = NULL)
 {
-    PACCESS_ALLOWED_OBJECT_ACE pAce = (PACCESS_ALLOWED_OBJECT_ACE)(pvAce);
-    LPBYTE pbAce = (LPBYTE)(pAce);
-    LPBYTE pbPtr = pbAce + pAce->Header.AceSize;
-
-    if(pGuid != NULL)
-    {
-        memcpy(pbPtr, pGuid, sizeof(GUID));
-        pAce->Flags |= AddFlag;
-        pbPtr += sizeof(GUID);
-    }
-
-    // Fixup the ACE size
-    pAce->Header.AceSize = (WORD)(pbPtr - pbAce);
-    return true;
+    return ACE_HELPER(AceType, AccessMask, pSid).AddToAcl(pAcl);
 }
 
-static bool AppendAceSid(PACE_HEADER pAceHeader, PSID pSid)
+static PACE_HEADER AddAce(
+    PACL pAcl,
+    BYTE AceType,
+    ACCESS_MASK AccessMask,
+    LPCGUID pGuid1,
+    LPCGUID pGuid2 = NULL)
 {
-    LPBYTE pbAceStart = (LPBYTE)(pAceHeader);
-    LPBYTE pbAcePtr = pbAceStart + pAceHeader->AceSize;
-    ULONG SidLength;
+    ACE_HELPER AceHelper(AceType, AccessMask);
 
-    // Copy the SID, if any
-    if(pSid != NULL && (SidLength = RtlLengthSid(pSid)) != 0)
+    // Append object type GUID
+    if(pGuid1 != NULL)
     {
-        memcpy(pbAcePtr, pSid, SidLength);
-        pbAcePtr += SidLength;
+        memcpy(&AceHelper.ObjectType, pGuid1, sizeof(GUID));
+        AceHelper.Flags |= ACE_OBJECT_TYPE_PRESENT;
     }
 
-    // Update the ACE size
-    pAceHeader->AceSize = (WORD)(pbAcePtr - pbAceStart);
-    return true;
-}
-
-static bool AppendAceData(PACE_HEADER pAceHeader, LPCBYTE pbCondition, ULONG cbCondition)
-{
-    LPBYTE pbAceStart = (LPBYTE)(pAceHeader);
-    LPBYTE pbAcePtr = pbAceStart + pAceHeader->AceSize;
-
-    // Copy the SID, if any
-    if(pbCondition && cbCondition)
+    // Append object type GUID
+    if(pGuid2 != NULL)
     {
-        memcpy(pbAcePtr, pbCondition, cbCondition);
-        pbAcePtr += cbCondition;
+        memcpy(&AceHelper.InheritedObjectType, pGuid2, sizeof(GUID));
+        AceHelper.Flags |= ACE_INHERITED_OBJECT_TYPE_PRESENT;
     }
 
-    // Update the ACE size
-    pAceHeader->AceSize = (WORD)(pbAcePtr - pbAceStart);
-    return true;
+    // Add the ACE to the ACL
+    return AceHelper.AddToAcl(pAcl);
 }
 
-
-template <typename ACE_TYPE>
-static ACE_TYPE * AddAce0(PACL pAcl, BYTE AceType, ACCESS_MASK AccessMask, PSID pSid = NULL)
+static PACE_HEADER AddAce(
+    PACL pAcl,
+    BYTE AceType,
+    ACCESS_MASK AccessMask,
+    LPCVOID lpCondition,
+    size_t cbCondition)
 {
-    ACE_TYPE * pAce = NULL;
-    LPBYTE pbNextAce = (LPBYTE)(pAcl + 1);
+    ACE_HELPER AceHelper(AceType, AccessMask);
 
-    // Get the pointer to the next free ACE
-    if(pAcl->AceCount > 0)
-    {
-        PACE_HEADER pLastAce;
+    // Capture the condition
+    AceHelper.SetCondition((LPVOID)lpCondition, cbCondition);
 
-        RtlGetAce(pAcl, pAcl->AceCount - 1, (PVOID *)(&pLastAce));
-        pbNextAce = (LPBYTE)(pLastAce) + pLastAce->AceSize;
-    }
-
-    if((pAce = (ACE_TYPE *)pbNextAce) != NULL)
-    {
-        // Configure the ACE
-        memset(pAce, 0, sizeof(ACE_TYPE));
-        pAce->Header.AceType = AceType;
-        pAce->Header.AceSize = FIELD_OFFSET(ACE_TYPE, SidStart);
-        pAce->Mask = AccessMask;
-
-        // Copy the SID, if any
-        AppendAceSid(&pAce->Header, pSid);
-        pAcl->AceCount++;
-    }
-    return pAce;
+    // Add the ACE to the ACL
+    return AceHelper.AddToAcl(pAcl);
 }
 
-static PCOMPOUND_ACCESS_ALLOWED_ACE AddAce4(PACL pAcl, ACCESS_MASK AccessMask, PSID pSid1, PSID pSid2 = NULL)
-{
-    PCOMPOUND_ACCESS_ALLOWED_ACE pAce;
-
-    if((pAce = AddAce0<COMPOUND_ACCESS_ALLOWED_ACE>(pAcl, ACCESS_ALLOWED_COMPOUND_ACE_TYPE, AccessMask, pSid1)) != NULL)
-    {
-        // Append the second SID, if any
-        AppendAceSid(&pAce->Header, pSid2);
-        pAce->CompoundAceType = COMPOUND_ACE_IMPERSONATION;
-    }
-    return pAce;
-}
-
-static PACCESS_ALLOWED_OBJECT_ACE AddAce5(PACL pAcl, BYTE AceType, ACCESS_MASK AccessMask, LPGUID pGuid1, LPGUID pGuid2, PSID pSid)
-{
-    PACCESS_ALLOWED_OBJECT_ACE pAce;
-
-    if((pAce = AddAce0<ACCESS_ALLOWED_OBJECT_ACE>(pAcl, AceType, AccessMask)) != NULL)
-    {
-        // Fixup the ACE size
-        pAce->Header.AceSize = FIELD_OFFSET(ACCESS_ALLOWED_OBJECT_ACE, ObjectType);
-
-        // Append both GUIDs and the SID
-        AppendAceGuid(pAce, pGuid1, ACE_OBJECT_TYPE_PRESENT);
-        AppendAceGuid(pAce, pGuid2, ACE_INHERITED_OBJECT_TYPE_PRESENT);
-        AppendAceSid(&pAce->Header, pSid);
-    }
-    return pAce;
-}
-
-static PACCESS_ALLOWED_CALLBACK_ACE AddAce9(PACL pAcl, BYTE AceType, ACCESS_MASK AccessMask, PSID pSid, LPCBYTE pbCondition, ULONG cbCondition)
-{
-    PACCESS_ALLOWED_CALLBACK_ACE pAce;
-
-    if((pAce = AddAce0<ACCESS_ALLOWED_CALLBACK_ACE>(pAcl, AceType, AccessMask, pSid)) != NULL)
-        AppendAceData(&pAce->Header, pbCondition, cbCondition);
-    return pAce;
-}
-
-static PSYSTEM_RESOURCE_ATTRIBUTE_ACE AddAce(PACL pAcl, ACCESS_MASK AccessMask, PSID pSid, PCLAIM_SECURITY_ATTRIBUTE_V1 pAttrAbs)
+static PACE_HEADER AddAce(
+    PACL pAcl,
+    BYTE AceType,
+    ACCESS_MASK AccessMask,
+    PSID pSid, 
+    ACE_CSA_HELPER & CsaHelper)
 {
     PCLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1 pAttrRel;
-    PSYSTEM_RESOURCE_ATTRIBUTE_ACE pAce = NULL;
+    ACE_HELPER AceHelper(AceType, AccessMask);
     ULONG cbAttrRel = 0;
-    ULONG cbMoveBy = 0;
+
+    // Set the SID into the ACE helper
+    AceHelper.SetSid(pSid, 0);
 
     // Convert to absolute security attributes
-    if((pAttrRel = ClaimSecurityAttributeAbs2Rel(pAttrAbs, &cbAttrRel)) != NULL)
+    if((pAttrRel = CsaHelper.Export(&cbAttrRel)) != NULL)
     {
-        if((pAce = AddAce0<SYSTEM_RESOURCE_ATTRIBUTE_ACE>(pAcl, SYSTEM_RESOURCE_ATTRIBUTE_ACE_TYPE, AccessMask, pSid)) != NULL)
-            AppendAceData(&pAce->Header, (LPBYTE)(pAttrRel), cbAttrRel);
+        // Capture the relative ACE
+        AceHelper.SetAttributes(pAttrRel, cbAttrRel);
         LocalFree(pAttrRel);
     }
-    return pAce;
+
+    return AceHelper.AddToAcl(pAcl);
 }
 
 PACL CreateEmptyDacl()
@@ -224,47 +167,42 @@ PACL CreateEmptyDacl()
     return pAcl;
 }
 
-PACL CreateDacl(PSID pSidEveryone, PSID pSidUser, PSID pSidAdmin)
+PACL CreateDacl(PSID pSidAdmin)
 {
     PACL pAcl;
-    ULONG cbAclSize = 0x1000;
     NTSTATUS Status = STATUS_INSUFFICIENT_RESOURCES;
 
     // Allocate space for ACL
-    if((pAcl = (PACL)LocalAlloc(LPTR, cbAclSize)) != NULL)
+    if((pAcl = (PACL)LocalAlloc(LPTR, MAX_ACL_LENGTH)) != NULL)
     {
-        if((Status = RtlCreateAcl(pAcl, cbAclSize, ACL_REVISION_DS)) == STATUS_SUCCESS)
+        if((Status = RtlCreateAcl(pAcl, MAX_ACL_LENGTH, ACL_REVISION_DS)) == STATUS_SUCCESS)
         {
             PACE_HEADER pAceHeader;
-            GUID Guid1 = {0};
-            GUID Guid2 = {0};
+            ULONG cbAclSize = sizeof(ACL);
 
-            pAceHeader = &AddAce0<ACCESS_ALLOWED_ACE>(pAcl, ACCESS_ALLOWED_ACE_TYPE, GENERIC_ALL, pSidEveryone)->Header;
-            cbAclSize = sizeof(ACL) + pAceHeader->AceSize;
+            if((pAceHeader = AddAce(pAcl, ACCESS_ALLOWED_ACE_TYPE)) != NULL)
+                cbAclSize = cbAclSize + pAceHeader->AceSize;
 
-            pAceHeader = &AddAce0<ACCESS_DENIED_ACE>(pAcl, ACCESS_DENIED_ACE_TYPE, FILE_EXECUTE, pSidAdmin)->Header;
-            cbAclSize = cbAclSize + pAceHeader->AceSize;
+            if((pAceHeader = AddAce(pAcl, ACCESS_DENIED_ACE_TYPE, FILE_EXECUTE, pSidAdmin)) != NULL)
+                cbAclSize = cbAclSize + pAceHeader->AceSize;
 
-            pAceHeader = &AddAce4(pAcl, FILE_EXECUTE, pSidAdmin, pSidUser)->Header;
-            cbAclSize = cbAclSize + pAceHeader->AceSize;
+            if((pAceHeader = AddAce(pAcl, ACCESS_ALLOWED_COMPOUND_ACE_TYPE, FILE_EXECUTE)) != NULL)
+                cbAclSize = cbAclSize + pAceHeader->AceSize;
 
-            pAceHeader = &AddAce5(pAcl, ACCESS_ALLOWED_OBJECT_ACE_TYPE, ADS_RIGHT_DS_READ_PROP, NULL, NULL, pSidEveryone)->Header;
-            cbAclSize = cbAclSize + pAceHeader->AceSize;
+            if((pAceHeader = AddAce(pAcl, ACCESS_ALLOWED_OBJECT_ACE_TYPE, ADS_RIGHT_DS_READ_PROP)) != NULL)
+                cbAclSize = cbAclSize + pAceHeader->AceSize;
 
-            pAceHeader = &AddAce5(pAcl, ACCESS_ALLOWED_OBJECT_ACE_TYPE, ADS_RIGHT_DS_READ_PROP, &Guid1, NULL, pSidEveryone)->Header;
-            cbAclSize = cbAclSize + pAceHeader->AceSize;
+            if((pAceHeader = AddAce(pAcl, ACCESS_ALLOWED_OBJECT_ACE_TYPE, ADS_RIGHT_DS_READ_PROP, &NullGuid)) != NULL)
+                cbAclSize = cbAclSize + pAceHeader->AceSize;
 
-            pAceHeader = &AddAce5(pAcl, ACCESS_DENIED_OBJECT_ACE_TYPE, ADS_RIGHT_DS_WRITE_PROP, &Guid1, &Guid2, pSidEveryone)->Header;
-            cbAclSize = cbAclSize + pAceHeader->AceSize;
+            if((pAceHeader = AddAce(pAcl, ACCESS_ALLOWED_OBJECT_ACE_TYPE, ADS_RIGHT_DS_READ_PROP, &NullGuid, &NullGuid)) != NULL)
+                cbAclSize = cbAclSize + pAceHeader->AceSize;
 
-            pAceHeader = &AddAce5(pAcl, ACCESS_DENIED_OBJECT_ACE_TYPE, ADS_RIGHT_DS_WRITE_PROP, &Guid1, &Guid2, pSidEveryone)->Header;
-            cbAclSize = cbAclSize + pAceHeader->AceSize;
+            if((pAceHeader = AddAce(pAcl, ACCESS_ALLOWED_CALLBACK_ACE_TYPE, FILE_READ_DATA, Condition1, sizeof(Condition1))) != NULL)
+                cbAclSize = cbAclSize + pAceHeader->AceSize;
 
-            pAceHeader = &AddAce9(pAcl, ACCESS_ALLOWED_CALLBACK_ACE_TYPE, FILE_READ_DATA, pSidUser, Condition1, sizeof(Condition1))->Header;
-            cbAclSize = cbAclSize + pAceHeader->AceSize;
-
-            pAceHeader = &AddAce9(pAcl, ACCESS_DENIED_CALLBACK_ACE_TYPE, FILE_EXECUTE, pSidUser, Condition2, sizeof(Condition2))->Header;
-            cbAclSize = cbAclSize + pAceHeader->AceSize;
+            if((pAceHeader = AddAce(pAcl, ACCESS_DENIED_CALLBACK_ACE_TYPE, FILE_EXECUTE, Condition2, sizeof(Condition2))) != NULL)
+                cbAclSize = cbAclSize + pAceHeader->AceSize;
 
             pAcl->AclSize = (WORD)(cbAclSize);
         }
@@ -275,43 +213,36 @@ PACL CreateDacl(PSID pSidEveryone, PSID pSidUser, PSID pSidAdmin)
 PACL CreateSacl(PSID pSidUser)
 {
     PACL pAcl;
-    ULONG cbAclSize = 0x1000;
     NTSTATUS Status = STATUS_INSUFFICIENT_RESOURCES;
 
     // Allocate space for ACL
-    if((pAcl = (PACL)LocalAlloc(LPTR, cbAclSize)) != NULL)
+    if((pAcl = (PACL)LocalAlloc(LPTR, MAX_ACL_LENGTH)) != NULL)
     {
-        if((Status = RtlCreateAcl(pAcl, cbAclSize, ACL_REVISION_DS)) == STATUS_SUCCESS)
+        if((Status = RtlCreateAcl(pAcl, MAX_ACL_LENGTH, ACL_REVISION_DS)) == STATUS_SUCCESS)
         {
-            CLAIM_SECURITY_ATTRIBUTE_V1 Csa1 = {0};
-            ULONG64 ItemArray_U64[] = {0xDEADBABF, 0x02, 0x1234567812345679};
-            LPWSTR ItemArray_STR[] = {L"DAENERYS", L"TARGARYEN", L"EDDARD", L"WINTERFELL"};
-            LONG64 ItemArray_I64[] = {0xDEADBABE, 0x01, 0x1234567812345678};
+            ACE_CSA_HELPER CsaHelper;
             PACE_HEADER pAceHeader;
+            ULONG cbAclSize = sizeof(ACL);
 
-            Csa1.Name = L"RESOURCE_ITEM_I64_VALUES";
-            Csa1.ValueType  = CLAIM_SECURITY_ATTRIBUTE_TYPE_INT64;
-            Csa1.Flags      = CLAIM_SECURITY_ATTRIBUTE_NON_INHERITABLE | CLAIM_SECURITY_ATTRIBUTE_USE_FOR_DENY_ONLY;
-            Csa1.ValueCount = _countof(ItemArray_I64);
-            Csa1.Values.pInt64 = ItemArray_I64;
-            pAceHeader = &AddAce(pAcl, GENERIC_READ, pSidUser, &Csa1)->Header;
-            cbAclSize = sizeof(ACL) + pAceHeader->AceSize;
+            CsaHelper.Create(L"RESOURCE_ITEM_I64_VALUES", CLAIM_SECURITY_ATTRIBUTE_TYPE_INT64, 3, 0xDEADBABFULL, 0x02ULL, 0x1234567812345679ULL);
+            CsaHelper.Flags = CLAIM_SECURITY_ATTRIBUTE_NON_INHERITABLE | CLAIM_SECURITY_ATTRIBUTE_USE_FOR_DENY_ONLY;
+            if((pAceHeader = AddAce(pAcl, SYSTEM_RESOURCE_ATTRIBUTE_ACE_TYPE, GENERIC_READ, pSidUser, CsaHelper)) != NULL)
+                cbAclSize = cbAclSize + pAceHeader->AceSize;
 
-            Csa1.Name = L"RESOURCE_ITEM_U64_VALUES";
-            Csa1.ValueType = CLAIM_SECURITY_ATTRIBUTE_TYPE_UINT64;
-            Csa1.Flags = CLAIM_SECURITY_ATTRIBUTE_VALUE_CASE_SENSITIVE;
-            Csa1.ValueCount = _countof(ItemArray_U64);
-            Csa1.Values.pUint64 = ItemArray_U64;
-            pAceHeader = &AddAce(pAcl, GENERIC_READ, pSidUser, &Csa1)->Header;
-            cbAclSize = cbAclSize + pAceHeader->AceSize;
+            CsaHelper.Create(L"RESOURCE_ITEM_U64_VALUES", CLAIM_SECURITY_ATTRIBUTE_TYPE_UINT64, 3, 0xDEADBABEULL, 0x01ULL, 0x1234567812345678ULL);
+            CsaHelper.Flags = CLAIM_SECURITY_ATTRIBUTE_VALUE_CASE_SENSITIVE;
+            if((pAceHeader = AddAce(pAcl, SYSTEM_RESOURCE_ATTRIBUTE_ACE_TYPE, GENERIC_READ, pSidUser, CsaHelper)) != NULL)
+                cbAclSize = cbAclSize + pAceHeader->AceSize;
 
-            Csa1.Name = L"RESOURCE_ITEM_STRING_VALUES";
-            Csa1.ValueType = CLAIM_SECURITY_ATTRIBUTE_TYPE_STRING;
-            Csa1.Flags = CLAIM_SECURITY_ATTRIBUTE_VALUE_CASE_SENSITIVE;
-            Csa1.ValueCount = _countof(ItemArray_STR);
-            Csa1.Values.ppString = ItemArray_STR;
-            pAceHeader = &AddAce(pAcl, GENERIC_READ, pSidUser, &Csa1)->Header;
-            cbAclSize = cbAclSize + pAceHeader->AceSize;
+            CsaHelper.Create(L"RESOURCE_ITEM_STRINGS", CLAIM_SECURITY_ATTRIBUTE_TYPE_STRING, 4, L"DAENERYS", L"TARGARYEN", L"EDDARD", L"WINTERFELL");
+            CsaHelper.Flags = CLAIM_SECURITY_ATTRIBUTE_VALUE_CASE_SENSITIVE;
+            if((pAceHeader = AddAce(pAcl, SYSTEM_RESOURCE_ATTRIBUTE_ACE_TYPE, GENERIC_READ, pSidUser, CsaHelper)) != NULL)
+                cbAclSize = cbAclSize + pAceHeader->AceSize;
+
+            CsaHelper.Create(L"RESOURCE_ITEM_SIDS", CLAIM_SECURITY_ATTRIBUTE_TYPE_SID, 3, (PSID)SidLocAdmins, (PSID)SidLocUsers, (PSID)SidEveryone);
+            CsaHelper.Flags = 0;
+            if((pAceHeader = AddAce(pAcl, SYSTEM_RESOURCE_ATTRIBUTE_ACE_TYPE, GENERIC_READ, pSidUser, CsaHelper)) != NULL)
+                cbAclSize = cbAclSize + pAceHeader->AceSize;
 
             pAcl->AclSize = (WORD)(cbAclSize);
         }
@@ -339,12 +270,12 @@ static DWORD SetCustomSecurityDescriptor(HANDLE hObject, ULONG AclType)
     // Get two sids: Admins and current user
     ccUserName = _countof(szUserName);
     GetUserName(szUserName, &ccUserName);
-    pSidAdmin = GetSid(_T("Administrator"), &cbSidAdmin);
-    pSidUser = GetSid(szUserName, &cbSidUser);
+    pSidAdmin = GetUserSid(_T("Administrator"), &cbSidAdmin);
+    pSidUser = GetUserSid(szUserName, &cbSidUser);
 
     // Get the SID of Everyone
-    RtlAllocateAndInitializeSid(&SiaWorld, 1, 0, 0, 0, 0, 0, 0, 0, 0, &pSidEveryone);
-    cbSidEveryone = RtlLengthSid(pSidEveryone);
+    pSidEveryone = (PSID)(SidEveryone);
+    cbSidEveryone = sizeof(SidEveryone);
 
     // Initialize the blank security descriptor
     if(NT_SUCCESS(Status))
@@ -375,7 +306,7 @@ static DWORD SetCustomSecurityDescriptor(HANDLE hObject, ULONG AclType)
                 break;
 
             case 2:
-                if((pDacl = CreateDacl(pSidEveryone, pSidUser, pSidAdmin)) != NULL)
+                if((pDacl = CreateDacl(pSidAdmin)) != NULL)
                 {
                     if((Status = RtlSetDaclSecurityDescriptor(&sd, TRUE, pDacl, FALSE)) == STATUS_SUCCESS)
                     {
@@ -458,9 +389,8 @@ static void LoadSpecialSecurityDescriptor(LPCTSTR szPath)
 
                     if(pAce->Header.AceType == SYSTEM_RESOURCE_ATTRIBUTE_ACE_TYPE)
                     {
-                        PCLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1 pAttrRel1;
-                        PCLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1 pAttrRel2;
-                        PCLAIM_SECURITY_ATTRIBUTE_V1 pAttrAbs;
+                        PCLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1 pAttrRel;
+                        ACE_CSA_HELPER CsaHelper;
                         PSID pSid = (PSID)(&pAce->SidStart);
                         LPBYTE pbAce = (LPBYTE)(pAce);
                         LPBYTE pbPtr = pbAce + FIELD_OFFSET(SYSTEM_RESOURCE_ATTRIBUTE_ACE, SidStart) + RtlLengthSid(pSid);
@@ -468,10 +398,10 @@ static void LoadSpecialSecurityDescriptor(LPCTSTR szPath)
                         ULONG cbRelSize = 0;
                         ULONG cbMoveBy = 0;
 
-                        pAttrRel1 = (PCLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1)(pbPtr);
-                        pAttrAbs = ClaimSecurityAttributeRel2Abs(pAttrRel1, (ULONG)(pbEnd - pbAce), &cbMoveBy);
-                        pAttrRel2 = ClaimSecurityAttributeAbs2Rel(pAttrAbs, &cbRelSize);
-                        assert(memcmp(pAttrRel1, pAttrRel2, cbMoveBy) == 0);
+                        CsaHelper.Import(pbPtr, pbEnd, &cbRelSize);
+                        pAttrRel = CsaHelper.Export(&cbMoveBy);
+
+                        assert(memcmp(pAttrRel, pbPtr, cbMoveBy) == 0);
                         assert(cbMoveBy == cbRelSize);
                     }
                 }

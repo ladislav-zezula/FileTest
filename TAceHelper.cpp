@@ -13,19 +13,60 @@
 //-----------------------------------------------------------------------------
 // Local variables
 
-static GUID NullGuid = {0, 0, 0, {0, 0, 0, 0, 0, 0, 0, 0}};
+static const BYTE SidEveryone[] = {0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00};
+static const BYTE SidAdmins[] = {0x01, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0x20, 0x00, 0x00, 0x00, 0x20, 0x02, 0x00, 0x00};
 
 //-----------------------------------------------------------------------------
 // Constructor and destructor
 
-ACE_HELPER::ACE_HELPER()
+ACE_HELPER::ACE_HELPER(DWORD dwAceType, ACCESS_MASK AccessMask, PSID pSid)
 {
+    // Set the object to default values
     memset(this, 0, sizeof(ACE_HELPER));
+
+    // Set the ACE type
+    SetAceType(dwAceType);
+    Mask = AccessMask;
+
+    // Set the first SID
+    SetSid(pSid, 0);
 }
 
 ACE_HELPER::~ACE_HELPER()
 {
     Reset();
+}
+
+void ACE_HELPER::Reset()
+{
+    DWORD dwFreeFlag = ACE_HELPER_NEED_FREE_SID0;
+
+    // Free the SIDs
+    for(size_t i = 0; i < _countof(Sid); i++, dwFreeFlag = dwFreeFlag << 1)
+    {
+        if((Sid[i] != NULL) && (FreeFlags & dwFreeFlag))
+            RtlFreeSid(Sid[i]);
+        Sid[i] = NULL;
+    }
+
+    // Free the condition
+    if(Condition != NULL)
+        delete[] Condition;
+    Condition = NULL;
+
+    // Free the security attributes
+    if(AttrRel != NULL)
+        delete[] AttrRel;
+    AttrRel = NULL;
+
+    // Reset everything to zero
+    memset(this, 0, sizeof(ACE_HELPER));
+
+    // Set to default values
+    AceType = ACCESS_ALLOWED_ACE_TYPE;
+    Mask    = GENERIC_ALL;
+    Sid[0]  = (PSID)(SidEveryone);
+    Sid[1]  = (PSID)(SidAdmins);
 }
 
 //-----------------------------------------------------------------------------
@@ -156,39 +197,67 @@ bool ACE_HELPER::SetAce(PACE_HEADER pAceHeader)
         // Get the CLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1 and convert it to pointer-based structure
         if((AceLayout & ACE_FIELD_CSA_V1) && (pbAcePtr < pbAceEnd))
         {
-            AttrRel = CaptureExtraStructure(pbAcePtr, pbAceEnd, &AttrRelLength);
-            pbAcePtr += AttrRelLength;
+            if(SetAttributes(pbAcePtr, (pbAceEnd - pbAcePtr)))
+                pbAcePtr += AttrRelLength;
         }
 
         // Get the ACE condition. Example: C:\Program Files\WindowsApps\<any folder>
         if((AceLayout & ACE_FIELD_CONDITION) && (pbAcePtr < pbAceEnd))
         {
-            Condition = CaptureExtraStructure(pbAcePtr, pbAceEnd, &ConditionLength);
-            pbAcePtr += ConditionLength;
+            if(SetCondition(pbAcePtr, (pbAceEnd - pbAcePtr)))
+                pbAcePtr += ConditionLength;
         }
     }
     return bResult;
 }
 
-// pNewSid could be NULL if we want just to free the existing SID[nSidIndex]
-void ACE_HELPER::SetAllocatedSid(PSID pNewSid, size_t nSidIndex)
+// pSid could be NULL if we want just to free the existing SID[nSidIndex]
+PSID ACE_HELPER::SetSid(PSID pSid, size_t nSidIndex)
 {
     DWORD dwFreeFlag = ACE_HELPER_NEED_FREE_SID0 << nSidIndex;
+    ULONG cbSid;
 
     // Free the old SID
     if((Sid[nSidIndex] != NULL) && (FreeFlags & dwFreeFlag))
-        RtlFreeSid(Sid[nSidIndex]);
+    {
+        LocalFree(Sid[nSidIndex]);
+    }
+
+    // Reset the SID
     Sid[nSidIndex] = NULL;
+    FreeFlags &= ~dwFreeFlag;
 
     // Store the new one
-    if(pNewSid != NULL)
-        Sid[nSidIndex] = pNewSid;
+    if(pSid != NULL && (cbSid = RtlLengthSid(pSid)) != 0)
+    {
+        if((Sid[nSidIndex] = (PSID)LocalAlloc(LPTR, cbSid)) != NULL)
+        {
+            memcpy(Sid[nSidIndex], pSid, cbSid);
+            FreeFlags |= dwFreeFlag;
+        }
+    }
 
-    // Update the flags in AceLayout
-    FreeFlags = (pNewSid != NULL) ? (FreeFlags | dwFreeFlag) : (FreeFlags & ~dwFreeFlag);
+    // Return the new SID
+    return Sid[nSidIndex];
 }
 
-PACE_HEADER ACE_HELPER::BuildAce(DWORD dwAceType, ACCESS_MASK AccessMask, LPBYTE pbBuffer, size_t cbBuffer)
+bool ACE_HELPER::SetAttributes(LPVOID lpAttrRel, size_t cbAttrRel)
+{
+    LPBYTE pbAttrRel = (LPBYTE)(lpAttrRel);
+
+    AttrRel = CaptureExtraStructure(pbAttrRel, pbAttrRel + cbAttrRel, &AttrRelLength);
+    return (AttrRel && AttrRelLength);
+}
+
+bool ACE_HELPER::SetCondition(LPVOID lpCondition, size_t cbCondition)
+{
+    LPBYTE pbCondition = (LPBYTE)(lpCondition);
+
+    Condition = CaptureExtraStructure(pbCondition, pbCondition + cbCondition, &ConditionLength);
+    return (Condition && ConditionLength);
+}
+
+PACE_HEADER ACE_HELPER::Export(LPBYTE pbBuffer, size_t cbBuffer)
 {
     PACE_HEADER pAceHeader = (PACE_HEADER)(pbBuffer);
     LPBYTE pbEnd = pbBuffer + cbBuffer;
@@ -198,11 +267,6 @@ PACE_HEADER ACE_HELPER::BuildAce(DWORD dwAceType, ACCESS_MASK AccessMask, LPBYTE
     // We do not support ACEs with condition
     if((AceLayout & ACE_FIELD_CONDITION) && (Condition != NULL))
         return NULL;
-
-    // Save values to the ACE_HELPER
-    if(!SetAceType(dwAceType))
-        return NULL;
-    Mask = AccessMask;
 
     // Fill-in the header
     if(AceLayout & ACE_FIELD_HEADER)
@@ -216,7 +280,7 @@ PACE_HEADER ACE_HELPER::BuildAce(DWORD dwAceType, ACCESS_MASK AccessMask, LPBYTE
     }
 
     // Fill-in the ACE:Mask
-    pbPtr = PutAceValue(pbPtr, pbEnd, &AccessMask, (ACE_FIELD_ACCESS_MASK | ACE_FIELD_ADS_ACCESS_MASK | ACE_FIELD_MANDATORY_MASK), sizeof(ACCESS_MASK));
+    pbPtr = PutAceValue(pbPtr, pbEnd, &Mask, (ACE_FIELD_ACCESS_MASK | ACE_FIELD_ADS_ACCESS_MASK | ACE_FIELD_MANDATORY_MASK), sizeof(ACCESS_MASK));
     if(pbPtr == NULL)
         return NULL;
 
@@ -272,39 +336,43 @@ PACE_HEADER ACE_HELPER::BuildAce(DWORD dwAceType, ACCESS_MASK AccessMask, LPBYTE
             return NULL;
     }
 
-    //
-    // TODO: Fill-in the condition
-    //
+    // Fill-in the CLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1
+    if(AceLayout & ACE_FIELD_CSA_V1)
+    {
+        if((pbPtr = PutAceValueBinary(pbPtr, pbEnd, AttrRel, AttrRelLength)) == NULL)
+            return NULL;
+    }
+
+    // Fill-in the CLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1
+    if(AceLayout & ACE_FIELD_CONDITION)
+    {
+        if((pbPtr = PutAceValueBinary(pbPtr, pbEnd, Condition, ConditionLength)) == NULL)
+            return NULL;
+    }
 
     // Fixup the ACE size
     pAceHeader->AceSize = (WORD)(pbPtr - (LPBYTE)pAceHeader);
     return pAceHeader;
 }
 
-void ACE_HELPER::Reset()
+PACE_HEADER ACE_HELPER::AddToAcl(PACL pAcl)
 {
-    DWORD dwFreeFlag = ACE_HELPER_NEED_FREE_SID0;
+    PACE_HEADER pAceHeader;
+    PACE_HEADER pTemp = NULL;
+    LPBYTE pbPtr = (LPBYTE)(pAcl) + sizeof(ACL);
+    LPBYTE pbEnd = (LPBYTE)(pAcl) + pAcl->AclSize;
 
-    // Free the SIDs
-    for(size_t i = 0; i < _countof(Sid); i++, dwFreeFlag = dwFreeFlag << 1)
+    // Skip all ACEs
+    if(pAcl->AceCount > 0)
     {
-        if((Sid[i] != NULL) && (FreeFlags & dwFreeFlag))
-            RtlFreeSid(Sid[i]);
-        Sid[i] = NULL;
+        RtlGetAce(pAcl, pAcl->AceCount - 1, (PVOID *)(&pTemp));
+        pbPtr = (LPBYTE)(pTemp) + pTemp->AceSize;
     }
 
-    // Free the condition
-    if(Condition != NULL)
-        delete[] Condition;
-    Condition = NULL;
-
-    // Free the security attributes
-    if(AttrRel != NULL)
-        delete [] AttrRel;
-    AttrRel = NULL;
-
-    // Reset everything to zero
-    memset(this, 0, sizeof(ACE_HELPER));
+    // Build the ACE
+    if((pAceHeader = Export(pbPtr, pbEnd - pbPtr)) != NULL)
+        pAcl->AceCount++;
+    return pAceHeader;
 }
 
 LPBYTE ACE_HELPER::PutAceValue(LPBYTE PtrAclData, LPBYTE PtrAclEnd, PVOID PtrValue, DWORD dwLayoutMask, DWORD ValueSize)
@@ -352,6 +420,22 @@ LPBYTE ACE_HELPER::PutAceValueSid(LPBYTE PtrAclData, LPBYTE PtrAclEnd, PSID pSou
         if(bFreeSid)
         {
             RtlFreeSid(pSourceSid);
+        }
+    }
+    return pbResult;
+}
+
+LPBYTE ACE_HELPER::PutAceValueBinary(LPBYTE PtrAclData, LPBYTE PtrAclEnd, LPVOID lpData, size_t cbData)
+{
+    LPBYTE pbResult = NULL;
+
+    // If we have that SID, add it to the ACE data
+    if(lpData && cbData)
+    {
+        if((PtrAclData + cbData) <= PtrAclEnd)
+        {
+            memmove(PtrAclData, lpData, cbData);
+            pbResult = PtrAclData + cbData;
         }
     }
     return pbResult;

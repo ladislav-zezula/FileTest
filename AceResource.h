@@ -28,32 +28,16 @@
 //
 
 #define CLAIM_SECURITY_ATTRIBUTE_TYPE_STRING    0x03
-
-//
-//  Fully-qualified binary name.
-//
-
-typedef struct _CLAIM_SECURITY_ATTRIBUTE_FQBN_VALUE
-{
-    DWORD64             Version;
-    PWSTR               Name;
-} CLAIM_SECURITY_ATTRIBUTE_FQBN_VALUE, * PCLAIM_SECURITY_ATTRIBUTE_FQBN_VALUE;
-
-#define CLAIM_SECURITY_ATTRIBUTE_TYPE_FQBN      0x04
-
+#define CLAIM_SECURITY_ATTRIBUTE_TYPE_FQBN      0x04            // Refused by Windows up to 11
 #define CLAIM_SECURITY_ATTRIBUTE_TYPE_SID       0x05
-
 #define CLAIM_SECURITY_ATTRIBUTE_TYPE_BOOLEAN   0x06
-
+#define CLAIM_SECURITY_ATTRIBUTE_TYPE_OCTET_STRING  0x10
 
 typedef struct _CLAIM_SECURITY_ATTRIBUTE_OCTET_STRING_VALUE
 {
     PVOID   pValue;         //  Pointer is BYTE aligned.
     DWORD   ValueLength;    //  In bytes
-} CLAIM_SECURITY_ATTRIBUTE_OCTET_STRING_VALUE,
-* PCLAIM_SECURITY_ATTRIBUTE_OCTET_STRING_VALUE;
-
-#define CLAIM_SECURITY_ATTRIBUTE_TYPE_OCTET_STRING  0x10
+} CLAIM_SECURITY_ATTRIBUTE_OCTET_STRING_VALUE, *PCLAIM_SECURITY_ATTRIBUTE_OCTET_STRING_VALUE;
 
 //
 // Attribute Flags
@@ -114,29 +98,6 @@ typedef struct _CLAIM_SECURITY_ATTRIBUTE_OCTET_STRING_VALUE
 //
 #define CLAIM_SECURITY_ATTRIBUTE_CUSTOM_FLAGS   0xFFFF0000
 
-//
-//  An individual security attribute.
-//
-
-typedef struct _CLAIM_SECURITY_ATTRIBUTE_V1
-{
-    PWSTR   Name;               // Name of the attribute. Case insensitive Unicode string.
-    WORD    ValueType;          // Data type of attribute.
-    WORD    Reserved;           // Must be zero
-    DWORD   Flags;              // Attribute Flags
-    DWORD   ValueCount;         // Number of values.
-
-    // The actual value itself.
-    union
-    {
-        PLONG64                                      pInt64;
-        PDWORD64                                     pUint64;
-        PWSTR * ppString;
-        PCLAIM_SECURITY_ATTRIBUTE_FQBN_VALUE         pFqbn;
-        PCLAIM_SECURITY_ATTRIBUTE_OCTET_STRING_VALUE pOctetString;
-    } Values;
-} CLAIM_SECURITY_ATTRIBUTE_V1, * PCLAIM_SECURITY_ATTRIBUTE_V1;
-
 typedef struct _CLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1
 {
     DWORD   Name;               // Name of the attribute. Offset from beginning of structure.
@@ -154,22 +115,74 @@ typedef struct _CLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1
         DWORD pFqbn[ANYSIZE_ARRAY];
         DWORD pOctetString[ANYSIZE_ARRAY];
     } Values;
-} CLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1, * PCLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1;
+} CLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1, *PCLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1;
 
 #endif
 
 //-----------------------------------------------------------------------------
 // Helpers
 
-PCLAIM_SECURITY_ATTRIBUTE_V1 ClaimSecurityAttributeRel2Abs(
-    PCLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1 pAttrRel,
-    ULONG cbAttrRel,
-    PULONG pcbMoveBy
-    );
+struct ACE_CSA_OBJECT
+{
+    ACE_CSA_OBJECT();
+    ~ACE_CSA_OBJECT();
+    void Clear();
 
-PCLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1 ClaimSecurityAttributeAbs2Rel(
-    PCLAIM_SECURITY_ATTRIBUTE_V1 pAttrAbs,
-    PULONG pcbLength
-    );
+    virtual size_t ImportSize(LPBYTE pbStructure, LPBYTE pbEnd, ULONG Offset);
+    virtual size_t ExportSize(size_t cbAlignSize = 1);
+
+    virtual LPBYTE Import(LPBYTE pbStructure, LPBYTE pbEnd, ULONG Offset);
+    virtual LPBYTE Export(LPBYTE pbPtr, LPBYTE pbEnd);
+
+    virtual LPBYTE ImportObject(LPCVOID lpObject);
+
+    void * lpData;
+};
+
+struct ACE_CSA_DWORD64 : public ACE_CSA_OBJECT
+{
+    size_t ImportSize(LPBYTE pbStructure, LPBYTE pbEnd, ULONG Offset);
+    size_t ExportSize(size_t cbAlignSize = 1);
+
+    LPBYTE ImportObject(LPCVOID lpObject);
+};
+
+struct ACE_CSA_LPWSTR : public ACE_CSA_OBJECT
+{
+    size_t ImportSize(LPBYTE pbStructure, LPBYTE pbEnd, ULONG Offset);
+    size_t ExportSize(size_t cbAlignSize = 1);
+
+    LPBYTE ImportObject(LPCVOID lpObject);
+};
+
+struct ACE_CSA_PSID : public ACE_CSA_OBJECT
+{
+    size_t ImportSize(LPBYTE pbStructure, LPBYTE pbEnd, ULONG Offset);
+    size_t ExportSize(size_t cbAlignSize = 1);
+
+    LPBYTE ImportObject(LPCVOID lpObject);
+};
+
+struct ACE_CSA_HELPER
+{
+    ACE_CSA_HELPER();
+    ~ACE_CSA_HELPER();
+    void Clear();
+
+    DWORD Create(LPCWSTR szName, WORD ValueType, DWORD ValueCount, ...);
+    DWORD Import(LPBYTE pbAttrRel, LPBYTE pbAttrEnd, PULONG pcbMoveBy = NULL);
+
+    PCLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1 Export(PULONG pcbLength = NULL);
+
+    DWORD AllocateElements();
+
+    ACE_CSA_LPWSTR Name;
+    WORD ValueType;
+    WORD Reserved;
+    DWORD Flags;
+    DWORD ValueCount;
+
+    ACE_CSA_OBJECT * ppObjects;
+};
 
 #endif // __ACE_RESOURCE_H__

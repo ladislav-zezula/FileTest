@@ -70,17 +70,22 @@
 struct ACE_HELPER
 {
     // Constructors and destructors
-    ACE_HELPER();
+    ACE_HELPER(DWORD dwAceType = 0, ACCESS_MASK AccessMask = GENERIC_ALL, PSID pSid = NULL);
     ~ACE_HELPER();
+    void Reset();                                       // Resets everything
 
     bool SetAceType(DWORD dwAceType);                   // Sets a new ACE type
     bool SetAce(PACE_HEADER pAceHeader);                // Stores an ACE
-    void SetAllocatedSid(PSID pSid, size_t nSidIndex);  // Stores a SID that needs to be freed
-    PACE_HEADER BuildAce(DWORD dwAceType, ACCESS_MASK AccessMask, LPBYTE pbBuffer, size_t cbBuffer);
-    void Reset();                                       // Resets everything to 0
+    PSID SetSid(PSID pSid, size_t nSidIndex);      // Stores a SID that needs to be freed
+    bool SetAttributes(LPVOID lpAttrRel, size_t cbAttrRel);
+    bool SetCondition(LPVOID lpAttrRel, size_t cbAttrRel);
+
+    PACE_HEADER Export(LPBYTE pbBuffer, size_t cbBuffer);
+    PACE_HEADER AddToAcl(PACL pAcl);
 
     LPBYTE PutAceValue(LPBYTE PtrAclData, LPBYTE PtrAclEnd, PVOID PtrValue, DWORD dwLayoutMask, DWORD ValueSize);
     LPBYTE PutAceValueSid(LPBYTE PtrAclData, LPBYTE PtrAclEnd, PSID pSourceSid);
+    LPBYTE PutAceValueBinary(LPBYTE PtrAclData, LPBYTE PtrAclEnd, LPVOID lpData, size_t cbData);
 
     LPBYTE CaptureExtraStructure(LPBYTE pbPtr, LPBYTE pbEnd, size_t * pcbMoveBy = NULL);
 

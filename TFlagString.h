@@ -101,9 +101,11 @@ class TFlagString : public TFastString<TCHAR>
             {
                 if(pFlags->IsValuePresent(dwBitMask))
                 {
+                    ULONG64 dwMask64 = pFlags->dwMask;
+
                     AppendSeparatorAndText(szSeparator, pFlags->szFlagText);
                     szSeparator = szNextSeparator;
-                    dwBitMask = dwBitMask & ~pFlags->dwMask;
+                    dwBitMask = dwBitMask & ~dwMask64;
                     dwFlagsConverted++;
                 }
             }

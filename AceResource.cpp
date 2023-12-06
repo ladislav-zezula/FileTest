@@ -11,294 +11,283 @@
 #include "FileTest.h"
 
 //-----------------------------------------------------------------------------
-// Local functions - value lengths
+// ACE_CSA_OBJECT implementation
 
-static ULONG AceResGetValueLength(LPWSTR Value)
+ACE_CSA_OBJECT::ACE_CSA_OBJECT()
 {
-    return (wcslen(Value) + 1) * sizeof(WCHAR);
+    lpData = NULL;
 }
 
-// Returns the length needed by the value
-static ULONG AceResGetValuesLength(PCLAIM_SECURITY_ATTRIBUTE_V1 pAttrAbs)
+ACE_CSA_OBJECT::~ACE_CSA_OBJECT()
 {
-    ULONG cbTotalLength = 0;
-    ULONG cbLength;
-
-    for(ULONG i = 0; i < pAttrAbs->ValueCount; i++)
-    {
-        // Add the size of value itself
-        switch(pAttrAbs->ValueType)
-        {
-            case CLAIM_SECURITY_ATTRIBUTE_TYPE_INT64:
-            case CLAIM_SECURITY_ATTRIBUTE_TYPE_UINT64:
-                cbTotalLength += sizeof(ULONG64);
-                break;
-
-            case CLAIM_SECURITY_ATTRIBUTE_TYPE_STRING:
-                cbLength = AceResGetValueLength(pAttrAbs->Values.ppString[i]);
-                cbTotalLength = cbTotalLength + ALIGN_TO_SIZE(cbLength, sizeof(DWORD));
-                break;
-
-            default:
-                assert(false);
-                break;
-        }
-    }
-    return cbTotalLength;
+    Clear();
 }
 
-//-----------------------------------------------------------------------------
-// Local functions - capturing values
-
-static LPWSTR AceResCaptureString(PCLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1 pAttrRel, ULONG Offset, ULONG cbAttrRel, PULONG pcbLength)
+void ACE_CSA_OBJECT::Clear()
 {
-    LPBYTE pbStructure = (LPBYTE)(pAttrRel);
-    LPBYTE pbString = pbStructure + Offset;
-    LPBYTE pbPtr;
-    LPBYTE pbEnd = pbStructure + cbAttrRel;
-    ULONG cbLength;
+    if(lpData != NULL)
+        LocalFree(lpData);
+    lpData = NULL;
+}
 
-    // Parse the string
-    for(pbPtr = pbString; pbPtr < pbEnd; pbPtr += sizeof(WCHAR))
+size_t ACE_CSA_OBJECT::ImportSize(LPBYTE /* pbStructure */, LPBYTE /* pbEnd */, ULONG /* Offset */)
+{
+    return 0;
+}
+
+size_t ACE_CSA_OBJECT::ExportSize(size_t)
+{
+    return 0;
+}
+
+LPBYTE ACE_CSA_OBJECT::Import(LPBYTE pbStructure, LPBYTE pbEnd, ULONG Offset)
+{
+    size_t cbLength;
+
+    // The inner buffer should be reset at this point
+    assert(lpData == NULL);
+
+    // Try to capture the data
+    if((cbLength = ImportSize(pbStructure, pbEnd, Offset)) == NULL)
     {
-        if(*(WCHAR *)(pbPtr) == 0)
-        {
-            // Calculate ther length of the string
-            cbLength = (ULONG)(pbPtr - pbString) + sizeof(WCHAR);
-
-            // Give the string to the caller
-            if(pcbLength != NULL)
-                pcbLength[0] = cbLength;
-            return (LPWSTR)(pbString);
-        }
+        SetLastError(ERROR_INVALID_PARAMETER);
+        return NULL;
     }
+
+    // Allocate the buffer for the data
+    if((lpData = LocalAlloc(LPTR, cbLength)) == NULL)
+    {
+        SetLastError(ERROR_NOT_ENOUGH_MEMORY);
+        return NULL;
+    }
+
+    // Copy the data
+    memcpy(lpData, pbStructure + Offset, cbLength);
+    return pbStructure + Offset + ALIGN_TO_SIZE(cbLength, sizeof(DWORD));
+}
+
+LPBYTE ACE_CSA_OBJECT::Export(LPBYTE pbPtr, LPBYTE pbEnd)
+{
+    size_t cbLength = ExportSize();
+
+    // Check whether the object fits into the buffer
+    if((pbPtr + cbLength) > pbEnd)
+    {
+        SetLastError(ERROR_BUFFER_OVERFLOW);
+        return NULL;
+    }
+
+    // Copy the data to the buffer
+    memcpy(pbPtr, lpData, cbLength);
+    return pbPtr + ALIGN_TO_SIZE(cbLength, sizeof(DWORD));
+}
+
+LPBYTE ACE_CSA_OBJECT::ImportObject(LPCVOID /* lpObject */)
+{
+    SetLastError(ERROR_NOT_SUPPORTED);
     return NULL;
 }
 
-template <typename ELEMENT>
-DWORD AceResCaptureElement(LPBYTE pbPtr, LPBYTE pbEnd, ELEMENT & Element, ULONG Offset)
-{
-    if((pbPtr + Offset + sizeof(ELEMENT)) > pbEnd)
-        return ERROR_BUFFER_OVERFLOW;
+//-----------------------------------------------------------------------------
+// ACE_CSA_DWORD64 implementation
 
-    Element = *(ELEMENT *)(pbPtr + Offset);
-    return ERROR_SUCCESS;
+size_t ACE_CSA_DWORD64::ImportSize(LPBYTE pbStructure, LPBYTE pbEnd, ULONG Offset)
+{
+    return ((pbStructure + Offset + sizeof(DWORD64)) <= pbEnd) ? sizeof(DWORD64) : 0;
 }
 
-PULONG64 AceResCaptureArray(LPBYTE pbPtr, LPBYTE pbEnd, PULONG Array, ULONG Count, PULONG pcbMaxOffset)
+size_t ACE_CSA_DWORD64::ExportSize(size_t)
 {
-    PULONG64 ValueArray;
-    DWORD dwErrCode;
-    ULONG cbMaxOffset = 0;
+    return sizeof(DWORD64);
+}
 
-    if((ValueArray = new ULONG64[Count]) != NULL)
-    {
-        for(ULONG i = 0; i < Count; i++)
-        {
-            // Capture the element
-            dwErrCode = AceResCaptureElement(pbPtr, pbEnd, ValueArray[i], Array[i]);
-            if(dwErrCode != ERROR_SUCCESS)
-            {
-                SetLastError(dwErrCode);
-                delete [] ValueArray;
-                ValueArray = NULL;
-                break;
-            }
+LPBYTE ACE_CSA_DWORD64::ImportObject(LPCVOID lpObject)
+{
+    LPBYTE pbObject = (LPBYTE)(lpObject);
 
-            // Move the max offset
-            if((Array[i] + sizeof(ULONG64)) > cbMaxOffset)
-            {
-                cbMaxOffset = Array[i] + sizeof(ULONG64);
-            }
-        }
-    }
-    else
-    {
-        SetLastError(ERROR_NOT_ENOUGH_MEMORY);
-    }
-
-    // Give the result to the caller
-    if(pcbMaxOffset != NULL)
-        pcbMaxOffset[0] = cbMaxOffset;
-    return ValueArray;
+    return Import(pbObject, pbObject + sizeof(DWORD64), 0);
 }
 
 //-----------------------------------------------------------------------------
-// Local functions - writing values
+// ACE_CSA_LPWSTR implementation
 
-// For conversion from absolute to relative
-static LPBYTE AceResWriteString(LPBYTE pbPtr, LPBYTE pbEnd, LPWSTR & szValue)
+size_t ACE_CSA_LPWSTR::ImportSize(LPBYTE pbStructure, LPBYTE pbEnd, ULONG Offset)
 {
-    size_t cbStringRaw = AceResGetValueLength(szValue);
-    size_t cbString = ALIGN_TO_SIZE(cbStringRaw, sizeof(DWORD));
+    LPBYTE pbString = pbStructure + Offset;
+    size_t cbLength = 0;
 
-    // Check if there is enough space
-    if((pbPtr + cbString) > pbEnd)
-        return NULL;
+    if(StringCbLengthW((LPCWSTR)pbString, (pbEnd - pbString), &cbLength) == S_OK)
+        return cbLength + sizeof(WCHAR);
 
-    memmove(pbPtr, szValue, cbStringRaw);
-    return pbPtr + cbString;
+    // Could not find the terminating EOS --> bad format
+    SetLastError(ERROR_BAD_FORMAT);
+    return 0;
 }
 
-// For conversion from relative to absolute
-static LPWSTR AceResWriteString(LPBYTE pbPtr, LPBYTE pbEnd, LPCWSTR szString, size_t cbString)
+size_t ACE_CSA_LPWSTR::ExportSize(size_t cbAlignSize)
 {
-    // Check if there is enough space
-    if((pbPtr + cbString) > pbEnd)
-        return NULL;
+    size_t cbLength = 0;
 
-    memmove(pbPtr, szString, cbString);
-    return (LPWSTR)(pbPtr);
+    if(lpData != NULL)
+        cbLength = (wcslen((LPWSTR)(lpData)) + 1) * sizeof(WCHAR);
+    return ALIGN_TO_SIZE(cbLength, cbAlignSize);
 }
 
-static LPBYTE AceResWriteValue(LPBYTE pbPtr, LPBYTE pbEnd, ULONG64 & Value)
+LPBYTE ACE_CSA_LPWSTR::ImportObject(LPCVOID lpObject)
 {
-    if((pbPtr + sizeof(ULONG)) > pbEnd)
-        return NULL;
+    LPWSTR szString = (LPWSTR)(lpObject);
+    LPBYTE pbString = (LPBYTE)(lpObject);
+    size_t cbLength = 0;
 
-    *(PULONG64)(pbPtr) = Value;
-    return pbPtr + sizeof(ULONG64);
-}
+    // Calculate the length of the string
+    if(szString == NULL)
+        return pbString;
+    cbLength = (wcslen(szString) + 1) * sizeof(WCHAR);
 
-static PULONG64 AceResWriteValue(LPBYTE pbPtr, LPBYTE pbEnd, PULONG64 pValue, LPBYTE pbUint64)
-{
-    // Check if there is enough space
-    if((pbPtr + sizeof(ULONG64)) > pbEnd)
-        return NULL;
-
-    memcpy(pValue, pbUint64, sizeof(ULONG64));
-    return pValue;
+    // Import string at offset > 0, otherwise the function returns error
+    return Import(pbString, pbString + cbLength, 0);
 }
 
 //-----------------------------------------------------------------------------
-// Public functions
+// ACE_CSA_PSID implementation
 
-PCLAIM_SECURITY_ATTRIBUTE_V1 ClaimSecurityAttributeRel2Abs(
-    PCLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1 pAttrRel,
-    ULONG cbAttrRel,
-    PULONG pcbMoveBy)
+typedef struct _SID_RELATIVE
 {
-    PCLAIM_SECURITY_ATTRIBUTE_V1 pAttrAbs = NULL;
-    LPWSTR szStringValue;
-    LPWSTR szName = NULL;
-    ULONG cbBase = FIELD_OFFSET(CLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1, Values) + pAttrRel->ValueCount * sizeof(ULONG);
-    ULONG cbNameRaw = 0;
-    ULONG cbName = 0;
-    ULONG cbValues = 0;
-    ULONG cbMax = cbBase;
+    ULONG Length;
+    BYTE  SidBuffer[MAX_SID_LENGTH];
+} SID_RELATIVE, *PSID_RELATIVE;
 
-    // The size of the base structure must not be greater than the total size
-    if(cbBase < cbAttrRel)
+size_t ACE_CSA_PSID::ImportSize(LPBYTE pbStructure, LPBYTE pbEnd, ULONG Offset)
+{
+    ULONG Length = 0;
+
+    // Capture the length of the SID
+    if((pbStructure + Offset + sizeof(ULONG)) <= pbEnd)
     {
-        // Read the attribute name
-        if((szName = AceResCaptureString(pAttrRel, pAttrRel->Name, cbAttrRel, &cbNameRaw)) == NULL)
+        // Copy the length
+        memcpy(&Length, pbStructure + Offset, sizeof(ULONG));
+
+        // Capture the length + SID
+        if((pbStructure + Offset + sizeof(ULONG) + Length) <= pbEnd)
         {
-            SetLastError(ERROR_BAD_FORMAT);
-            return NULL;
+            return sizeof(ULONG) + Length;
         }
+    }
 
-        // Get the length of each value
-        for(ULONG i = 0; i < pAttrRel->ValueCount; i++)
+    // Bad format
+    SetLastError(ERROR_BAD_FORMAT);
+    return NULL;
+}
+
+size_t ACE_CSA_PSID::ExportSize(size_t cbAlignSize)
+{
+    PSID_RELATIVE pSidRelative = (PSID_RELATIVE)lpData;
+    size_t cbLength = 0;
+
+    if(lpData != NULL)
+        cbLength = sizeof(ULONG) + pSidRelative->Length;
+    return ALIGN_TO_SIZE(cbLength, cbAlignSize);
+}
+
+LPBYTE ACE_CSA_PSID::ImportObject(LPCVOID lpObject)
+{
+    SID_RELATIVE SidRelative;
+    LPBYTE pbStructure;
+    PSID pSid = (PSID)(lpObject);
+
+    if(pSid == NULL)
+        return NULL;
+
+    // Initialize the structure that is required for the SID in ACE attributes
+    SidRelative.Length = RtlLengthSid(pSid);
+    assert(SidRelative.Length <= MAX_SID_LENGTH);
+    memcpy(SidRelative.SidBuffer, pSid, SidRelative.Length);
+
+    // Import the SID
+    pbStructure = (LPBYTE)(&SidRelative);
+    return Import(pbStructure, pbStructure + sizeof(SidRelative) + SidRelative.Length, 0);
+}
+
+//-----------------------------------------------------------------------------
+// ACE_CSA_HELPER implementation
+
+ACE_CSA_HELPER::ACE_CSA_HELPER()
+{
+    ValueType = Reserved = 0;
+    ValueCount = Flags = 0;
+    ppObjects = NULL;
+}
+
+ACE_CSA_HELPER::~ACE_CSA_HELPER()
+{
+    Clear();
+}
+
+void ACE_CSA_HELPER::Clear()
+{
+    // Reset the attribute name
+    Name.Clear();
+
+    // Free the values
+    if(ppObjects != NULL)
+        delete[] ppObjects;
+    ppObjects = NULL;
+
+    // Reset values
+    ValueType = Reserved = 0;
+    ValueCount = Flags = 0;
+}
+
+
+DWORD ACE_CSA_HELPER::Create(LPCWSTR szName, WORD aValueType, DWORD aValueCount, ...)
+{
+    va_list argList;
+    DWORD dwErrCode = ERROR_SUCCESS;
+
+    // Free the current values
+    Clear();
+
+    // Allocate new values
+    if(Name.ImportObject(szName) == NULL)
+        return GetLastError();
+
+    // Fill-in the value type
+    ValueType = aValueType;
+
+    // Import all elements
+    if((ValueCount = aValueCount) != 0)
+    {
+        va_start(argList, aValueCount);
+        if((dwErrCode = AllocateElements()) == ERROR_SUCCESS)
         {
-            ULONG cbValue = 0;
-
-            switch(pAttrRel->ValueType)
+            for(ULONG i = 0; i < ValueCount; i++)
             {
-                case CLAIM_SECURITY_ATTRIBUTE_TYPE_INT64:
-                case CLAIM_SECURITY_ATTRIBUTE_TYPE_UINT64:
-                    cbValues += sizeof(ULONG64);
-                    break;
+                LPBYTE pbResult = NULL;
 
-                case CLAIM_SECURITY_ATTRIBUTE_TYPE_STRING:
-                    if((szStringValue = AceResCaptureString(pAttrRel, pAttrRel->Values.ppString[i], cbAttrRel, &cbValue)) == NULL)
-                    {
-                        SetLastError(ERROR_BAD_FORMAT);
-                        return NULL;
-                    }
-                    cbValues = cbValues + sizeof(LPWSTR) + ALIGN_TO_SIZE(cbValue, sizeof(void *));
-                    break;
-
-                default:
-                    assert(false);
-                    break;
-            }
-        }
-
-        // Align the name length to size of pointer
-        cbName = ALIGN_TO_SIZE(cbNameRaw, sizeof(void *));
-
-        // Allocate buffer for the whole structure
-        pAttrAbs = (PCLAIM_SECURITY_ATTRIBUTE_V1)LocalAlloc(LPTR, sizeof(CLAIM_SECURITY_ATTRIBUTE_V1) + cbName + cbValues);
-        if(pAttrAbs != NULL)
-        {
-            LPBYTE pbStructure = (LPBYTE)(pAttrRel);
-            LPBYTE pbPtr = (LPBYTE)(pAttrAbs) + sizeof(CLAIM_SECURITY_ATTRIBUTE_V1);
-            LPBYTE pbEnd = pbPtr + cbName + cbValues;
-
-            // Copy the structure members
-            pAttrAbs->ValueType = pAttrRel->ValueType;
-            pAttrAbs->Reserved = pAttrRel->Reserved;
-            pAttrAbs->Flags = pAttrRel->Flags;
-            pAttrAbs->ValueCount = pAttrRel->ValueCount;
-            
-            // Copy the attribute name
-            if(szName && cbName)
-            {
-                // Set the max value
-                cbMax = max(cbMax, pAttrRel->Name + cbNameRaw);
-
-                // Write the string
-                pAttrAbs->Name = AceResWriteString(pbPtr, pbEnd, szName, cbNameRaw);
-                pbPtr += cbName;
-            }
-
-            // Copy the values
-            for(ULONG i = 0; i < pAttrRel->ValueCount; i++)
-            {
-                ULONG cbValue = 0;
-
-                switch(pAttrRel->ValueType)
+                switch(ValueType)
                 {
                     case CLAIM_SECURITY_ATTRIBUTE_TYPE_INT64:
                     case CLAIM_SECURITY_ATTRIBUTE_TYPE_UINT64:
                     {
-                        // Initialize the value for the QWORDS
-                        if(pAttrAbs->Values.pUint64 == NULL)
-                            pAttrAbs->Values.pUint64 = (PDWORD64)(pbPtr);
+                        DWORD64 Int64 = va_arg(argList, DWORD64);
 
-                        // Set the max value
-                        cbMax = max(cbMax, pAttrRel->Values.pUint64[i] + sizeof(ULONG64));
-
-                        // Write the ULONG64
-                        if(AceResWriteValue(pbPtr, pbEnd, pAttrAbs->Values.pUint64 + i, pbStructure + pAttrRel->Values.pUint64[i]) == NULL)
-                        {
-                            SetLastError(ERROR_BAD_FORMAT);
-                            return NULL;
-                        }
+                        pbResult = ppObjects[i].ImportObject(&Int64);
                         break;
                     }
 
                     case CLAIM_SECURITY_ATTRIBUTE_TYPE_STRING:
                     {
-                        PWSTR szString = AceResCaptureString(pAttrRel, pAttrRel->Values.ppString[i], cbAttrRel, &cbValue);
+                        LPCWSTR String = va_arg(argList, LPCWSTR);
 
-                        // Initialize the value for the strings
-                        if(pAttrAbs->Values.ppString == NULL)
-                        {
-                            pAttrAbs->Values.ppString = (LPWSTR *)(pbPtr);
-                            pbPtr = pbPtr + pAttrAbs->ValueCount * sizeof(LPWSTR);
-                        }
+                        pbResult = ppObjects[i].ImportObject(String);
+                        break;
+                    }
 
-                        pAttrAbs->Values.ppString[i] = AceResWriteString(pbPtr, pbEnd, szString, cbValue);
-                        if(pAttrAbs->Values.ppString[i] == NULL)
-                        {
-                            SetLastError(ERROR_BAD_FORMAT);
-                            return NULL;
-                        }
+                    case CLAIM_SECURITY_ATTRIBUTE_TYPE_SID:
+                    {
+                        PSID pSid = va_arg(argList, PSID);
 
-                        // Set the max value
-                        cbMax = max(cbMax, pAttrRel->Values.ppString[i] + cbValue);
-                        pbPtr += cbValue;
+                        pbResult = ppObjects[i].ImportObject(pSid);
                         break;
                     }
 
@@ -308,95 +297,157 @@ PCLAIM_SECURITY_ATTRIBUTE_V1 ClaimSecurityAttributeRel2Abs(
                         break;
                     }
                 }
+
+                // Did the import succeed?
+                if(pbResult == NULL)
+                {
+                    dwErrCode = GetLastError();
+                    break;
+                }
             }
         }
+        va_end(argList);
     }
-    else
-    {
-        SetLastError(ERROR_BAD_FORMAT);
-    }
-
-    // Give all values
-    if(pAttrAbs != NULL && pcbMoveBy != NULL)
-        pcbMoveBy[0] = ALIGN_TO_SIZE(cbMax, sizeof(DWORD));
-    return pAttrAbs;
+    return dwErrCode;
 }
 
-PCLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1 ClaimSecurityAttributeAbs2Rel(
-    PCLAIM_SECURITY_ATTRIBUTE_V1 pAttrAbs,
-    PULONG pcbLength)
+DWORD ACE_CSA_HELPER::Import(LPBYTE pbAttrRel, LPBYTE pbAttrEnd, PULONG pcbMoveBy)
 {
-    PCLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1 pAttrRel = NULL;
-    ULONG cbBase = FIELD_OFFSET(CLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1, Values) + pAttrAbs->ValueCount * sizeof(ULONG);
-    ULONG cbName = 0;
-    ULONG cbValues = 0;
-    ULONG cbNameRaw = 0;
+    ULONG cbBase = FIELD_OFFSET(CLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1, Values);
+    ULONG cbMoveBy = 0;
+    DWORD dwErrCode = ERROR_BAD_FORMAT;
 
-    // Calculate length of the attribute name.
-    if(pAttrAbs->Name)
+    // Free the current values
+    Clear();
+
+    // Enough data to cover CLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1?
+    if((pbAttrRel + cbBase) <= pbAttrEnd)
     {
-        cbNameRaw = AceResGetValueLength(pAttrAbs->Name);
-        cbName = ALIGN_TO_SIZE(cbNameRaw, sizeof(DWORD));
-    }
+        PCLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1 pAttrRel = (PCLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1)(pbAttrRel);
+        LPBYTE pbEndObject;
+        ULONG cbName = 0;
 
-    // Calculate length of the attribute values
-    if(pAttrAbs->ValueCount)
-    {
-        cbValues = AceResGetValuesLength(pAttrAbs);
-        cbValues = ALIGN_TO_SIZE(cbValues, sizeof(DWORD));
-    }
+        // Import the base values
+        ValueType = pAttrRel->ValueType;
+        Reserved = pAttrRel->Reserved;
+        Flags = pAttrRel->Flags;
+        ValueCount = pAttrRel->ValueCount;
+        cbMoveBy = cbBase;
 
-    // Allocate buffer
-    pAttrRel = (PCLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1)LocalAlloc(LPTR, cbBase + cbName + cbValues);
-    if(pAttrRel != NULL)
-    {
-        LPBYTE pbStructure = (LPBYTE)(pAttrRel);
-        LPBYTE pbPtr = pbStructure + cbBase;
-        LPBYTE pbEnd = pbStructure + cbBase + cbName + cbValues;
+        // Do we have an attribute name?
+        if(Name.Import(pbAttrRel, pbAttrEnd, pAttrRel->Name) == NULL)
+            return GetLastError();
+        cbName = (ULONG)Name.ExportSize(sizeof(DWORD));
 
-        // Copy the base structure
-        pAttrRel->ValueType  = pAttrAbs->ValueType;
-        pAttrRel->Reserved   = pAttrAbs->Reserved;
-        pAttrRel->Flags      = pAttrAbs->Flags;
-        pAttrRel->ValueCount = pAttrAbs->ValueCount;
+        // Update the moveby
+        cbMoveBy = max(cbMoveBy, pAttrRel->Name + cbName);
 
-        // Copy the string
-        if(pAttrAbs->Name)
+        // Enough to cover the value offsets too?
+        if((pbAttrRel + (ValueCount * sizeof(DWORD))) <= pbAttrEnd)
         {
-            memmove(pbPtr, pAttrAbs->Name, cbNameRaw);
-            pAttrRel->Name = (ULONG)(pbPtr - pbStructure);
-            pbPtr += cbName;
-        }
-
-        // Copy values
-        for(ULONG i = 0; i < pAttrAbs->ValueCount; i++)
-        {
-            // Write the value offset
-            pAttrRel->Values.pInt64[i] = (ULONG)(pbPtr - pbStructure);
-
-            // Write the value itself
-            switch(pAttrAbs->ValueType)
+            // Make sure that we have the elements
+            if((dwErrCode = AllocateElements()) == ERROR_SUCCESS)
             {
-                case CLAIM_SECURITY_ATTRIBUTE_TYPE_INT64:
-                case CLAIM_SECURITY_ATTRIBUTE_TYPE_UINT64:
-                    if((pbPtr = AceResWriteValue(pbPtr, pbEnd, pAttrAbs->Values.pUint64[i])) == NULL)
-                        assert(false);
-                    break;
+                for(ULONG i = 0; i < ValueCount; i++)
+                {
+                    // Import the n-th value
+                    pbEndObject = ppObjects[i].Import(pbAttrRel, pbAttrEnd, pAttrRel->Values.pUint64[i]);
+                    if(pbEndObject == NULL)
+                        return GetLastError();
 
-                case CLAIM_SECURITY_ATTRIBUTE_TYPE_STRING:
-                    if((pbPtr = AceResWriteString(pbPtr, pbEnd, pAttrAbs->Values.ppString[i])) == NULL)
-                        assert(false);
-                    break;
-
-                default:
-                    assert(false);
-                    break;
+                    // Update the biggest offset
+                    if(dwErrCode != ERROR_SUCCESS)
+                        return dwErrCode;
+                    cbMoveBy = max(cbMoveBy, (ULONG)(pbEndObject - pbAttrRel));
+                }
             }
         }
     }
 
     // Give the result to the caller
+    if(pcbMoveBy != NULL)
+        pcbMoveBy[0] = ALIGN_TO_SIZE(cbMoveBy, sizeof(DWORD));
+    return dwErrCode;
+}
+
+// In case NtSetSecurityObject returns STATUS_INVALID_ACL, look here:
+// nt!RtlpValidRelativeAttribute(PCLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1 pAttrRel, size_t cbAttrRel)
+PCLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1 ACE_CSA_HELPER::Export(PULONG pcbLength)
+{
+    PCLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1 pAttrRel = NULL;
+    ULONG cbLength = 0;
+
+    // Allocate buffer. Don't bother with calculating the length.
+    // The maximum size of an ACE is 0xFFF8 bytes, which we can afford to allocate
+    pAttrRel = (PCLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1)LocalAlloc(LPTR, MAX_ACL_LENGTH);
+    if(pAttrRel != NULL)
+    {
+        LPBYTE pbStructure = (LPBYTE)(pAttrRel);
+        LPBYTE pbPtr = pbStructure + FIELD_OFFSET(CLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1, Values) + ValueCount * sizeof(ULONG);
+        LPBYTE pbEnd = pbStructure + MAX_ACL_LENGTH;
+
+        // Copy the base structure
+        pAttrRel->ValueType  = ValueType;
+        pAttrRel->Reserved   = Reserved;
+        pAttrRel->Flags      = Flags;
+        pAttrRel->ValueCount = ValueCount;
+
+        // Export the attribute name
+        if(Name.Export(pbPtr, pbEnd) > pbPtr)
+        {
+            pAttrRel->Name = (ULONG)(pbPtr - pbStructure);
+            pbPtr = pbPtr + Name.ExportSize(sizeof(DWORD));
+        }
+
+        // Copy values
+        for(ULONG i = 0; i < ValueCount; i++)
+        {
+            // Write the value offset
+            pAttrRel->Values.pUint64[i] = (ULONG)(pbPtr - pbStructure);
+
+            // Write the value itself
+            pbPtr = ppObjects[i].Export(pbPtr, pbEnd);
+            assert(pbPtr != NULL);
+        }
+
+        // Update the length
+        cbLength = (ULONG)(pbPtr - pbStructure);
+    }
+
+    // Give the result to the caller
     if(pcbLength != NULL)
-        pcbLength[0] = cbBase + cbName + cbValues;
+        pcbLength[0] = cbLength;
     return pAttrRel;
+}
+
+DWORD ACE_CSA_HELPER::AllocateElements()
+{
+    // Sanity checks
+    assert(ppObjects == NULL);
+    assert(ValueCount != 0);
+    assert(ValueType != 0);
+
+    // Allocate the elements based on element type
+    switch(ValueType)
+    {
+        case CLAIM_SECURITY_ATTRIBUTE_TYPE_INT64:
+        case CLAIM_SECURITY_ATTRIBUTE_TYPE_UINT64:
+            ppObjects = new ACE_CSA_DWORD64[ValueCount];
+            break;
+
+        case CLAIM_SECURITY_ATTRIBUTE_TYPE_STRING:
+            ppObjects = new ACE_CSA_LPWSTR[ValueCount];
+            break;
+
+        case CLAIM_SECURITY_ATTRIBUTE_TYPE_SID:
+            ppObjects = new ACE_CSA_PSID[ValueCount];
+            break;
+
+        default:
+            assert(false);
+            break;
+    }
+
+    // If the allocation failed, return error
+    return (ppObjects != NULL) ? ERROR_SUCCESS : ERROR_NOT_ENOUGH_MEMORY;
 }
