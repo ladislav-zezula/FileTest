@@ -137,12 +137,12 @@ struct ACE_CSA_OBJECT
     virtual LPBYTE ImportObject(LPCVOID lpObject);
 
     void * lpData;
+    size_t cbData;
 };
 
 struct ACE_CSA_DWORD64 : public ACE_CSA_OBJECT
 {
     size_t ImportSize(LPBYTE pbStructure, LPBYTE pbEnd, ULONG Offset);
-    size_t ExportSize(size_t cbAlignSize = 1);
 
     LPBYTE ImportObject(LPCVOID lpObject);
 };
@@ -150,12 +150,18 @@ struct ACE_CSA_DWORD64 : public ACE_CSA_OBJECT
 struct ACE_CSA_LPWSTR : public ACE_CSA_OBJECT
 {
     size_t ImportSize(LPBYTE pbStructure, LPBYTE pbEnd, ULONG Offset);
-    size_t ExportSize(size_t cbAlignSize = 1);
 
     LPBYTE ImportObject(LPCVOID lpObject);
 };
 
-struct ACE_CSA_PSID : public ACE_CSA_OBJECT
+struct ACE_CSA_SID : public ACE_CSA_OBJECT
+{
+    size_t ImportSize(LPBYTE pbStructure, LPBYTE pbEnd, ULONG Offset);
+
+    LPBYTE ImportObject(LPCVOID lpObject);
+};
+
+struct ACE_CSA_BOOLEAN : public ACE_CSA_OBJECT
 {
     size_t ImportSize(LPBYTE pbStructure, LPBYTE pbEnd, ULONG Offset);
     size_t ExportSize(size_t cbAlignSize = 1);
@@ -174,6 +180,7 @@ struct ACE_CSA_HELPER
 
     PCLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1 Export(PULONG pcbLength = NULL);
 
+    ULONG GetSizeAlignedToMax(LPBYTE pbPtr, LPBYTE pbEnd, ULONG cbLength);
     DWORD AllocateElements();
 
     ACE_CSA_LPWSTR Name;

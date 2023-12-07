@@ -16,6 +16,7 @@
 ACE_CSA_OBJECT::ACE_CSA_OBJECT()
 {
     lpData = NULL;
+    cbData = 0;
 }
 
 ACE_CSA_OBJECT::~ACE_CSA_OBJECT()
@@ -28,6 +29,7 @@ void ACE_CSA_OBJECT::Clear()
     if(lpData != NULL)
         LocalFree(lpData);
     lpData = NULL;
+    cbData = 0;
 }
 
 size_t ACE_CSA_OBJECT::ImportSize(LPBYTE /* pbStructure */, LPBYTE /* pbEnd */, ULONG /* Offset */)
@@ -35,35 +37,38 @@ size_t ACE_CSA_OBJECT::ImportSize(LPBYTE /* pbStructure */, LPBYTE /* pbEnd */, 
     return 0;
 }
 
-size_t ACE_CSA_OBJECT::ExportSize(size_t)
+size_t ACE_CSA_OBJECT::ExportSize(size_t cbAlignSize)
 {
-    return 0;
+    return ALIGN_TO_SIZE(cbData, cbAlignSize);
 }
 
 LPBYTE ACE_CSA_OBJECT::Import(LPBYTE pbStructure, LPBYTE pbEnd, ULONG Offset)
 {
-    size_t cbLength;
+    size_t cbImportSize;
 
     // The inner buffer should be reset at this point
     assert(lpData == NULL);
+    assert(cbData == 0);
 
     // Try to capture the data
-    if((cbLength = ImportSize(pbStructure, pbEnd, Offset)) == NULL)
+    if((cbImportSize = ImportSize(pbStructure, pbEnd, Offset)) == NULL)
     {
         SetLastError(ERROR_INVALID_PARAMETER);
         return NULL;
     }
 
-    // Allocate the buffer for the data
-    if((lpData = LocalAlloc(LPTR, cbLength)) == NULL)
+    // Allocate the buffer for the data.
+    // Make sure that it's always aligned to 8
+    if((lpData = LocalAlloc(LPTR, ALIGN_TO_SIZE(cbImportSize, 8))) == NULL)
     {
         SetLastError(ERROR_NOT_ENOUGH_MEMORY);
         return NULL;
     }
 
     // Copy the data
-    memcpy(lpData, pbStructure + Offset, cbLength);
-    return pbStructure + Offset + ALIGN_TO_SIZE(cbLength, sizeof(DWORD));
+    memcpy(lpData, pbStructure + Offset, cbImportSize);
+    cbData = cbImportSize;
+    return pbStructure + Offset + ALIGN_TO_SIZE(cbData, sizeof(DWORD));
 }
 
 LPBYTE ACE_CSA_OBJECT::Export(LPBYTE pbPtr, LPBYTE pbEnd)
@@ -96,11 +101,6 @@ size_t ACE_CSA_DWORD64::ImportSize(LPBYTE pbStructure, LPBYTE pbEnd, ULONG Offse
     return ((pbStructure + Offset + sizeof(DWORD64)) <= pbEnd) ? sizeof(DWORD64) : 0;
 }
 
-size_t ACE_CSA_DWORD64::ExportSize(size_t)
-{
-    return sizeof(DWORD64);
-}
-
 LPBYTE ACE_CSA_DWORD64::ImportObject(LPCVOID lpObject)
 {
     LPBYTE pbObject = (LPBYTE)(lpObject);
@@ -124,15 +124,6 @@ size_t ACE_CSA_LPWSTR::ImportSize(LPBYTE pbStructure, LPBYTE pbEnd, ULONG Offset
     return 0;
 }
 
-size_t ACE_CSA_LPWSTR::ExportSize(size_t cbAlignSize)
-{
-    size_t cbLength = 0;
-
-    if(lpData != NULL)
-        cbLength = (wcslen((LPWSTR)(lpData)) + 1) * sizeof(WCHAR);
-    return ALIGN_TO_SIZE(cbLength, cbAlignSize);
-}
-
 LPBYTE ACE_CSA_LPWSTR::ImportObject(LPCVOID lpObject)
 {
     LPWSTR szString = (LPWSTR)(lpObject);
@@ -149,15 +140,10 @@ LPBYTE ACE_CSA_LPWSTR::ImportObject(LPCVOID lpObject)
 }
 
 //-----------------------------------------------------------------------------
-// ACE_CSA_PSID implementation
+// ACE_CSA_SID implementation
+// Windows kernel requires the SID to be prepended with 32-bit length: [Length] [SID]
 
-typedef struct _SID_RELATIVE
-{
-    ULONG Length;
-    BYTE  SidBuffer[MAX_SID_LENGTH];
-} SID_RELATIVE, *PSID_RELATIVE;
-
-size_t ACE_CSA_PSID::ImportSize(LPBYTE pbStructure, LPBYTE pbEnd, ULONG Offset)
+size_t ACE_CSA_SID::ImportSize(LPBYTE pbStructure, LPBYTE pbEnd, ULONG Offset)
 {
     ULONG Length = 0;
 
@@ -179,33 +165,51 @@ size_t ACE_CSA_PSID::ImportSize(LPBYTE pbStructure, LPBYTE pbEnd, ULONG Offset)
     return NULL;
 }
 
-size_t ACE_CSA_PSID::ExportSize(size_t cbAlignSize)
+LPBYTE ACE_CSA_SID::ImportObject(LPCVOID lpObject)
 {
-    PSID_RELATIVE pSidRelative = (PSID_RELATIVE)lpData;
-    size_t cbLength = 0;
-
-    if(lpData != NULL)
-        cbLength = sizeof(ULONG) + pSidRelative->Length;
-    return ALIGN_TO_SIZE(cbLength, cbAlignSize);
-}
-
-LPBYTE ACE_CSA_PSID::ImportObject(LPCVOID lpObject)
-{
-    SID_RELATIVE SidRelative;
     LPBYTE pbStructure;
+    ULONG SidRelative[MAX_SID_LENGTH];
+    ULONG cbLength;
     PSID pSid = (PSID)(lpObject);
 
-    if(pSid == NULL)
-        return NULL;
+    if(pSid != NULL)
+    {
+        // Initialize the structure that is required for the SID in ACE attributes
+        if((cbLength = RtlLengthSid(pSid)) < MAX_SID_LENGTH)
+        {
+            // Prepare the SID prependede by length
+            memcpy(&SidRelative[1], pSid, cbLength);
+            pbStructure = (LPBYTE)(SidRelative);
+            SidRelative[0] = cbLength;
 
-    // Initialize the structure that is required for the SID in ACE attributes
-    SidRelative.Length = RtlLengthSid(pSid);
-    assert(SidRelative.Length <= MAX_SID_LENGTH);
-    memcpy(SidRelative.SidBuffer, pSid, SidRelative.Length);
+            // Import the SID
+            return Import(pbStructure, pbStructure + sizeof(ULONG) + cbLength, 0);
+        }
+    }
 
-    // Import the SID
-    pbStructure = (LPBYTE)(&SidRelative);
-    return Import(pbStructure, pbStructure + sizeof(SidRelative) + SidRelative.Length, 0);
+    SetLastError(ERROR_INVALID_PARAMETER);
+    return NULL;
+}
+
+//-----------------------------------------------------------------------------
+// ACE_CSA_BOOLEAN implementation
+// Windows kernel requires each BOOLEAN value to have 8 bytes
+
+size_t ACE_CSA_BOOLEAN::ImportSize(LPBYTE pbStructure, LPBYTE pbEnd, ULONG Offset)
+{
+    return ((pbStructure + Offset + sizeof(BOOLEAN)) <= pbEnd) ? sizeof(BOOLEAN) : 0;
+}
+
+size_t ACE_CSA_BOOLEAN::ExportSize(size_t cbAlignSize)
+{
+    return ALIGN_TO_SIZE(sizeof(ULONG64), cbAlignSize);
+}
+
+LPBYTE ACE_CSA_BOOLEAN::ImportObject(LPCVOID lpObject)
+{
+    LPBYTE pbObject = (LPBYTE)(lpObject);
+
+    return Import(pbObject, pbObject + sizeof(BOOLEAN), 0);
 }
 
 //-----------------------------------------------------------------------------
@@ -291,6 +295,14 @@ DWORD ACE_CSA_HELPER::Create(LPCWSTR szName, WORD aValueType, DWORD aValueCount,
                         break;
                     }
 
+                    case CLAIM_SECURITY_ATTRIBUTE_TYPE_BOOLEAN:
+                    {
+                        BOOLEAN BooleanValue = va_arg(argList, BOOLEAN);
+
+                        pbResult = ppObjects[i].ImportObject(&BooleanValue);
+                        break;
+                    }
+
                     default:
                     {
                         assert(false);
@@ -314,8 +326,8 @@ DWORD ACE_CSA_HELPER::Create(LPCWSTR szName, WORD aValueType, DWORD aValueCount,
 DWORD ACE_CSA_HELPER::Import(LPBYTE pbAttrRel, LPBYTE pbAttrEnd, PULONG pcbMoveBy)
 {
     ULONG cbBase = FIELD_OFFSET(CLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1, Values);
-    ULONG cbMoveBy = 0;
     DWORD dwErrCode = ERROR_BAD_FORMAT;
+    ULONG cbMoveBy = 0;
 
     // Free the current values
     Clear();
@@ -364,9 +376,9 @@ DWORD ACE_CSA_HELPER::Import(LPBYTE pbAttrRel, LPBYTE pbAttrEnd, PULONG pcbMoveB
         }
     }
 
-    // Give the result to the caller
+    // Give the result to the caller. Always try to eat up to 8-byte boundary
     if(pcbMoveBy != NULL)
-        pcbMoveBy[0] = ALIGN_TO_SIZE(cbMoveBy, sizeof(DWORD));
+        pcbMoveBy[0] = GetSizeAlignedToMax(pbAttrRel, pbAttrEnd, cbMoveBy);
     return dwErrCode;
 }
 
@@ -420,6 +432,30 @@ PCLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1 ACE_CSA_HELPER::Export(PULONG pcbLength)
     return pAttrRel;
 }
 
+ULONG ACE_CSA_HELPER::GetSizeAlignedToMax(LPBYTE pbPtr, LPBYTE pbEnd, ULONG cbLength)
+{
+    ULONG cbLengthAligned;
+
+    // Can we eat up size aligned to 8 bytes?
+    cbLengthAligned = ALIGN_TO_SIZE(cbLength, 8);
+    if((pbPtr + cbLengthAligned) <= pbEnd)
+        return cbLengthAligned;
+
+    // Can we eat up size aligned to 4 bytes?
+    cbLengthAligned = ALIGN_TO_SIZE(cbLength, 4);
+    if((pbPtr + cbLengthAligned) <= pbEnd)
+        return cbLengthAligned;
+
+    // Can we eat up size aligned to 2 bytes?
+    cbLengthAligned = ALIGN_TO_SIZE(cbLength, 2);
+    if((pbPtr + cbLengthAligned) <= pbEnd)
+        return cbLengthAligned;
+
+    // Return the length as-is
+    assert(false);
+    return cbLength;
+}
+
 DWORD ACE_CSA_HELPER::AllocateElements()
 {
     // Sanity checks
@@ -440,7 +476,11 @@ DWORD ACE_CSA_HELPER::AllocateElements()
             break;
 
         case CLAIM_SECURITY_ATTRIBUTE_TYPE_SID:
-            ppObjects = new ACE_CSA_PSID[ValueCount];
+            ppObjects = new ACE_CSA_SID[ValueCount];
+            break;
+
+        case CLAIM_SECURITY_ATTRIBUTE_TYPE_BOOLEAN:
+            ppObjects = new ACE_CSA_BOOLEAN[ValueCount];
             break;
 
         default:

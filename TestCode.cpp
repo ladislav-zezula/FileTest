@@ -244,6 +244,11 @@ PACL CreateSacl(PSID pSidUser)
             if((pAceHeader = AddAce(pAcl, SYSTEM_RESOURCE_ATTRIBUTE_ACE_TYPE, GENERIC_READ, pSidUser, CsaHelper)) != NULL)
                 cbAclSize = cbAclSize + pAceHeader->AceSize;
 
+            CsaHelper.Create(L"RESOURCE_ITEM_BOOLEANS", CLAIM_SECURITY_ATTRIBUTE_TYPE_BOOLEAN, 4, TRUE, TRUE, FALSE, FALSE);
+            CsaHelper.Flags = 0;
+            if((pAceHeader = AddAce(pAcl, SYSTEM_RESOURCE_ATTRIBUTE_ACE_TYPE, GENERIC_READ, pSidUser, CsaHelper)) != NULL)
+                cbAclSize = cbAclSize + pAceHeader->AceSize;
+
             pAcl->AclSize = (WORD)(cbAclSize);
         }
     }
@@ -347,7 +352,7 @@ static void SetCustomSecurityDescriptor(LPCTSTR szPath, ULONG AclType)
     HANDLE hFolder;
 
     // Make sure that the folder exists
-    CreateDirectory(szPath, NULL);
+    ForcePathExist(szPath, TRUE);
 
     // Open the folder and set security descriptor
     hFolder = CreateFile(szPath, GENERIC_ALL | READ_CONTROL | WRITE_DAC | WRITE_OWNER, 0, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);

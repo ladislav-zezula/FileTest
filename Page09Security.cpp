@@ -32,6 +32,7 @@ typedef enum _ITEM_TYPE
     ItemTypeNullAcl,                                // The item says that the ACL is present but it's NULL
     ItemTypeSid,                                    // The item contains Security Identifier (SID)
     ItemTypeAce,                                    // The item contains Access Control Entry (ACE) from DACL
+    ItemTypeBool,                                   // The item is a boolean value
     ItemTypeUint08,                                 // The item contains 8-bit integer
     ItemTypeUint16,                                 // The item contains 16-bit integer
     ItemTypeUint32,                                 // The item contains 32-bit integer
@@ -526,6 +527,18 @@ static void TV_MakeItemText(
         rsprintf(szBuffer, ccBuffer, nIDFormat, GLOBAL_ItemIndex, szDataText);
     else
         rsprintf(szBuffer, ccBuffer, nIDFormat, szDataText);
+}
+
+//-----------------------------------------------------------------------------
+// Conversion of String <-> Binary Data: BOOL
+
+static bool ToString_Bool(PTREE_ITEM_INFO pItemInfo, LPTSTR szBuffer, size_t ccBuffer, LPBYTE pbPtr, LPBYTE pbEnd, PULONG pcbMoveBy = NULL)
+{
+    if(pbPtr >= pbEnd)
+        return false;
+
+    StringCchCopy(szBuffer, ccBuffer, pbPtr[0] ? _T("TRUE") : _T("FALSE"));
+    return true;
 }
 
 //-----------------------------------------------------------------------------
@@ -1030,6 +1043,7 @@ static TREE_ITEM_INFO TreeItem_CSA_VCnt = {ItemTypeUint32,  0,                ID
 static TREE_ITEM_INFO TreeItem_CSA_U64  = {ItemTypeUint64,  IDS_FORMAT_VALUE, IDS_FORMAT_VALINDEX,  NULL,        ToString_Hex};
 static TREE_ITEM_INFO TreeItem_CSA_STR  = {ItemTypeLPWSTR,  IDS_FORMAT_VALUE, IDS_FORMAT_VALINDEX,  NULL,        ToString_STR};
 static TREE_ITEM_INFO TreeItem_CSA_SID  = {ItemTypeCSASid,  IDS_FORMAT_VALUE, IDS_FORMAT_VALINDEX,  NULL,        ToString_Sidn};
+static TREE_ITEM_INFO TreeItem_CSA_BOOL = {ItemTypeBool,    IDS_FORMAT_VALUE, IDS_FORMAT_VALINDEX,  NULL,        ToString_Bool};
 
 
 static PCTREE_ITEM_INFO AclFieldInfos[] =
@@ -1290,6 +1304,10 @@ static HTREEITEM TV_InsertNewItemCSA_V1(
 
                     case CLAIM_SECURITY_ATTRIBUTE_TYPE_SID:
                         hInsertAfter = TV_InsertIndexedItem(hWndTree, hParent, TVI_LAST, &TreeItem_CSA_SID, &CsaHelper.ppObjects[i], i);
+                        break;
+
+                    case CLAIM_SECURITY_ATTRIBUTE_TYPE_BOOLEAN:
+                        hInsertAfter = TV_InsertIndexedItem(hWndTree, hParent, TVI_LAST, &TreeItem_CSA_BOOL, &CsaHelper.ppObjects[i], i);
                         break;
 
                     default:
