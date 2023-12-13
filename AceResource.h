@@ -27,17 +27,11 @@
 //  is set indicating otherwise.
 //
 
-#define CLAIM_SECURITY_ATTRIBUTE_TYPE_STRING    0x03
+#define CLAIM_SECURITY_ATTRIBUTE_TYPE_STRING    0x03            // Zero terminated UTF-16 string
 #define CLAIM_SECURITY_ATTRIBUTE_TYPE_FQBN      0x04            // Refused by Windows up to 11
-#define CLAIM_SECURITY_ATTRIBUTE_TYPE_SID       0x05
-#define CLAIM_SECURITY_ATTRIBUTE_TYPE_BOOLEAN   0x06
-#define CLAIM_SECURITY_ATTRIBUTE_TYPE_OCTET_STRING  0x10
-
-typedef struct _CLAIM_SECURITY_ATTRIBUTE_OCTET_STRING_VALUE
-{
-    PVOID   pValue;         //  Pointer is BYTE aligned.
-    DWORD   ValueLength;    //  In bytes
-} CLAIM_SECURITY_ATTRIBUTE_OCTET_STRING_VALUE, *PCLAIM_SECURITY_ATTRIBUTE_OCTET_STRING_VALUE;
+#define CLAIM_SECURITY_ATTRIBUTE_TYPE_SID       0x05            // 4 bytes of length, followed by the SID
+#define CLAIM_SECURITY_ATTRIBUTE_TYPE_BOOLEAN   0x06            // Each item has 8 bytes, upper 4 bytes must be zero
+#define CLAIM_SECURITY_ATTRIBUTE_TYPE_OCTET_STRING  0x10        // 4 bytes of length, followed by array of BYTEs
 
 //
 // Attribute Flags
@@ -120,12 +114,28 @@ typedef struct _CLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1
 #endif
 
 //-----------------------------------------------------------------------------
+// Octet string structure
+
+typedef struct _ACE_OCTET_STRING
+{
+    ULONG cbData;
+    BYTE  pbData[1];
+} ACE_OCTET_STRING, *PACE_OCTET_STRING;
+
+inline ULONG OctetStringSize(PACE_OCTET_STRING pOctetString)
+{
+    return sizeof(ULONG) + pOctetString->cbData;
+}
+
+//-----------------------------------------------------------------------------
 // Helpers
 
 struct ACE_CSA_OBJECT
 {
     ACE_CSA_OBJECT();
     ~ACE_CSA_OBJECT();
+
+    LPBYTE ImportOctet(LPCVOID pbOctet, ULONG cbOctet);
     void Clear();
 
     virtual size_t ImportSize(LPBYTE pbStructure, LPBYTE pbEnd, ULONG Offset);
@@ -143,30 +153,30 @@ struct ACE_CSA_OBJECT
 struct ACE_CSA_DWORD64 : public ACE_CSA_OBJECT
 {
     size_t ImportSize(LPBYTE pbStructure, LPBYTE pbEnd, ULONG Offset);
-
     LPBYTE ImportObject(LPCVOID lpObject);
 };
 
 struct ACE_CSA_LPWSTR : public ACE_CSA_OBJECT
 {
     size_t ImportSize(LPBYTE pbStructure, LPBYTE pbEnd, ULONG Offset);
-
     LPBYTE ImportObject(LPCVOID lpObject);
 };
 
 struct ACE_CSA_SID : public ACE_CSA_OBJECT
 {
     size_t ImportSize(LPBYTE pbStructure, LPBYTE pbEnd, ULONG Offset);
-
-    LPBYTE ImportObject(LPCVOID lpObject);
 };
 
 struct ACE_CSA_BOOLEAN : public ACE_CSA_OBJECT
 {
     size_t ImportSize(LPBYTE pbStructure, LPBYTE pbEnd, ULONG Offset);
     size_t ExportSize(size_t cbAlignSize = 1);
-
     LPBYTE ImportObject(LPCVOID lpObject);
+};
+
+struct ACE_CSA_OCTET_STRING : public ACE_CSA_OBJECT
+{
+    size_t ImportSize(LPBYTE pbStructure, LPBYTE pbEnd, ULONG Offset);
 };
 
 struct ACE_CSA_HELPER

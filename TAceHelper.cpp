@@ -13,8 +13,33 @@
 //-----------------------------------------------------------------------------
 // Local variables
 
-static const BYTE SidEveryone[] = {0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00};
-static const BYTE SidAdmins[] = {0x01, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0x20, 0x00, 0x00, 0x00, 0x20, 0x02, 0x00, 0x00};
+// SID_IDENTIFIER_AUTHORITY SiaWorld = SECURITY_NT_AUTHORITY;
+static const BYTE SidAdministrat[] = {0x01, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0x20, 0x00, 0x00, 0x00, 0x20, 0x02, 0x00, 0x00};
+
+// SID_IDENTIFIER_AUTHORITY SiaWorld = SECURITY_WORLD_SID_AUTHORITY;
+static const BYTE SidEveryone[]    = {0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00};
+
+// SID_IDENTIFIER_AUTHORITY SiaLabel = SECURITY_MANDATORY_LABEL_AUTHORITY;
+static const BYTE SidLabelMedium[] = {0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x10, 0x00, 0x00};
+
+// SID_IDENTIFIER_AUTHORITY SiaLabel = SECURITY_SCOPED_POLICY_ID_AUTHORITY;
+static const BYTE SidSystemAce17[] = {0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x11, 0x00, 0x00, 0x00, 0x00};
+
+// SID_IDENTIFIER_AUTHORITY SiaLabel = SECURITY_PROCESS_TRUST_AUTHORITY;
+static const BYTE SidSystemAce19[] = {0x01, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x13, 0x00, 0x02, 0x00, 0x00, 0x00, 0x10, 0x00, 0x00};
+
+// Dummy condition for various reasons
+// Obtained from "c:\Program Files\WindowsApps\Microsoft.ZuneMusic_11.2310.8.0_neutral_~_8wekyb3d8bbwe" 
+static const BYTE DummyCondition[] =
+{
+    0x61, 0x72, 0x74, 0x78, 0xf8, 0x1c, 0x00, 0x00, 0x00, 0x57, 0x00, 0x49, 0x00, 0x4e, 0x00, 0x3a,
+    0x00, 0x2f, 0x00, 0x2f, 0x00, 0x53, 0x00, 0x59, 0x00, 0x53, 0x00, 0x41, 0x00, 0x50, 0x00, 0x50,
+    0x00, 0x49, 0x00, 0x44, 0x00, 0x10, 0x42, 0x00, 0x00, 0x00, 0x4d, 0x00, 0x69, 0x00, 0x63, 0x00,
+    0x72, 0x00, 0x6f, 0x00, 0x73, 0x00, 0x6f, 0x00, 0x66, 0x00, 0x74, 0x00, 0x2e, 0x00, 0x5a, 0x00,
+    0x75, 0x00, 0x6e, 0x00, 0x65, 0x00, 0x56, 0x00, 0x69, 0x00, 0x64, 0x00, 0x65, 0x00, 0x6f, 0x00,
+    0x5f, 0x00, 0x38, 0x00, 0x77, 0x00, 0x65, 0x00, 0x6b, 0x00, 0x79, 0x00, 0x62, 0x00, 0x33, 0x00,
+    0x64, 0x00, 0x38, 0x00, 0x62, 0x00, 0x62, 0x00, 0x77, 0x00, 0x65, 0x00, 0x86, 0x00, 0x00, 0x00
+};
 
 //-----------------------------------------------------------------------------
 // Constructor and destructor
@@ -28,7 +53,9 @@ ACE_HELPER::ACE_HELPER(DWORD dwAceType, ACCESS_MASK AccessMask, PSID pSid)
     SetAceType(dwAceType);
     Mask = AccessMask;
 
-    // Set the first SID
+    // If the SID is not provided, choose a default SID
+    if(pSid == NULL)
+        pSid = GetDefaultSid(dwAceType);
     SetSid(pSid, 0);
 }
 
@@ -39,13 +66,11 @@ ACE_HELPER::~ACE_HELPER()
 
 void ACE_HELPER::Reset()
 {
-    DWORD dwFreeFlag = ACE_HELPER_NEED_FREE_SID0;
-
     // Free the SIDs
-    for(size_t i = 0; i < _countof(Sid); i++, dwFreeFlag = dwFreeFlag << 1)
+    for(size_t i = 0; i < _countof(Sid); i++)
     {
-        if((Sid[i] != NULL) && (FreeFlags & dwFreeFlag))
-            RtlFreeSid(Sid[i]);
+        if(Sid[i] != NULL)
+            LocalFree(Sid[i]);
         Sid[i] = NULL;
     }
 
@@ -66,7 +91,7 @@ void ACE_HELPER::Reset()
     AceType = ACCESS_ALLOWED_ACE_TYPE;
     Mask    = GENERIC_ALL;
     Sid[0]  = (PSID)(SidEveryone);
-    Sid[1]  = (PSID)(SidAdmins);
+    Sid[1]  = (PSID)(SidAdministrat);
 }
 
 //-----------------------------------------------------------------------------
@@ -84,7 +109,7 @@ bool ACE_HELPER::SetAceType(DWORD dwAceType)
             break;
 
         case ACCESS_ALLOWED_COMPOUND_ACE_TYPE:          // Compound ACEs:
-            AceLayout = ACE_LAYOUT_COMPOUND;            // {Header-Mask-CompoundType-Reserved-ServerSid-CliendSid}
+            AceLayout = ACE_FIELD_COMPOUND_TYPE;        // {Header-Mask-CompoundType-Reserved-ServerSid-CliendSid}
             break;
 
         case ACCESS_ALLOWED_OBJECT_ACE_TYPE:            // Object ACEs:
@@ -98,6 +123,7 @@ bool ACE_HELPER::SetAceType(DWORD dwAceType)
         case ACCESS_DENIED_CALLBACK_ACE_TYPE:           // {Header-Mask-SidStart-Condition}
         case SYSTEM_AUDIT_CALLBACK_ACE_TYPE:
         case SYSTEM_ALARM_CALLBACK_ACE_TYPE:
+            SetCondition(DummyCondition, sizeof(DummyCondition));
             AceLayout = ACE_LAYOUT_CONDITION;
             break;
 
@@ -105,6 +131,7 @@ bool ACE_HELPER::SetAceType(DWORD dwAceType)
         case ACCESS_DENIED_CALLBACK_OBJECT_ACE_TYPE:    // {Header-AdsMask-Flags-ObjectType-InheritedObjectType-SidStart-Condition}
         case SYSTEM_AUDIT_CALLBACK_OBJECT_ACE_TYPE:
         case SYSTEM_ALARM_CALLBACK_OBJECT_ACE_TYPE:
+            SetCondition(DummyCondition, sizeof(DummyCondition));
             AceLayout = ACE_LAYOUT_OBJECT_CONDITION;
             break;
 
@@ -116,8 +143,22 @@ bool ACE_HELPER::SetAceType(DWORD dwAceType)
             AceLayout = ACE_LAYOUT_RESOURCE;            // Contains the CLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1 structure
             break;
 
+        case SYSTEM_SCOPED_POLICY_ID_ACE_TYPE:
+            AceLayout = ACE_LAYOUT_POLICY_ID;
+            break;
+
+        case SYSTEM_PROCESS_TRUST_LABEL_ACE_TYPE:
+            AceLayout = ACE_LAYOUT_TRUST_ID;
+            break;
+
+        case SYSTEM_ACCESS_FILTER_ACE_TYPE:
+            SetCondition(DummyCondition, sizeof(DummyCondition));
+            AceLayout = ACE_LAYOUT_TRUST_ID_CONDITION;
+            break;
+
         default:
             AceLayout = ACE_FIELD_HEADER | ACE_FIELD_ACCESS_MASK;
+            assert(false);
             break;
     }
 
@@ -173,7 +214,7 @@ bool ACE_HELPER::SetAce(PACE_HEADER pAceHeader)
         }
 
         // Get the compound ACE type
-        if(AceLayout & (ACE_FIELD_CTYPE | ACE_FIELD_CRESERVED))
+        if(AceLayout & (ACE_FIELD_COMPOUND_TYPE | ACE_FIELD_COMPOUND_RSVD))
         {
             CompoundAceType = *(PUSHORT)(pbAcePtr);
             CompoundReserved = *(PUSHORT)(pbAcePtr + sizeof(USHORT));
@@ -181,17 +222,17 @@ bool ACE_HELPER::SetAce(PACE_HEADER pAceHeader)
         }
 
         // Get the pointer to (server|mandatory) SID
-        if(AceLayout & (ACE_FIELD_ACCESS_SID | ACE_FIELD_SERVER_SID | ACE_FIELD_MANDATORY_SID))
+        if(AceLayout & (ACE_FIELD_ACCESS_SID | ACE_FIELD_SERVER_SID | ACE_FIELD_MANDATORY_SID | ACE_FIELD_MANDATORY_MASK))
         {
-            pbAcePtr += GetLengthSid(Sid[0] = (PSID)(pbAcePtr));
-            FreeFlags &= ~ACE_HELPER_NEED_FREE_SID0;
+            if(SetSid((PSID)(pbAcePtr), 0) != NULL)
+                pbAcePtr += GetLengthSid(Sid[0]);
         }
 
         // Get the pointer to (server|mandatory) SID
         if(AceLayout & ACE_FIELD_CLIENT_SID)
         {
-            pbAcePtr += GetLengthSid(Sid[1] = (PSID)(pbAcePtr));
-            FreeFlags &= ~ACE_HELPER_NEED_FREE_SID1;
+            if(SetSid((PSID)(pbAcePtr), 1) != NULL)
+                pbAcePtr += GetLengthSid(Sid[1]);
         }
 
         // Get the CLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1 and convert it to pointer-based structure
@@ -214,18 +255,12 @@ bool ACE_HELPER::SetAce(PACE_HEADER pAceHeader)
 // pSid could be NULL if we want just to free the existing SID[nSidIndex]
 PSID ACE_HELPER::SetSid(PSID pSid, size_t nSidIndex)
 {
-    DWORD dwFreeFlag = ACE_HELPER_NEED_FREE_SID0 << nSidIndex;
     ULONG cbSid;
 
     // Free the old SID
-    if((Sid[nSidIndex] != NULL) && (FreeFlags & dwFreeFlag))
-    {
+    if(Sid[nSidIndex] != NULL)
         LocalFree(Sid[nSidIndex]);
-    }
-
-    // Reset the SID
     Sid[nSidIndex] = NULL;
-    FreeFlags &= ~dwFreeFlag;
 
     // Store the new one
     if(pSid != NULL && (cbSid = RtlLengthSid(pSid)) != 0)
@@ -233,7 +268,6 @@ PSID ACE_HELPER::SetSid(PSID pSid, size_t nSidIndex)
         if((Sid[nSidIndex] = (PSID)LocalAlloc(LPTR, cbSid)) != NULL)
         {
             memcpy(Sid[nSidIndex], pSid, cbSid);
-            FreeFlags |= dwFreeFlag;
         }
     }
 
@@ -241,7 +275,7 @@ PSID ACE_HELPER::SetSid(PSID pSid, size_t nSidIndex)
     return Sid[nSidIndex];
 }
 
-bool ACE_HELPER::SetAttributes(LPVOID lpAttrRel, size_t cbAttrRel)
+bool ACE_HELPER::SetAttributes(LPCVOID lpAttrRel, size_t cbAttrRel)
 {
     LPBYTE pbAttrRel = (LPBYTE)(lpAttrRel);
 
@@ -249,7 +283,7 @@ bool ACE_HELPER::SetAttributes(LPVOID lpAttrRel, size_t cbAttrRel)
     return (AttrRel && AttrRelLength);
 }
 
-bool ACE_HELPER::SetCondition(LPVOID lpCondition, size_t cbCondition)
+bool ACE_HELPER::SetCondition(LPCVOID lpCondition, size_t cbCondition)
 {
     LPBYTE pbCondition = (LPBYTE)(lpCondition);
 
@@ -263,10 +297,6 @@ PACE_HEADER ACE_HELPER::Export(LPBYTE pbBuffer, size_t cbBuffer)
     LPBYTE pbEnd = pbBuffer + cbBuffer;
     LPBYTE pbPtr = pbBuffer;
     ULONG GuidFlags = Flags;
-
-    // We do not support ACEs with condition
-    if((AceLayout & ACE_FIELD_CONDITION) && (Condition != NULL))
-        return NULL;
 
     // Fill-in the header
     if(AceLayout & ACE_FIELD_HEADER)
@@ -290,12 +320,12 @@ PACE_HEADER ACE_HELPER::Export(LPBYTE pbBuffer, size_t cbBuffer)
         return NULL;
 
     // Fill-in the ACE::CompoundAceType
-    pbPtr = PutAceValue(pbPtr, pbEnd, &CompoundAceType, ACE_FIELD_CTYPE, sizeof(CompoundAceType));
+    pbPtr = PutAceValue(pbPtr, pbEnd, &CompoundAceType, ACE_FIELD_COMPOUND_TYPE, sizeof(CompoundAceType));
     if(pbPtr == NULL)
         return NULL;
 
     // Fill-in the ACE::CompoundReserved
-    pbPtr = PutAceValue(pbPtr, pbEnd, &CompoundReserved, ACE_FIELD_CRESERVED, sizeof(CompoundReserved));
+    pbPtr = PutAceValue(pbPtr, pbEnd, &CompoundReserved, ACE_FIELD_COMPOUND_RSVD, sizeof(CompoundReserved));
     if(pbPtr == NULL)
         return NULL;
 
@@ -336,6 +366,13 @@ PACE_HEADER ACE_HELPER::Export(LPBYTE pbBuffer, size_t cbBuffer)
             return NULL;
     }
 
+    // Fill-in the policy ID SID
+    if(AceLayout & ACE_FIELD_POLICY_SID)
+    {
+        if((pbPtr = PutAceValueSid(pbPtr, pbEnd, Sid[0])) == NULL)
+            return NULL;
+    }
+
     // Fill-in the CLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1
     if(AceLayout & ACE_FIELD_CSA_V1)
     {
@@ -344,7 +381,7 @@ PACE_HEADER ACE_HELPER::Export(LPBYTE pbBuffer, size_t cbBuffer)
     }
 
     // Fill-in the CLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1
-    if(AceLayout & ACE_FIELD_CONDITION)
+    if((AceLayout & ACE_FIELD_CONDITION) && (Condition != NULL))
     {
         if((pbPtr = PutAceValueBinary(pbPtr, pbEnd, Condition, ConditionLength)) == NULL)
             return NULL;
@@ -397,14 +434,10 @@ LPBYTE ACE_HELPER::PutAceValueSid(LPBYTE PtrAclData, LPBYTE PtrAclEnd, PSID pSou
 {
     LPBYTE pbResult = NULL;
     ULONG SidLength;
-    bool bFreeSid = false;
 
     // If no SID is given, create one with Everyone
     if(pSourceSid == NULL)
-    {
-        pSourceSid = CreateNewSid(AceType, SECURITY_MANDATORY_MEDIUM_RID);
-        bFreeSid = true;
-    }
+        pSourceSid = GetDefaultSid(AceType);
 
     // If we have that SID, add it to the ACE data
     if(pSourceSid != NULL)
@@ -415,11 +448,6 @@ LPBYTE ACE_HELPER::PutAceValueSid(LPBYTE PtrAclData, LPBYTE PtrAclEnd, PSID pSou
         {
             memmove(PtrAclData, pSourceSid, SidLength);
             pbResult = PtrAclData + SidLength;
-        }
-
-        if(bFreeSid)
-        {
-            RtlFreeSid(pSourceSid);
         }
     }
     return pbResult;
@@ -460,4 +488,25 @@ LPBYTE ACE_HELPER::CaptureExtraStructure(LPBYTE pbPtr, LPBYTE pbEnd, size_t * pc
     if(pcbMoveBy != NULL)
         pcbMoveBy[0] = cbExtraStructure;
     return pbExtraStructure;
+}
+
+PSID ACE_HELPER::GetDefaultSid(DWORD dwAceType)
+{
+    switch(dwAceType)
+    {
+        case SYSTEM_MANDATORY_LABEL_ACE_TYPE:       // Mandatory label ACE requires S-1-16-###
+            return (PSID)(SidLabelMedium);
+
+        case SYSTEM_SCOPED_POLICY_ID_ACE_TYPE:      // System scoped policy requires S-1-17-###
+            return (PSID)(SidSystemAce17);
+
+        case SYSTEM_PROCESS_TRUST_LABEL_ACE_TYPE:   // System process trust label requires S-1-19-###
+            return (PSID)(SidSystemAce19);
+
+        case SYSTEM_ACCESS_FILTER_ACE_TYPE:
+            return (PSID)(SidSystemAce19);
+
+        default:
+            return (PSID)(SidEveryone);
+    }
 }

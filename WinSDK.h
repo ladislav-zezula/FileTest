@@ -365,6 +365,7 @@ typedef struct _SYSTEM_ALARM_CALLBACK_OBJECT_ACE
 
 //-----------------------------------------------------------------------------
 // SYSTEM_MANDATORY_LABEL_ACE (not included in older SDKs)
+// Can be found on %USERPROFILE%\AppData\LocalLow
 
 // Access mask for the mandatory label ACE
 #ifndef SYSTEM_MANDATORY_LABEL_NO_WRITE_UP
@@ -405,6 +406,7 @@ typedef struct _SYSTEM_MANDATORY_LABEL_ACE
 
 //-----------------------------------------------------------------------------
 // SYSTEM_RESOURCE_ATTRIBUTE_ACE (not included in older SDKs)
+// Can be found on %USERPROFILE%\Downloads
 
 #ifndef SYSTEM_RESOURCE_ATTRIBUTE_ACE_TYPE
 #define SYSTEM_RESOURCE_ATTRIBUTE_ACE_TYPE      (0x12)
@@ -419,18 +421,55 @@ typedef struct _SYSTEM_RESOURCE_ATTRIBUTE_ACE
 #endif
 
 //-----------------------------------------------------------------------------
-// Newer ACEs
+// SYSTEM_SCOPED_POLICY_ID_ACE (not included in older SDKs)
 
 #ifndef SYSTEM_SCOPED_POLICY_ID_ACE_TYPE
 #define SYSTEM_SCOPED_POLICY_ID_ACE_TYPE        (0x13)
 #define SECURITY_SCOPED_POLICY_ID_AUTHORITY     {0,0,0,0,0,17}
+
+typedef struct _SYSTEM_SCOPED_POLICY_ID_ACE
+{
+    ACE_HEADER Header;
+    ACCESS_MASK Mask;
+    DWORD SidStart;
+} SYSTEM_SCOPED_POLICY_ID_ACE, *PSYSTEM_SCOPED_POLICY_ID_ACE;
+
 #endif  // SYSTEM_SCOPED_POLICY_ID_ACE_TYPE
+
+//-----------------------------------------------------------------------------
+// SYSTEM_PROCESS_TRUST_LABEL_ACE (not included in older SDKs)
+// Can be found on C:\Program Files\WindowsApps\<any subfolder>
+// SYSTEM_PROCESS_TRUST_LABEL_ACE::Mask must have upper 8 bits zeroed
+// Setting the trust label can only be done if
+// * The thread token contains trust level SID and dominates the process token's SID 
+// contains 
 
 #ifndef SYSTEM_PROCESS_TRUST_LABEL_ACE_TYPE
 #define SYSTEM_PROCESS_TRUST_LABEL_ACE_TYPE     (0x14)
 #define SECURITY_PROCESS_TRUST_AUTHORITY        {0,0,0,0,0,19}
+
+typedef struct _SYSTEM_PROCESS_TRUST_LABEL_ACE
+{
+    ACE_HEADER Header;
+    ACCESS_MASK Mask;
+    DWORD SidStart;
+} SYSTEM_PROCESS_TRUST_LABEL_ACE, *PSYSTEM_PROCESS_TRUST_LABEL_ACE;
+#endif  // SYSTEM_PROCESS_TRUST_LABEL_ACE_TYPE
+
+//-----------------------------------------------------------------------------
+// SYSTEM_ACCESS_FILTER_ACE (not included in older SDKs)
+
+#ifndef SYSTEM_ACCESS_FILTER_ACE_TYPE
 #define SYSTEM_ACCESS_FILTER_ACE_TYPE           (0x15)
-#endif
+
+typedef struct _SYSTEM_ACCESS_FILTER_ACE
+{
+    ACE_HEADER Header;
+    ACCESS_MASK Mask;
+    DWORD SidStart;
+    // Filter Condition follows the SID
+} SYSTEM_ACCESS_FILTER_ACE, *PSYSTEM_ACCESS_FILTER_ACE;
+#endif  // SYSTEM_ACCESS_FILTER_ACE_TYPE
 
 //-----------------------------------------------------------------------------
 // Definitions for token mandatory label

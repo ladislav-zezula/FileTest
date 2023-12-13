@@ -129,13 +129,12 @@ static PACE_HEADER AddAce(
 
 static PACE_HEADER AddAce(
     PACL pAcl,
-    BYTE AceType,
     ACCESS_MASK AccessMask,
     PSID pSid, 
     ACE_CSA_HELPER & CsaHelper)
 {
     PCLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1 pAttrRel;
-    ACE_HELPER AceHelper(AceType, AccessMask);
+    ACE_HELPER AceHelper(SYSTEM_RESOURCE_ATTRIBUTE_ACE_TYPE, AccessMask);
     ULONG cbAttrRel = 0;
 
     // Set the SID into the ACE helper
@@ -210,7 +209,7 @@ PACL CreateDacl(PSID pSidAdmin)
     return pAcl;
 }
 
-PACL CreateSacl(PSID pSidUser)
+PACL CreateSacl(SECURITY_INFORMATION & SecurityInfo, PSID pSidUser)
 {
     PACL pAcl;
     NTSTATUS Status = STATUS_INSUFFICIENT_RESOURCES;
@@ -222,32 +221,81 @@ PACL CreateSacl(PSID pSidUser)
         {
             ACE_CSA_HELPER CsaHelper;
             PACE_HEADER pAceHeader;
+            BYTE OctetString1[] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07};
+            BYTE OctetString2[] = {0xA1, 0xB2, 0xC3, 0xD4, 0xE5, 0xF6, 0x07, 0x18, 0x29, 0x3A, 0x4B, 0x3C, 0x4D, 0x01, 0x02, 0x03, 0x04};
             ULONG cbAclSize = sizeof(ACL);
+
+            if((pAceHeader = AddAce(pAcl, SYSTEM_MANDATORY_LABEL_ACE_TYPE, SYSTEM_MANDATORY_LABEL_NO_WRITE_UP)) != NULL)
+            {
+                SecurityInfo |= LABEL_SECURITY_INFORMATION;
+                cbAclSize = cbAclSize + pAceHeader->AceSize;
+            }
 
             CsaHelper.Create(L"RESOURCE_ITEM_I64_VALUES", CLAIM_SECURITY_ATTRIBUTE_TYPE_INT64, 3, 0xDEADBABFULL, 0x02ULL, 0x1234567812345679ULL);
             CsaHelper.Flags = CLAIM_SECURITY_ATTRIBUTE_NON_INHERITABLE | CLAIM_SECURITY_ATTRIBUTE_USE_FOR_DENY_ONLY;
-            if((pAceHeader = AddAce(pAcl, SYSTEM_RESOURCE_ATTRIBUTE_ACE_TYPE, GENERIC_READ, pSidUser, CsaHelper)) != NULL)
+            if((pAceHeader = AddAce(pAcl, GENERIC_READ, pSidUser, CsaHelper)) != NULL)
+            {
+                SecurityInfo |= ATTRIBUTE_SECURITY_INFORMATION;
                 cbAclSize = cbAclSize + pAceHeader->AceSize;
+            }
 
             CsaHelper.Create(L"RESOURCE_ITEM_U64_VALUES", CLAIM_SECURITY_ATTRIBUTE_TYPE_UINT64, 3, 0xDEADBABEULL, 0x01ULL, 0x1234567812345678ULL);
             CsaHelper.Flags = CLAIM_SECURITY_ATTRIBUTE_VALUE_CASE_SENSITIVE;
-            if((pAceHeader = AddAce(pAcl, SYSTEM_RESOURCE_ATTRIBUTE_ACE_TYPE, GENERIC_READ, pSidUser, CsaHelper)) != NULL)
+            if((pAceHeader = AddAce(pAcl, GENERIC_READ, pSidUser, CsaHelper)) != NULL)
+            {
+                SecurityInfo |= ATTRIBUTE_SECURITY_INFORMATION;
                 cbAclSize = cbAclSize + pAceHeader->AceSize;
+            }
 
             CsaHelper.Create(L"RESOURCE_ITEM_STRINGS", CLAIM_SECURITY_ATTRIBUTE_TYPE_STRING, 4, L"DAENERYS", L"TARGARYEN", L"EDDARD", L"WINTERFELL");
             CsaHelper.Flags = CLAIM_SECURITY_ATTRIBUTE_VALUE_CASE_SENSITIVE;
-            if((pAceHeader = AddAce(pAcl, SYSTEM_RESOURCE_ATTRIBUTE_ACE_TYPE, GENERIC_READ, pSidUser, CsaHelper)) != NULL)
+            if((pAceHeader = AddAce(pAcl, GENERIC_READ, pSidUser, CsaHelper)) != NULL)
+            {
+                SecurityInfo |= ATTRIBUTE_SECURITY_INFORMATION;
                 cbAclSize = cbAclSize + pAceHeader->AceSize;
+            }
 
             CsaHelper.Create(L"RESOURCE_ITEM_SIDS", CLAIM_SECURITY_ATTRIBUTE_TYPE_SID, 3, (PSID)SidLocAdmins, (PSID)SidLocUsers, (PSID)SidEveryone);
             CsaHelper.Flags = 0;
-            if((pAceHeader = AddAce(pAcl, SYSTEM_RESOURCE_ATTRIBUTE_ACE_TYPE, GENERIC_READ, pSidUser, CsaHelper)) != NULL)
+            if((pAceHeader = AddAce(pAcl, GENERIC_READ, pSidUser, CsaHelper)) != NULL)
+            {
+                SecurityInfo |= ATTRIBUTE_SECURITY_INFORMATION;
                 cbAclSize = cbAclSize + pAceHeader->AceSize;
+            }
 
             CsaHelper.Create(L"RESOURCE_ITEM_BOOLEANS", CLAIM_SECURITY_ATTRIBUTE_TYPE_BOOLEAN, 4, TRUE, TRUE, FALSE, FALSE);
             CsaHelper.Flags = 0;
-            if((pAceHeader = AddAce(pAcl, SYSTEM_RESOURCE_ATTRIBUTE_ACE_TYPE, GENERIC_READ, pSidUser, CsaHelper)) != NULL)
+            if((pAceHeader = AddAce(pAcl, GENERIC_READ, pSidUser, CsaHelper)) != NULL)
+            {
+                SecurityInfo |= ATTRIBUTE_SECURITY_INFORMATION;
                 cbAclSize = cbAclSize + pAceHeader->AceSize;
+            }
+
+            CsaHelper.Create(L"RESOURCE_ITEM_OCTET_STRINGS", CLAIM_SECURITY_ATTRIBUTE_TYPE_OCTET_STRING, 2, OctetString1, sizeof(OctetString1), OctetString2, sizeof(OctetString2));
+            CsaHelper.Flags = 0;
+            if((pAceHeader = AddAce(pAcl, GENERIC_READ, pSidUser, CsaHelper)) != NULL)
+            {
+                SecurityInfo |= ATTRIBUTE_SECURITY_INFORMATION;
+                cbAclSize = cbAclSize + pAceHeader->AceSize;
+            }
+
+            if((pAceHeader = AddAce(pAcl, SYSTEM_SCOPED_POLICY_ID_ACE_TYPE, GENERIC_READ)) != NULL)
+            {
+                SecurityInfo |= SCOPE_SECURITY_INFORMATION;
+                cbAclSize = cbAclSize + pAceHeader->AceSize;
+            }
+
+            if((pAceHeader = AddAce(pAcl, SYSTEM_PROCESS_TRUST_LABEL_ACE_TYPE, GENERIC_READ)) != NULL)
+            {
+                SecurityInfo |= PROCESS_TRUST_LABEL_SECURITY_INFORMATION;
+                cbAclSize = cbAclSize + pAceHeader->AceSize;
+            }
+
+            if((pAceHeader = AddAce(pAcl, SYSTEM_ACCESS_FILTER_ACE_TYPE, GENERIC_READ, (PSID)SidEveryone)) != NULL)
+            {
+                SecurityInfo |= ACCESS_FILTER_SECURITY_INFORMATION;
+                cbAclSize = cbAclSize + pAceHeader->AceSize;
+            }
 
             pAcl->AclSize = (WORD)(cbAclSize);
         }
@@ -257,7 +305,6 @@ PACL CreateSacl(PSID pSidUser)
 
 static DWORD SetCustomSecurityDescriptor(HANDLE hObject, ULONG AclType)
 {
-    SID_IDENTIFIER_AUTHORITY SiaWorld = SECURITY_WORLD_SID_AUTHORITY;
     SECURITY_INFORMATION SecurityInfo = 0;
     SECURITY_DESCRIPTOR sd;
     NTSTATUS Status = STATUS_SUCCESS;
@@ -319,13 +366,11 @@ static DWORD SetCustomSecurityDescriptor(HANDLE hObject, ULONG AclType)
                     }
                 }
                 break;
+
             case 3:
-                if((pSacl = CreateSacl(pSidUser)) != NULL)
+                if((pSacl = CreateSacl(SecurityInfo, pSidUser)) != NULL)
                 {
-                    if((Status = RtlSetSaclSecurityDescriptor(&sd, TRUE, pSacl, FALSE)) == STATUS_SUCCESS)
-                    {
-                        SecurityInfo |= ATTRIBUTE_SECURITY_INFORMATION;
-                    }
+                    Status = RtlSetSaclSecurityDescriptor(&sd, TRUE, pSacl, FALSE);
                 }
                 break;
         }
@@ -355,7 +400,7 @@ static void SetCustomSecurityDescriptor(LPCTSTR szPath, ULONG AclType)
     ForcePathExist(szPath, TRUE);
 
     // Open the folder and set security descriptor
-    hFolder = CreateFile(szPath, GENERIC_ALL | READ_CONTROL | WRITE_DAC | WRITE_OWNER, 0, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
+    hFolder = CreateFile(szPath, GENERIC_ALL | READ_CONTROL | WRITE_DAC | WRITE_OWNER | ACCESS_SYSTEM_SECURITY, 0, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
     if(hFolder != INVALID_HANDLE_VALUE)
     {
         SetCustomSecurityDescriptor(hFolder, AclType);
@@ -363,7 +408,7 @@ static void SetCustomSecurityDescriptor(LPCTSTR szPath, ULONG AclType)
     }
 }
 
-static void LoadSpecialSecurityDescriptor(LPCTSTR szPath)
+void LoadSpecialSecurityDescriptor(LPCTSTR szPath)
 {
     HANDLE hFolder;
 
@@ -416,62 +461,15 @@ static void LoadSpecialSecurityDescriptor(LPCTSTR szPath)
     }
 }
 
-/*
-static void FindSpecialSecurityDescriptor(LPTSTR szPathBuffer, LPTSTR szPathBufferEnd)
+void DebugCode_SecurityDescriptor(LPCTSTR /* szPath */)
 {
-    WIN32_FIND_DATA wf;
-    LPTSTR szPlainName = szPathBuffer + _tcslen(szPathBuffer);
-    HANDLE hFind;
-    BOOL bFound = TRUE;
-
-    // Append the search mask
-    StringCchCopy(szPlainName, (szPathBufferEnd - szPlainName), _T("\\*"));
-    szPlainName = szPlainName + 1;
-
-    // Perform the search
-    if((hFind = FindFirstFile(szPathBuffer, &wf)) != INVALID_HANDLE_VALUE)
-    {
-        while(bFound)
-        {
-            if(_tcscmp(wf.cFileName, _T(".")) && _tcscmp(wf.cFileName, _T("..")))
-            {
-                StringCchCopy(szPlainName, (szPathBufferEnd - szPlainName), wf.cFileName);
-                LoadSpecialSecurityDescriptor(szPathBuffer);
-
-                if(wf.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
-                {
-                    FindSpecialSecurityDescriptor(szPathBuffer, szPathBufferEnd);
-                }
-            }
-            bFound = FindNextFile(hFind, &wf);
-        }
-    
-        FindClose(hFind);
-    }
-}
-
-static void FindSpecialSecurityDescriptor()
-{
-    LPTSTR szPathBuffer;
-    SIZE_T ccPathBuffer = 0x1000;
-
-    if((szPathBuffer = (LPTSTR)LocalAlloc(LPTR, ccPathBuffer * sizeof(TCHAR))) != NULL)
-    {
-        StringCchCopy(szPathBuffer, ccPathBuffer, _T("C:"));
-        FindSpecialSecurityDescriptor(szPathBuffer, szPathBuffer + ccPathBuffer);
-        LocalFree(szPathBuffer);
-    }
-}
-*/
-void DebugCode_SecurityDescriptor(LPCTSTR szPath)
-{
-    // FindSpecialSecurityDescriptor();
-
-    LoadSpecialSecurityDescriptor(szPath);
+    //EnablePrivilege(SE_TCB_NAME);
+    //EnablePrivilege(SE_SECURITY_NAME);
 
     //SetCustomSecurityDescriptor(_T("c:\\VMWARE\\Test-001-NULL_ACL"), 0);
     //SetCustomSecurityDescriptor(_T("c:\\VMWARE\\Test-002-EMPTY_ACL"), 1);
     //SetCustomSecurityDescriptor(_T("c:\\VMWARE\\Test-003-VALID_ACL"), 2);
-      SetCustomSecurityDescriptor(_T("c:\\VMWARE\\Test-004-RES_ATTR"),  3);
+    //SetCustomSecurityDescriptor(_T("c:\\VMWARE\\Test-004-RES_ATTR"),  3);
+    //LoadSpecialSecurityDescriptor(_T("c:\\VMWARE\\Test-004-RES_ATTR"));
 }
 #endif

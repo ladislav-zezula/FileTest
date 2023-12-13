@@ -65,20 +65,6 @@ static TDialogData * GetData(HWND hDlg)
     return (TDialogData *)GetWindowLongPtr(hDlg, DWLP_USER);
 }
 
-static HANDLE OpenCurrentToken(DWORD dwDesiredAccess)
-{
-    HANDLE hToken = NULL;
-
-    // Open process or thread token
-    if(!OpenThreadToken(GetCurrentThread(), dwDesiredAccess, TRUE, &hToken))
-    {
-        if(GetLastError() == ERROR_NO_TOKEN)
-            OpenProcessToken(GetCurrentProcess(), dwDesiredAccess, &hToken);
-    }
-
-    return hToken;
-}
-
 static void LoadSystemSettings(TDialogData & Data)
 {
     PTOKEN_MANDATORY_LABEL pMandatoryLabel = NULL;

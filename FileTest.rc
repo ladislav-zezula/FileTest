@@ -1457,12 +1457,14 @@ BEGIN
     IDS_FORMAT_VALTYPE      "ValueType: %s"
     IDS_FORMAT_FLAGS        "Flags: %s"
     IDS_FORMAT_VALCOUNT     "ValueCount: %s"
+    IDS_FORMAT_TRUST_LEVEL  "Trust Level: %s"
     IDS_FORMAT_VALUE        "Value"
 END
 
 STRINGTABLE
 BEGIN
     IDS_FORMAT_VALINDEX     "Value[0x%02x]: %s"
+    IDS_FORMAT_POLICY_ID    "PolicyID: %s"
 END
 
 #endif    // English (United States) resources

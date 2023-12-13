@@ -27,7 +27,7 @@ static BYTE CharToValue[0x80] =
     0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 
 };
 
-static TCHAR ValueToChar[] = _T("0123456789ABCDEF");
+LPCTSTR HexaAlphabetUpper = _T("0123456789ABCDEF");
 
 static void Hex2TextXX(ULONGLONG Value, LPTSTR szBuffer, int nSize)
 {
@@ -37,7 +37,7 @@ static void Hex2TextXX(ULONGLONG Value, LPTSTR szBuffer, int nSize)
     // Convert the number to string
     for(int i = 0; i <= nSize; i++)
     {
-        szBuffer[nSize - i] = ValueToChar[Value & 0x0F];
+        szBuffer[nSize - i] = HexaAlphabetUpper[Value & 0x0F];
         Value >>= 4;
     }
     
@@ -670,7 +670,20 @@ int OnTVKeyDown_CopyToClipboard(HWND /* hDlg */, LPNMTVKEYDOWN pNMTVKeyDown)
 }
 
 //-----------------------------------------------------------------------------
-// Virtualization for the current process
+// Token operations
+
+HANDLE OpenCurrentToken(DWORD dwDesiredAccess)
+{
+    HANDLE hToken = NULL;
+
+    // Open process or thread token
+    if(!OpenThreadToken(GetCurrentThread(), dwDesiredAccess, TRUE, &hToken))
+    {
+        if(GetLastError() == ERROR_NO_TOKEN)
+            OpenProcessToken(GetCurrentProcess(), dwDesiredAccess, &hToken);
+    }
+    return hToken;
+}
 
 BOOL GetTokenElevation(PBOOL pbElevated)
 {
@@ -1761,8 +1774,8 @@ void ObjectIDToString(PBYTE pbObjId, LPCTSTR szFileName, LPTSTR szObjectID)
     {
         BYTE OneByte = *pbObjId++;
 
-        *szObjectID++ = ValueToChar[OneByte >> 0x04];
-        *szObjectID++ = ValueToChar[OneByte & 0x0F];
+        *szObjectID++ = HexaAlphabetUpper[OneByte >> 0x04];
+        *szObjectID++ = HexaAlphabetUpper[OneByte & 0x0F];
     }
 
     *szObjectID = 0;
@@ -1846,50 +1859,6 @@ DWORD StringToFileID(
     if(dwErrCode == ERROR_SUCCESS && pLength != NULL)
         *pLength = dwLength;
     return dwErrCode;
-}
-
-PSID CreateNewSid(BYTE AceType, ULONG dwIntParam)
-{
-    PSID pSid = NULL;
-
-    switch(AceType)
-    {
-        case SYSTEM_MANDATORY_LABEL_ACE_TYPE:       // Mandatory label ACE requires S-1-16-###
-        {
-            SID_IDENTIFIER_AUTHORITY SiaLabel = SECURITY_MANDATORY_LABEL_AUTHORITY;
-            RtlAllocateAndInitializeSid(&SiaLabel, 1, dwIntParam, 0, 0, 0, 0, 0, 0, 0, &pSid);
-            break;
-        }
-
-        case SYSTEM_SCOPED_POLICY_ID_ACE_TYPE:      // System scoped policy requires S-1-17-###
-        {
-            SID_IDENTIFIER_AUTHORITY SiaLabel = SECURITY_SCOPED_POLICY_ID_AUTHORITY;
-            RtlAllocateAndInitializeSid(&SiaLabel, 1, dwIntParam, 0, 0, 0, 0, 0, 0, 0, &pSid);
-            break;
-        }
-
-        case SYSTEM_PROCESS_TRUST_LABEL_ACE_TYPE:   // System process trust label requires S-1-19-###
-        {
-            SID_IDENTIFIER_AUTHORITY SiaLabel = SECURITY_PROCESS_TRUST_AUTHORITY;
-            RtlAllocateAndInitializeSid(&SiaLabel, 1, dwIntParam, 0, 0, 0, 0, 0, 0, 0, &pSid);
-            break;
-        }
-
-        case SYSTEM_ACCESS_FILTER_ACE_TYPE:
-        {
-            SID_IDENTIFIER_AUTHORITY SiaLabel = SECURITY_PROCESS_TRUST_AUTHORITY;
-            RtlAllocateAndInitializeSid(&SiaLabel, 1, dwIntParam, 0, 0, 0, 0, 0, 0, 0, &pSid);
-            break;
-        }
-
-        default:
-        {
-            SID_IDENTIFIER_AUTHORITY SiaWorld = SECURITY_WORLD_SID_AUTHORITY;
-            RtlAllocateAndInitializeSid(&SiaWorld, 1, SECURITY_WORLD_RID, 0, 0, 0, 0, 0, 0, 0, &pSid);
-            break;
-        }
-    }
-    return pSid;
 }
 
 HMENU FindContextMenu(UINT nIDMenu)

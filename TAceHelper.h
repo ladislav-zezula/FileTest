@@ -22,16 +22,18 @@
 #define ACE_FIELD_ADS_ACCESS_MASK   0x00000010      // ACE::Mask for ADS ACEs
 #define ACE_FIELD_MANDATORY_MASK    0x00000020      // SYSTEM_MANDATORY_LABEL_ACE::Mask
 #define ACE_FIELD_FLAGS             0x00000040      // XXX_YYY_OBJECT_ACE::Flags
-#define ACE_FIELD_CTYPE             0x00000080      // COMPOUND_ACCESS_ALLOWED_ACE::CompoundAceType
-#define ACE_FIELD_CRESERVED         0x00000100      // COMPOUND_ACCESS_ALLOWED_ACE::Reserved
+#define ACE_FIELD_COMPOUND_TYPE     0x00000080      // COMPOUND_ACCESS_ALLOWED_ACE::CompoundAceType
+#define ACE_FIELD_COMPOUND_RSVD     0x00000100      // COMPOUND_ACCESS_ALLOWED_ACE::Reserved
 #define ACE_FIELD_OBJECT_TYPE1      0x00000200      // XXX_YYY_OBJECT_ACE::ObjectType
 #define ACE_FIELD_OBJECT_TYPE2      0x00000400      // XXX_YYY_OBJECT_ACE::InheritedObjectType
 #define ACE_FIELD_ACCESS_SID        0x00000800      // ACE::SidStart contains an access SID
 #define ACE_FIELD_SERVER_SID        0x00001000      // ACE::SidStart contains a server SID
 #define ACE_FIELD_CLIENT_SID        0x00002000      // ACE::SidStart contains a client SID
 #define ACE_FIELD_MANDATORY_SID     0x00004000      // ACE::SidStart contains a mandatory label SID
-#define ACE_FIELD_CSA_V1            0x00008000      // Contains the CLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1 structure
-#define ACE_FIELD_CONDITION         0x00010000      // Contains the ACE condition
+#define ACE_FIELD_POLICY_SID        0x00008000      // ACE::SidStart contains a Policy ID SID
+#define ACE_FIELD_TRUST_SID         0x00010000
+#define ACE_FIELD_CSA_V1            0x00020000      // Contains the CLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1 structure
+#define ACE_FIELD_CONDITION         0x00040000      // Contains the ACE condition
 
 // Multi flags that are always together
 #define ACE_FIELD_HEADER            (ACE_FIELD_HTYPE|ACE_FIELD_HFLAGS|ACE_FIELD_HSIZE)
@@ -47,7 +49,7 @@
 #define ACE_LAYOUT_SIMPLE     (ACE_FIELD_HEADER | ACE_FIELD_ACCESS_MASK | ACE_FIELD_ACCESS_SID)
 
 //
-#define ACE_LAYOUT_COMPOUND   (ACE_FIELD_HEADER | ACE_FIELD_ACCESS_MASK | ACE_FIELD_CTYPE | ACE_FIELD_CRESERVED | ACE_FIELD_SERVER_SID | ACE_FIELD_CLIENT_SID)
+#define ACE_LAYOUT_COMPOUND   (ACE_FIELD_HEADER | ACE_FIELD_ACCESS_MASK | ACE_FIELD_COMPOUND_TYPE | ACE_FIELD_COMPOUND_RSVD | ACE_FIELD_SERVER_SID | ACE_FIELD_CLIENT_SID)
 
 // ACE layout for {Header-AdsMask-Flags-ObjectType-InheritedObjectType-SidStart}
 #define ACE_LAYOUT_OBJECT     (ACE_FIELD_HEADER | ACE_FIELD_ADS_ACCESS_MASK | ACE_FIELD_FLAGS | ACE_FIELD_OBJECT_TYPE1 | ACE_FIELD_OBJECT_TYPE2 | ACE_FIELD_ACCESS_SID)
@@ -64,6 +66,15 @@
 // ACE layout for SYSTEM_RESOURCE_ATTRIBUTE_ACE
 #define ACE_LAYOUT_RESOURCE   (ACE_FIELD_HEADER | ACE_FIELD_ACCESS_MASK | ACE_FIELD_ACCESS_SID | ACE_FIELD_CSA_V1)
 
+// ACE layout for SYSTEM_SCOPED_POLICY_ID_ACE_TYPE
+#define ACE_LAYOUT_POLICY_ID  (ACE_FIELD_HEADER | ACE_FIELD_ACCESS_MASK | ACE_FIELD_POLICY_SID)
+
+// ACE layout for SYSTEM_PROCESS_TRUST_LABEL_ACE
+#define ACE_LAYOUT_TRUST_ID  (ACE_FIELD_HEADER | ACE_FIELD_ACCESS_MASK | ACE_FIELD_TRUST_SID)
+
+// ACE layout for SYSTEM_ACCESS_FILTER_ACE
+#define ACE_LAYOUT_TRUST_ID_CONDITION  (ACE_FIELD_HEADER | ACE_FIELD_ACCESS_MASK | ACE_FIELD_TRUST_SID | ACE_FIELD_CONDITION)
+
 //-----------------------------------------------------------------------------
 // Interface for the ACE_HELPER class
 
@@ -77,8 +88,8 @@ struct ACE_HELPER
     bool SetAceType(DWORD dwAceType);                   // Sets a new ACE type
     bool SetAce(PACE_HEADER pAceHeader);                // Stores an ACE
     PSID SetSid(PSID pSid, size_t nSidIndex);      // Stores a SID that needs to be freed
-    bool SetAttributes(LPVOID lpAttrRel, size_t cbAttrRel);
-    bool SetCondition(LPVOID lpAttrRel, size_t cbAttrRel);
+    bool SetAttributes(LPCVOID lpAttrRel, size_t cbAttrRel);
+    bool SetCondition(LPCVOID lpAttrRel, size_t cbAttrRel);
 
     PACE_HEADER Export(LPBYTE pbBuffer, size_t cbBuffer);
     PACE_HEADER AddToAcl(PACL pAcl);
@@ -88,6 +99,9 @@ struct ACE_HELPER
     LPBYTE PutAceValueBinary(LPBYTE PtrAclData, LPBYTE PtrAclEnd, LPVOID lpData, size_t cbData);
 
     LPBYTE CaptureExtraStructure(LPBYTE pbPtr, LPBYTE pbEnd, size_t * pcbMoveBy = NULL);
+
+    // Helper for creating a SID belonging to a certain ACE type
+    static PSID GetDefaultSid(DWORD dwAceType = ACCESS_ALLOWED_ACE_TYPE);
 
     // Field mask for fields that are valid
     DWORD AceLayout;                                    // See ACE_FIELD_XXX
@@ -107,7 +121,6 @@ struct ACE_HELPER
     size_t ConditionLength;                             // Length of the ACE condition
     LPBYTE AttrRel;                                     // Relative security attribute
     size_t AttrRelLength;                               // Length of the ACE condition
-    DWORD FreeFlags;                                    // Free SID flags
 };
 
 #endif  // __TACEHELPER_H__

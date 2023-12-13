@@ -415,6 +415,7 @@ typedef BOOL (WINAPI * CREATEHARDLINK)(
 
 extern TContextMenu g_ContextMenus[MAX_CONTEXT_MENUS];
 extern TToolTip g_Tooltip;
+extern LPCTSTR HexaAlphabetUpper;
 extern DWORD g_dwWinVer;
 extern DWORD g_dwWinBuild;
 extern TCHAR g_szInitialDirectory[MAX_PATH];
@@ -484,6 +485,7 @@ void TreeView_DeleteChildren(HWND hWndTree, HTREEITEM hParent);
 void TreeView_CopyToClipboard(HWND hWndTree);
 int OnTVKeyDown_CopyToClipboard(HWND hDlg, LPNMTVKEYDOWN pNMTVKeyDown);
 
+HANDLE OpenCurrentToken(DWORD dwDesiredAccess);
 BOOL GetTokenElevation(PBOOL pbElevated);
 BOOL GetTokenVirtualizationEnabled(PBOOL pbEnabled);
 BOOL SetTokenVirtualizationEnabled(BOOL bEnabled);
@@ -509,8 +511,6 @@ LPTSTR GuidValueToString(LPTSTR szBuffer, size_t cchBuffer, LPCTSTR szFormat, LP
 void FileIDToString(TFileTestData * pData, ULONGLONG FileId, LPTSTR szBuffer);
 void ObjectIDToString(PBYTE pbObjId, LPCTSTR szFileName, LPTSTR szObjectID);
 DWORD StringToFileID(LPCTSTR szFileOrObjId, LPTSTR szVolume, PVOID pvFileObjId, PDWORD pLength);
-
-PSID CreateNewSid(BYTE AceType = ACCESS_ALLOWED_ACE_TYPE, ULONG dwIntParam = 0);
 
 void SidToString(PSID pvSid, LPTSTR szString, size_t cchString, bool bAddUserName);
 

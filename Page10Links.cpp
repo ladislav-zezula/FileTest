@@ -239,7 +239,6 @@ static bool ReparseTargetIsDirectory(PREPARSE_DATA_BUFFER ReparseData)
 
 static void BinaryToString(LPBYTE pbData, ULONG cbData, LPTSTR szBuffer, size_t cchBuffer)
 {
-    LPCTSTR IntToHex = _T("0123456789abcdef");
     LPTSTR szSaveBuffer = szBuffer;
     LPTSTR szBufferEnd = szBuffer + cchBuffer;
     LPBYTE pbDataEnd = pbData + cbData;
@@ -251,8 +250,8 @@ static void BinaryToString(LPBYTE pbData, ULONG cbData, LPTSTR szBuffer, size_t 
             *szBuffer++ = _T(' ');
 
         // Printf the hexa digit
-        *szBuffer++ = IntToHex[pbData[0] >> 0x04];
-        *szBuffer++ = IntToHex[pbData[0] & 0x0F];
+        *szBuffer++ = HexaAlphabetLower[pbData[0] >> 0x04];
+        *szBuffer++ = HexaAlphabetLower[pbData[0] & 0x0F];
         pbData++;
     }
 

@@ -462,8 +462,10 @@
 #define IDS_FORMAT_VALTYPE              4123
 #define IDS_FORMAT_FLAGS                4124
 #define IDS_FORMAT_VALCOUNT             4125
+#define IDS_FORMAT_TRUST_LEVEL          4126
 #define IDS_FORMAT_VALUE                4127
 #define IDS_FORMAT_VALINDEX             4128
+#define IDS_FORMAT_POLICY_ID            4129
 #define ID_EDIT_LABEL                   40001
 #define ID_NEW_ACE_BEFORE               40008
 #define ID_NEW_ACE_AFTER                40009

@@ -24,6 +24,37 @@ ACE_CSA_OBJECT::~ACE_CSA_OBJECT()
     Clear();
 }
 
+LPBYTE ACE_CSA_OBJECT::ImportOctet(LPCVOID lpOctet, ULONG cbOctet)
+{
+    PACE_OCTET_STRING pOctetString;
+
+    // The inner buffer should be reset at this point
+    assert(lpData == NULL);
+    assert(cbData == 0);
+
+    // lpOctet must not be NULL
+    if(lpOctet == NULL || cbOctet == 0)
+    {
+        SetLastError(ERROR_INVALID_PARAMETER);
+        return NULL;
+    }
+
+    // Create the counted data structure
+    pOctetString = (PACE_OCTET_STRING)LocalAlloc(LPTR, sizeof(ULONG) + cbOctet);
+    if(pOctetString == NULL)
+    {
+        SetLastError(ERROR_NOT_ENOUGH_MEMORY);
+        return NULL;
+    }
+
+    // Fill-in the structure
+    memcpy(pOctetString->pbData, lpOctet, cbOctet);
+    pOctetString->cbData = cbOctet;
+    lpData = pOctetString;
+    cbData = OctetStringSize(pOctetString);
+    return (LPBYTE)(lpOctet) + cbOctet;
+}
+
 void ACE_CSA_OBJECT::Clear()
 {
     if(lpData != NULL)
@@ -165,32 +196,6 @@ size_t ACE_CSA_SID::ImportSize(LPBYTE pbStructure, LPBYTE pbEnd, ULONG Offset)
     return NULL;
 }
 
-LPBYTE ACE_CSA_SID::ImportObject(LPCVOID lpObject)
-{
-    LPBYTE pbStructure;
-    ULONG SidRelative[MAX_SID_LENGTH];
-    ULONG cbLength;
-    PSID pSid = (PSID)(lpObject);
-
-    if(pSid != NULL)
-    {
-        // Initialize the structure that is required for the SID in ACE attributes
-        if((cbLength = RtlLengthSid(pSid)) < MAX_SID_LENGTH)
-        {
-            // Prepare the SID prependede by length
-            memcpy(&SidRelative[1], pSid, cbLength);
-            pbStructure = (LPBYTE)(SidRelative);
-            SidRelative[0] = cbLength;
-
-            // Import the SID
-            return Import(pbStructure, pbStructure + sizeof(ULONG) + cbLength, 0);
-        }
-    }
-
-    SetLastError(ERROR_INVALID_PARAMETER);
-    return NULL;
-}
-
 //-----------------------------------------------------------------------------
 // ACE_CSA_BOOLEAN implementation
 // Windows kernel requires each BOOLEAN value to have 8 bytes
@@ -210,6 +215,25 @@ LPBYTE ACE_CSA_BOOLEAN::ImportObject(LPCVOID lpObject)
     LPBYTE pbObject = (LPBYTE)(lpObject);
 
     return Import(pbObject, pbObject + sizeof(BOOLEAN), 0);
+}
+
+//-----------------------------------------------------------------------------
+// ACE_CSA_OCTET_STRING implementation
+
+size_t ACE_CSA_OCTET_STRING::ImportSize(LPBYTE pbStructure, LPBYTE pbEnd, ULONG Offset)
+{
+    PACE_OCTET_STRING pOctetString = (PACE_OCTET_STRING)(pbStructure + Offset);
+
+    // Can the length be there at all?
+    if((pbStructure + Offset + sizeof(ULONG)) <= pbEnd)
+    {
+        // Can the whole octet string be there?
+        if((pbStructure + Offset + sizeof(ULONG) + pOctetString->cbData) <= pbEnd)
+        {
+            return OctetStringSize(pOctetString);
+        }
+    }
+    return 0;
 }
 
 //-----------------------------------------------------------------------------
@@ -291,7 +315,7 @@ DWORD ACE_CSA_HELPER::Create(LPCWSTR szName, WORD aValueType, DWORD aValueCount,
                     {
                         PSID pSid = va_arg(argList, PSID);
 
-                        pbResult = ppObjects[i].ImportObject(pSid);
+                        pbResult = ppObjects[i].ImportOctet(pSid, RtlLengthSid(pSid));
                         break;
                     }
 
@@ -300,6 +324,15 @@ DWORD ACE_CSA_HELPER::Create(LPCWSTR szName, WORD aValueType, DWORD aValueCount,
                         BOOLEAN BooleanValue = va_arg(argList, BOOLEAN);
 
                         pbResult = ppObjects[i].ImportObject(&BooleanValue);
+                        break;
+                    }
+
+                    case CLAIM_SECURITY_ATTRIBUTE_TYPE_OCTET_STRING:
+                    {
+                        LPCVOID lpOctet = va_arg(argList, LPCVOID);
+                        ULONG cbOctet = va_arg(argList, ULONG);
+
+                        pbResult = ppObjects[i].ImportOctet(lpOctet, cbOctet);
                         break;
                     }
 
@@ -481,6 +514,10 @@ DWORD ACE_CSA_HELPER::AllocateElements()
 
         case CLAIM_SECURITY_ATTRIBUTE_TYPE_BOOLEAN:
             ppObjects = new ACE_CSA_BOOLEAN[ValueCount];
+            break;
+
+        case CLAIM_SECURITY_ATTRIBUTE_TYPE_OCTET_STRING:
+            ppObjects = new ACE_CSA_OCTET_STRING[ValueCount];
             break;
 
         default:
