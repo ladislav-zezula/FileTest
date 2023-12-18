@@ -82,6 +82,7 @@
 #define WM_WORK_COMPLETE            (WM_USER + 0x1006)
 #define WM_UPDATE_VIEW              (WM_USER + 0x1007)
 #define WM_DEFER_ITEM_TEXT          (WM_USER + 0x1008)  // WPARAM = hItem, LPARAM = LPTSTR
+#define WM_DEFER_CHANGE_ACE_TYPE    (WM_USER + 0x1009)  // WPARAM = hItem, LPARAM = ACE data
 
 #define STATUS_INVALID_DATA_FORMAT  0xC1110001
 #define STATUS_CANNOT_EDIT_THIS     0xC1110002
@@ -568,7 +569,6 @@ BOOL GetSupportedDateTimeFormats(
 INT_PTR HelpAboutDialog(HWND hWndParent);
 INT_PTR HelpCommandLineDialog(HWND hWndParent);
 INT_PTR FlagsDialog(HWND hWndParent, UINT nIDTitle, TFlagInfo * pFlags, DWORD & dwBitMask);
-INT_PTR FlagsDialog(HWND hWndParent, UINT nIDTitle, TFlagInfo * pFlags, LPCTSTR szFocusText, DWORD & dwBitMask);
 INT_PTR FlagsDialog_OnControl(HWND hWndParent, UINT nIDTitle, TFlagInfo * pFlags, UINT nIDCtrl);
 
 INT_PTR EaEditorDialog(HWND hWndParent, PFILE_FULL_EA_INFORMATION * pEaInfo);

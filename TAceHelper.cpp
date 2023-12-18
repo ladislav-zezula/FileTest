@@ -13,20 +13,23 @@
 //-----------------------------------------------------------------------------
 // Local variables
 
-// SID_IDENTIFIER_AUTHORITY SiaWorld = SECURITY_NT_AUTHORITY;
-static const BYTE SidAdministrat[] = {0x01, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0x20, 0x00, 0x00, 0x00, 0x20, 0x02, 0x00, 0x00};
-
 // SID_IDENTIFIER_AUTHORITY SiaWorld = SECURITY_WORLD_SID_AUTHORITY;
-static const BYTE SidEveryone[]    = {0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00};
+const BYTE SidEveryone[0x0C]  = {0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00};
+
+// SID_IDENTIFIER_AUTHORITY SiaWorld = SECURITY_NT_AUTHORITY;
+const BYTE SidLocAdmins[0x10] = {0x01, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0x20, 0x00, 0x00, 0x00, 0x20, 0x02, 0x00, 0x00};
+
+// SID_IDENTIFIER_AUTHORITY SiaWorld = SECURITY_NT_AUTHORITY;
+const BYTE SidLocUsers[0x10] = {0x01, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0x20, 0x00, 0x00, 0x00, 0x21, 0x02, 0x00, 0x00};
 
 // SID_IDENTIFIER_AUTHORITY SiaLabel = SECURITY_MANDATORY_LABEL_AUTHORITY;
-static const BYTE SidLabelMedium[] = {0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x10, 0x00, 0x00};
+const BYTE SidLabelMedium[0x0C] = {0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x00, 0x10, 0x00, 0x00};
 
-// SID_IDENTIFIER_AUTHORITY SiaLabel = SECURITY_SCOPED_POLICY_ID_AUTHORITY;
-static const BYTE SidSystemAce17[] = {0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x11, 0x00, 0x00, 0x00, 0x00};
+// SID_IDENTIFIER_AUTHORITY SiaPolicy = SECURITY_SCOPED_POLICY_ID_AUTHORITY;
+const BYTE SidSystemAce17[0x0C] = {0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x11, 0x00, 0x00, 0x00, 0x00};
 
-// SID_IDENTIFIER_AUTHORITY SiaLabel = SECURITY_PROCESS_TRUST_AUTHORITY;
-static const BYTE SidSystemAce19[] = {0x01, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x13, 0x00, 0x02, 0x00, 0x00, 0x00, 0x10, 0x00, 0x00};
+// SID_IDENTIFIER_AUTHORITY SiaTrust = SECURITY_PROCESS_TRUST_AUTHORITY;
+const BYTE SidSystemAce19[0x10] = {0x01, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x13, 0x00, 0x02, 0x00, 0x00, 0x00, 0x10, 0x00, 0x00};
 
 // Dummy condition for various reasons
 // Obtained from "c:\Program Files\WindowsApps\Microsoft.ZuneMusic_11.2310.8.0_neutral_~_8wekyb3d8bbwe" 
@@ -44,19 +47,36 @@ static const BYTE DummyCondition[] =
 //-----------------------------------------------------------------------------
 // Constructor and destructor
 
-ACE_HELPER::ACE_HELPER(DWORD dwAceType, ACCESS_MASK AccessMask, PSID pSid)
+ACE_HELPER::ACE_HELPER(DWORD dwAceType, PSID pSid)
+{
+    // Set the object to default values
+    memset(this, 0, sizeof(ACE_HELPER));
+    Mask = INVALID_ACCESS_MASK;
+
+    // Set the ACE type
+    SetAceType(dwAceType);
+
+    // Put the main SID. If not provided, choose a default SID
+    if(pSid == NULL)
+        pSid = GetDefaultSid(dwAceType);
+    SetSid(pSid, 0);
+}
+
+ACE_HELPER::ACE_HELPER(ACE_CSA_HELPER & CsaHelper, PSID pSid)
 {
     // Set the object to default values
     memset(this, 0, sizeof(ACE_HELPER));
 
-    // Set the ACE type
-    SetAceType(dwAceType);
-    Mask = AccessMask;
+    // Set the ACE type. Prevent construction of ACE resource
+    AceType = SYSTEM_RESOURCE_ATTRIBUTE_ACE_TYPE;
+    Mask = FILE_READ_DATA;
 
-    // If the SID is not provided, choose a default SID
-    if(pSid == NULL)
-        pSid = GetDefaultSid(dwAceType);
+    // Set the default SID
+    pSid = (pSid != NULL) ? pSid : (PSID)(SidEveryone);
     SetSid(pSid, 0);
+
+    // Set the resource
+    SetResource(CsaHelper);
 }
 
 ACE_HELPER::~ACE_HELPER()
@@ -91,7 +111,7 @@ void ACE_HELPER::Reset()
     AceType = ACCESS_ALLOWED_ACE_TYPE;
     Mask    = GENERIC_ALL;
     Sid[0]  = (PSID)(SidEveryone);
-    Sid[1]  = (PSID)(SidAdministrat);
+    Sid[1]  = (PSID)(SidLocAdmins);
 }
 
 //-----------------------------------------------------------------------------
@@ -99,76 +119,95 @@ void ACE_HELPER::Reset()
 
 bool ACE_HELPER::SetAceType(DWORD dwAceType)
 {
+    // Set the ACE type
+    AceType = (BYTE)(dwAceType);
+
+    // Perform ACE-specific initialization
     switch(dwAceType)
     {
-        case ACCESS_ALLOWED_ACE_TYPE:                   // Simple ACEs:
-        case ACCESS_DENIED_ACE_TYPE:                    // {Header-Mask-SidStart}
+        case ACCESS_ALLOWED_ACE_TYPE:                       // Simple ACEs:
+        case ACCESS_DENIED_ACE_TYPE:                        // {Header-Mask-SidStart}
         case SYSTEM_AUDIT_ACE_TYPE:
         case SYSTEM_ALARM_ACE_TYPE:
+            Mask = (Mask != INVALID_ACCESS_MASK) ? Mask : GENERIC_ALL;
             AceLayout = ACE_LAYOUT_SIMPLE;
             break;
 
-        case ACCESS_ALLOWED_COMPOUND_ACE_TYPE:          // Compound ACEs:
-            AceLayout = ACE_FIELD_COMPOUND_TYPE;        // {Header-Mask-CompoundType-Reserved-ServerSid-CliendSid}
+        case ACCESS_ALLOWED_COMPOUND_ACE_TYPE:              // Compound ACEs:
+            Mask = (Mask != INVALID_ACCESS_MASK) ? Mask : GENERIC_ALL;
+            CompoundAceType |= COMPOUND_ACE_IMPERSONATION;
+            AceLayout = ACE_LAYOUT_COMPOUND;                // {Header-Mask-CompoundType-Reserved-ServerSid-CliendSid}
+            SetSid(SidEveryone, 1);
             break;
 
-        case ACCESS_ALLOWED_OBJECT_ACE_TYPE:            // Object ACEs:
-        case ACCESS_DENIED_OBJECT_ACE_TYPE:             // {Header-AdsMask-Flags-ObjectType-InheritedObjectType-SidStart-Condition}
+        case ACCESS_ALLOWED_OBJECT_ACE_TYPE:                // Object ACEs:
+        case ACCESS_DENIED_OBJECT_ACE_TYPE:                 // {Header-AdsMask-Flags-ObjectType-InheritedObjectType-SidStart-Condition}
         case SYSTEM_AUDIT_OBJECT_ACE_TYPE:
         case SYSTEM_ALARM_OBJECT_ACE_TYPE:
+            Mask = (Mask != INVALID_ACCESS_MASK) ? Mask : ADS_RIGHT_DS_READ_PROP;
             AceLayout = ACE_LAYOUT_OBJECT;
             break;
 
-        case ACCESS_ALLOWED_CALLBACK_ACE_TYPE:          // Conditional ACEs:
-        case ACCESS_DENIED_CALLBACK_ACE_TYPE:           // {Header-Mask-SidStart-Condition}
+        case ACCESS_ALLOWED_CALLBACK_ACE_TYPE:              // Conditional ACEs:
+        case ACCESS_DENIED_CALLBACK_ACE_TYPE:               // {Header-Mask-SidStart-Condition}
         case SYSTEM_AUDIT_CALLBACK_ACE_TYPE:
         case SYSTEM_ALARM_CALLBACK_ACE_TYPE:
-            SetCondition(DummyCondition, sizeof(DummyCondition));
+            Mask = (Mask != INVALID_ACCESS_MASK) ? Mask : GENERIC_ALL;
             AceLayout = ACE_LAYOUT_CONDITION;
+            SetCondition(DummyCondition, sizeof(DummyCondition));
             break;
 
-        case ACCESS_ALLOWED_CALLBACK_OBJECT_ACE_TYPE:   // Conditional object ACEs:
-        case ACCESS_DENIED_CALLBACK_OBJECT_ACE_TYPE:    // {Header-AdsMask-Flags-ObjectType-InheritedObjectType-SidStart-Condition}
+        case ACCESS_ALLOWED_CALLBACK_OBJECT_ACE_TYPE:       // Conditional object ACEs:
+        case ACCESS_DENIED_CALLBACK_OBJECT_ACE_TYPE:        // {Header-AdsMask-Flags-ObjectType-InheritedObjectType-SidStart-Condition}
         case SYSTEM_AUDIT_CALLBACK_OBJECT_ACE_TYPE:
         case SYSTEM_ALARM_CALLBACK_OBJECT_ACE_TYPE:
-            SetCondition(DummyCondition, sizeof(DummyCondition));
+            Mask = (Mask != INVALID_ACCESS_MASK) ? Mask : GENERIC_ALL;
             AceLayout = ACE_LAYOUT_OBJECT_CONDITION;
+            SetCondition(DummyCondition, sizeof(DummyCondition));
             break;
 
         case SYSTEM_MANDATORY_LABEL_ACE_TYPE:
+            Mask = (Mask != INVALID_ACCESS_MASK) ? Mask : SYSTEM_MANDATORY_LABEL_NO_WRITE_UP;
             AceLayout = ACE_LAYOUT_MANDATORY;
             break;
 
         case SYSTEM_RESOURCE_ATTRIBUTE_ACE_TYPE:
-            AceLayout = ACE_LAYOUT_RESOURCE;            // Contains the CLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1 structure
+            Mask = (Mask != INVALID_ACCESS_MASK) ? Mask : FILE_READ_DATA;
+            if(AttrRel == NULL)
+                SetDummyResource();
+            AceLayout = ACE_LAYOUT_RESOURCE;                // Contains the CLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1 structure
             break;
 
         case SYSTEM_SCOPED_POLICY_ID_ACE_TYPE:
+            Mask = (Mask != INVALID_ACCESS_MASK) ? Mask : FILE_READ_DATA;
             AceLayout = ACE_LAYOUT_POLICY_ID;
+            AceFlags |= INHERIT_ONLY_ACE;
             break;
 
         case SYSTEM_PROCESS_TRUST_LABEL_ACE_TYPE:
+            Mask = (Mask != INVALID_ACCESS_MASK) ? Mask : FILE_READ_DATA;
             AceLayout = ACE_LAYOUT_TRUST_ID;
+            AceFlags |= INHERIT_ONLY_ACE;
             break;
 
         case SYSTEM_ACCESS_FILTER_ACE_TYPE:
-            SetCondition(DummyCondition, sizeof(DummyCondition));
+            Mask = (Mask != INVALID_ACCESS_MASK) ? Mask : FILE_READ_DATA;
             AceLayout = ACE_LAYOUT_TRUST_ID_CONDITION;
+            AceFlags |= TRUST_PROTECTED_FILTER_ACE_FLAG;
+            SetCondition(DummyCondition, sizeof(DummyCondition));
             break;
 
-        default:
+        default:    // Unknown ACE type. Just assume ACE_HEADER and AccessMask
+            Mask = (Mask != INVALID_ACCESS_MASK) ? Mask : GENERIC_ALL;
             AceLayout = ACE_FIELD_HEADER | ACE_FIELD_ACCESS_MASK;
-            assert(false);
             break;
     }
-
-    // Remember the ACE type
-    AceType = (BYTE)(dwAceType);
     return true;
 }
 
 bool ACE_HELPER::SetAce(PACE_HEADER pAceHeader)
 {
+    PSID pSid;
     bool bResult;
 
     // Verify ACE type and set the ACE layout
@@ -222,23 +261,23 @@ bool ACE_HELPER::SetAce(PACE_HEADER pAceHeader)
         }
 
         // Get the pointer to (server|mandatory) SID
-        if(AceLayout & (ACE_FIELD_ACCESS_SID | ACE_FIELD_SERVER_SID | ACE_FIELD_MANDATORY_SID | ACE_FIELD_MANDATORY_MASK))
+        if(AceLayout & (ACE_FIELD_SID | ACE_FIELD_MANDATORY_SID | ACE_FIELD_MANDATORY_MASK))
         {
-            if(SetSid((PSID)(pbAcePtr), 0) != NULL)
-                pbAcePtr += GetLengthSid(Sid[0]);
+            if((pSid = SetSid(pbAcePtr, 0)) != NULL)
+                pbAcePtr += GetLengthSid(pSid);
         }
 
         // Get the pointer to (server|mandatory) SID
         if(AceLayout & ACE_FIELD_CLIENT_SID)
         {
-            if(SetSid((PSID)(pbAcePtr), 1) != NULL)
-                pbAcePtr += GetLengthSid(Sid[1]);
+            if((pSid = SetSid(pbAcePtr, 1)) != NULL)
+                pbAcePtr += GetLengthSid(pSid);
         }
 
         // Get the CLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1 and convert it to pointer-based structure
         if((AceLayout & ACE_FIELD_CSA_V1) && (pbAcePtr < pbAceEnd))
         {
-            if(SetAttributes(pbAcePtr, (pbAceEnd - pbAcePtr)))
+            if(SetResource(pbAcePtr, (pbAceEnd - pbAcePtr)))
                 pbAcePtr += AttrRelLength;
         }
 
@@ -253,8 +292,9 @@ bool ACE_HELPER::SetAce(PACE_HEADER pAceHeader)
 }
 
 // pSid could be NULL if we want just to free the existing SID[nSidIndex]
-PSID ACE_HELPER::SetSid(PSID pSid, size_t nSidIndex)
+PSID ACE_HELPER::SetSid(LPCVOID lpSid, size_t nSidIndex)
 {
+    PSID pSid = (PSID)(lpSid);
     ULONG cbSid;
 
     // Free the old SID
@@ -275,7 +315,7 @@ PSID ACE_HELPER::SetSid(PSID pSid, size_t nSidIndex)
     return Sid[nSidIndex];
 }
 
-bool ACE_HELPER::SetAttributes(LPCVOID lpAttrRel, size_t cbAttrRel)
+bool ACE_HELPER::SetResource(LPCVOID lpAttrRel, size_t cbAttrRel)
 {
     LPBYTE pbAttrRel = (LPBYTE)(lpAttrRel);
 
@@ -289,6 +329,31 @@ bool ACE_HELPER::SetCondition(LPCVOID lpCondition, size_t cbCondition)
 
     Condition = CaptureExtraStructure(pbCondition, pbCondition + cbCondition, &ConditionLength);
     return (Condition && ConditionLength);
+}
+
+bool ACE_HELPER::SetResource(ACE_CSA_HELPER & CsaHelper)
+{
+    PCLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1 pAttrRel;
+    ULONG cbAttrRel = 0;
+    bool bResult = false;
+
+    // Export the resource object
+    if((pAttrRel = CsaHelper.Export(&cbAttrRel)) != NULL)
+    {
+        bResult = SetResource(pAttrRel, cbAttrRel);
+        LocalFree(pAttrRel);
+    }
+    return bResult;
+}
+
+bool ACE_HELPER::SetDummyResource()
+{
+    ACE_CSA_HELPER CsaHelper;
+
+    // Construct the resource object
+    CsaHelper.Create(L"RESOURCE_STRINGS", CLAIM_SECURITY_ATTRIBUTE_TYPE_STRING, 4, L"Daenerys", L"Targaryen", L"Tyrion", L"Lannister");
+    CsaHelper.Flags = CLAIM_SECURITY_ATTRIBUTE_VALUE_CASE_SENSITIVE;
+    return SetResource(CsaHelper);
 }
 
 PACE_HEADER ACE_HELPER::Export(LPBYTE pbBuffer, size_t cbBuffer)
@@ -345,8 +410,8 @@ PACE_HEADER ACE_HELPER::Export(LPBYTE pbBuffer, size_t cbBuffer)
             return NULL;
     }
 
-    // Fill-in the (server, mandatory) SID
-    if(AceLayout & (ACE_FIELD_ACCESS_SID | ACE_FIELD_SERVER_SID))
+    // Fill-in the (server, mandatory, policy, trust) SID
+    if(AceLayout & ACE_FIELD_PRIMARY_SID_MASK)
     {
         if((pbPtr = PutAceValueSid(pbPtr, pbEnd, Sid[0])) == NULL)
             return NULL;
@@ -356,20 +421,6 @@ PACE_HEADER ACE_HELPER::Export(LPBYTE pbBuffer, size_t cbBuffer)
     if(AceLayout & ACE_FIELD_CLIENT_SID)
     {
         if((pbPtr = PutAceValueSid(pbPtr, pbEnd, Sid[1])) == NULL)
-            return NULL;
-    }
-
-    // Fill-in the mandatory SID
-    if(AceLayout & ACE_FIELD_MANDATORY_SID)
-    {
-        if((pbPtr = PutAceValueSid(pbPtr, pbEnd, Sid[0])) == NULL)
-            return NULL;
-    }
-
-    // Fill-in the policy ID SID
-    if(AceLayout & ACE_FIELD_POLICY_SID)
-    {
-        if((pbPtr = PutAceValueSid(pbPtr, pbEnd, Sid[0])) == NULL)
             return NULL;
     }
 
@@ -490,7 +541,7 @@ LPBYTE ACE_HELPER::CaptureExtraStructure(LPBYTE pbPtr, LPBYTE pbEnd, size_t * pc
     return pbExtraStructure;
 }
 
-PSID ACE_HELPER::GetDefaultSid(DWORD dwAceType)
+PSID ACE_HELPER::GetDefaultSid(DWORD dwAceType, DWORD dwAceFlags)
 {
     switch(dwAceType)
     {
@@ -503,8 +554,16 @@ PSID ACE_HELPER::GetDefaultSid(DWORD dwAceType)
         case SYSTEM_PROCESS_TRUST_LABEL_ACE_TYPE:   // System process trust label requires S-1-19-###
             return (PSID)(SidSystemAce19);
 
+        // When Flags don't contain TRUST_PROTECTED_FILTER_ACE_FLAG (0x40), the SID must be Everyone,
+        //   which means the system simply filters access according to the callback condition.
+        // When Flags contain TRUST_PROTECTED_FILTER_ACE_FLAG, the SID must represent a trust level
+        //   (S-1-19-x-y). In this case, the system performs access filtration according to the condition
+        //   only when the caller's trust is lower. In other words, a trust-protected Access Filter ACE
+        //   works as a Trust Label Callback ACE would.
         case SYSTEM_ACCESS_FILTER_ACE_TYPE:
-            return (PSID)(SidSystemAce19);
+            if(dwAceFlags & TRUST_PROTECTED_FILTER_ACE_FLAG)
+                return (PSID)(SidSystemAce19);
+            // Go default into SidEveryone
 
         default:
             return (PSID)(SidEveryone);

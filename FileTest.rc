@@ -153,8 +153,8 @@ IDR_ACE_MENU MENU
 BEGIN
     POPUP "_ACE_MENU_"
     BEGIN
-        MENUITEM "Insert new ACE &before",      IDC_NEW_ACE_BEFORE
-        MENUITEM "Insert new ACE &after",       IDC_NEW_ACE_AFTER
+        MENUITEM "Insert new ACE &before ...",  IDC_NEW_ACE_BEFORE
+        MENUITEM "Insert new ACE &after ...",   IDC_NEW_ACE_AFTER
         MENUITEM "Move this ACE &up",           IDC_MOVE_ACE_UP
         MENUITEM "Move this ACE &down",         IDC_MOVE_ACE_DOWN
         MENUITEM "&Set ACE type ...",           IDC_SET_ACE_TYPE
@@ -1437,7 +1437,6 @@ BEGIN
     IDS_FORMAT_ACE_MASK     "AccessMask: %s"
     IDS_FORMAT_ACE_FLAGS    "Flags: %s"
     IDS_FORMAT_ACE_CTYPE    "CompoundAceType: %s"
-    IDS_FORMAT_SSID         "ServerSid: %s"
     IDS_FORMAT_CSID         "ClientSid: %s"
 END
 

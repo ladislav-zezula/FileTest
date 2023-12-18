@@ -467,11 +467,10 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM l
 //-----------------------------------------------------------------------------
 // Public functions
 
-INT_PTR FlagsDialog(HWND hWndParent, UINT nIDTitle, TFlagInfo * pFlags, LPCTSTR szFocusText, DWORD & dwBitMask)
+INT_PTR FlagsDialog(HWND hWndParent, UINT nIDTitle, TFlagInfo * pFlags, DWORD & dwBitMask)
 {
     TFlagDialogData fdd;
     INT_PTR Result;
-    CHAR szFocusTextA[256];
 
     // Retrieve the flags
     fdd.hWndParent = hWndParent;
@@ -479,29 +478,13 @@ INT_PTR FlagsDialog(HWND hWndParent, UINT nIDTitle, TFlagInfo * pFlags, LPCTSTR 
     fdd.dwBitMask = dwBitMask;
     fdd.nIDTitle = nIDTitle;
 
-    // Also supply the focus string
-    if(szFocusText && szFocusText[0])
-    {
-        StringCchCopyX(szFocusTextA, _countof(szFocusTextA), szFocusText);
-        fdd.ccFocusText = strlen(szFocusTextA);
-        fdd.szFocusText = szFocusTextA;
-    }
-
     // Execute the dialog
     Result = DialogBoxParam(g_hInst, MAKEINTRESOURCE(IDD_FLAGS_DIALOG), hWndParent, DialogProc, (LPARAM)&fdd);
 
     // Only change the value on success
     if(Result == IDOK)
-    {
         dwBitMask = fdd.dwBitMask;
-    }
-
     return Result;
-}
-
-INT_PTR FlagsDialog(HWND hWndParent, UINT nIDTitle, TFlagInfo * pFlags, DWORD & dwBitMask)
-{
-    return FlagsDialog(hWndParent, nIDTitle, pFlags, NULL, dwBitMask);
 }
 
 INT_PTR FlagsDialog_OnControl(HWND hWndParent, UINT nIDTitle, TFlagInfo * pFlags, UINT nIDCtrl)

@@ -254,7 +254,7 @@ typedef struct _COMPOUND_ACCESS_ALLOWED_ACE
     USHORT CompoundAceType;     // Always COMPOUND_ACE_IMPERSONATION
     USHORT Reserved;
     ULONG SidStart;             // Server SID
-    //                              // Client SID
+//                              // Client SID
 } COMPOUND_ACCESS_ALLOWED_ACE, * PCOMPOUND_ACCESS_ALLOWED_ACE;
 #endif
 
@@ -406,7 +406,11 @@ typedef struct _SYSTEM_MANDATORY_LABEL_ACE
 
 //-----------------------------------------------------------------------------
 // SYSTEM_RESOURCE_ATTRIBUTE_ACE (not included in older SDKs)
-// Can be found on %USERPROFILE%\Downloads
+//
+// * Can be accessed with SecurityInformation = ATTRIBUTE_SECURITY_INFORMATION
+// * Presence checked by nt!SepSDContainsAttributeACE
+// * Can be found on %USERPROFILE%\Downloads
+//
 
 #ifndef SYSTEM_RESOURCE_ATTRIBUTE_ACE_TYPE
 #define SYSTEM_RESOURCE_ATTRIBUTE_ACE_TYPE      (0x12)
@@ -422,6 +426,12 @@ typedef struct _SYSTEM_RESOURCE_ATTRIBUTE_ACE
 
 //-----------------------------------------------------------------------------
 // SYSTEM_SCOPED_POLICY_ID_ACE (not included in older SDKs)
+//
+// * Can be accessed with SecurityInformation = SCOPE_SECURITY_INFORMATION
+// * ACE_HEADER::AceFlags must have INHERIT_ONLY_ACE set (tested by SepGetScopedPolicySid)
+// * SID must contain SECURITY_SCOPED_POLICY_ID_AUTHORITY
+// * Used by nt!SepGetScopedPolicySid
+//
 
 #ifndef SYSTEM_SCOPED_POLICY_ID_ACE_TYPE
 #define SYSTEM_SCOPED_POLICY_ID_ACE_TYPE        (0x13)
@@ -438,11 +448,16 @@ typedef struct _SYSTEM_SCOPED_POLICY_ID_ACE
 
 //-----------------------------------------------------------------------------
 // SYSTEM_PROCESS_TRUST_LABEL_ACE (not included in older SDKs)
-// Can be found on C:\Program Files\WindowsApps\<any subfolder>
-// SYSTEM_PROCESS_TRUST_LABEL_ACE::Mask must have upper 8 bits zeroed
-// Setting the trust label can only be done if
-// * The thread token contains trust level SID and dominates the process token's SID 
-// contains 
+//
+// * Can be accessed with SecurityInformation = PROCESS_TRUST_LABEL_SECURITY_INFORMATION
+// * ACE_HEADER::AceFlags must have INHERIT_ONLY_ACE set (tested by SepGetProcessTrustLabelAce)
+// * The sid must be of SECURITY_PROCESS_TRUST_AUTHORITY and specifies
+//   required process protection level. Caller's with lower level will be limited
+//   to the subsets of rights specified in the ACE.
+// * SYSTEM_PROCESS_TRUST_LABEL_ACE::Mask must have upper 8 bits zeroed (tested by RtlpSetSecurityObject)
+// * Can be set only if the current token has a trust level SID. If not, nt!RtlpSetSecurityObject returns STATUS_ACCESS_DENIED 
+// * Can be found on C:\Program Files\WindowsApps\<any subfolder>
+//
 
 #ifndef SYSTEM_PROCESS_TRUST_LABEL_ACE_TYPE
 #define SYSTEM_PROCESS_TRUST_LABEL_ACE_TYPE     (0x14)
@@ -458,9 +473,21 @@ typedef struct _SYSTEM_PROCESS_TRUST_LABEL_ACE
 
 //-----------------------------------------------------------------------------
 // SYSTEM_ACCESS_FILTER_ACE (not included in older SDKs)
+//
+// * Can be accessed with SecurityInformation = ACCESS_FILTER_SECURITY_INFORMATION
+// * Upper 8 bits of SYSTEM_ACCESS_FILTER_ACE::Mask must be zero
+// * If TRUST_PROTECTED_FILTER_ACE_FLAG in ACE_HEADER::AceFlags is NOT set, the SID must be Everyone, which means the system simply filters access according to the callback condition. 
+// * If TRUST_PROTECTED_FILTER_ACE_FLAG in ACE_HEADER::AceFlags is set, the SID must represent a trust level (S-1-19-x-y).
+//   In this case, the system performs access filtration according to the condition only when the caller's trust is lower. 
+//   In other words, a trust-protected Access Filter ACE works as a Trust Label Callback ACE would
+// * Can be set only if the current token has a trust level SID. If not, nt!RtlpSetSecurityObject returns STATUS_ACCESS_DENIED 
+// * Verified by nt!RtlpValidFilterAclSubjectContext(PACL pAcl, ULONG AceIndex)
+// * SID verified by nt!RtlpValidTrustSubjectContext
 
 #ifndef SYSTEM_ACCESS_FILTER_ACE_TYPE
 #define SYSTEM_ACCESS_FILTER_ACE_TYPE           (0x15)
+
+#define TRUST_PROTECTED_FILTER_ACE_FLAG  (0x40)
 
 typedef struct _SYSTEM_ACCESS_FILTER_ACE
 {

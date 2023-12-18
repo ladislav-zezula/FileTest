@@ -446,7 +446,6 @@
 #define IDS_FORMAT_ACE_MASK             4107
 #define IDS_FORMAT_ACE_FLAGS            4108
 #define IDS_FORMAT_ACE_CTYPE            4109
-#define IDS_FORMAT_SSID                 4110
 #define IDS_FORMAT_CSID                 4111
 #define IDS_FORMAT_OBJ_TYPE             4112
 #define IDS_FORMAT_OBJ_TYPEI            4113

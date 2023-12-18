@@ -66,13 +66,13 @@ typedef struct _TREE_ITEM_INFO
     TFlagInfo * pFlagInfos;
 
     // Converts the binary item to string representation that will be shown in the tree view item
-    bool (*ToString) (_TREE_ITEM_INFO * pItemInfo, LPTSTR szBuffer, size_t ccBuffer, LPBYTE pbPtr, LPBYTE pbEnd, PULONG pcbMoveBy);
+    NTSTATUS (*ToString) (_TREE_ITEM_INFO * pItemInfo, LPTSTR szBuffer, size_t ccBuffer, LPBYTE pbPtr, LPBYTE pbEnd, PULONG pcbMoveBy);
 
     // Converts the string representation to binary item
-    bool (*StringTo) (_TREE_ITEM_INFO * pItemInfo, LPCTSTR szString, LPBYTE pbPtr, LPBYTE pbEnd, PULONG pcbMoveBy);
+    NTSTATUS(*StringTo) (_TREE_ITEM_INFO * pItemInfo, LPCTSTR szString, LPBYTE pbPtr, LPBYTE pbEnd, PULONG pcbMoveBy);
 
     // Creates a new item of that type
-    bool (*CreateNew)(_TREE_ITEM_INFO * pItemInfo, LPBYTE pbDataBuffer, size_t * pcbDataBuffer);
+    NTSTATUS(*CreateNew)(_TREE_ITEM_INFO * pItemInfo, LPBYTE pbDataBuffer, size_t * pcbDataBuffer);
     
     // Type of the item data
     PVOID ItemData;
@@ -252,6 +252,39 @@ static TFlagInfo IntgrLevels[] =
     FLAGINFO_NUMV(SECURITY_MANDATORY_HIGH_RID),
     FLAGINFO_NUMV(SECURITY_MANDATORY_SYSTEM_RID),
     FLAGINFO_NUMV(SECURITY_MANDATORY_PROTECTED_PROCESS_RID),
+    FLAGINFO_END()
+};
+
+// Process trust types
+// Source: https://github.com/googleprojectzero/sandbox-attacksurface-analysis-tools/NtApiDotNet/NtSemaphore.cs
+#define TT_None             0
+#define TT_ProtectedLight   512
+#define TT_Protected        1024
+
+static TFlagInfo PsTrustTypes[] =
+{
+    FLAGINFO_NUMV(TT_None),
+    FLAGINFO_NUMV(TT_ProtectedLight),
+    FLAGINFO_NUMV(TT_Protected),
+    FLAGINFO_END()
+};
+
+// Process trust levels
+#define TL_None             0
+#define TL_Authenticode     1024
+#define TL_AntiMalware      1536
+#define TL_App              2048
+#define TL_Windows          4096
+#define TL_WinTcb           8192
+
+static TFlagInfo PsTrustLevels[] =
+{
+    FLAGINFO_NUMV(TL_None),
+    FLAGINFO_NUMV(TL_Authenticode),
+    FLAGINFO_NUMV(TL_AntiMalware),
+    FLAGINFO_NUMV(TL_App),
+    FLAGINFO_NUMV(TL_Windows),
+    FLAGINFO_NUMV(TL_WinTcb),
     FLAGINFO_END()
 };
 
@@ -441,6 +474,11 @@ static LPBYTE GetSidProcessTrustLevel(PSID pSid)
 //-----------------------------------------------------------------------------
 // Local functions - tree items
 
+static DWORD GetDefaultAceTypeForAcl(PCTREE_ITEM_INFO pItemInfo)
+{
+    return (pItemInfo->ItemType == ItemTypeSacl) ? SYSTEM_MANDATORY_LABEL_ACE_TYPE : ACCESS_ALLOWED_ACE_TYPE;
+}
+
 static int GetDefaultCharLimit(PCTREE_ITEM_INFO pItemInfo)
 {
     if(pItemInfo->ItemType == ItemTypeUint08)
@@ -454,19 +492,18 @@ static int GetDefaultCharLimit(PCTREE_ITEM_INFO pItemInfo)
     return 256;
 }
 
-static bool CopyDataAway(LPBYTE pbPtr, LPBYTE pbEnd, LPCVOID lpData, ULONG cbData, PULONG pcbMoveBy = NULL)
+static NTSTATUS CopyDataAway(LPBYTE pbPtr, LPBYTE pbEnd, LPCVOID lpData, ULONG cbData, PULONG pcbMoveBy = NULL)
 {
-    if((ULONG)(pbEnd - pbPtr) >= cbData)
-    {
-        // Copy the SID
-        memcpy(pbPtr, lpData, cbData);
+    if(cbData > (ULONG)(pbEnd - pbPtr))
+        return STATUS_BUFFER_OVERFLOW;
 
-        // Give the SID length
-        if(pcbMoveBy != NULL)
-            pcbMoveBy[0] = cbData;
-        return true;
-    }
-    return false;
+    // Copy the data to the target buffer
+    memcpy(pbPtr, lpData, cbData);
+
+    // Give the length of the data
+    if(pcbMoveBy != NULL)
+        pcbMoveBy[0] = cbData;
+    return STATUS_SUCCESS;
 }
 
 static void UpdateAceVariables(PACE_HEADER pAceHeader, LPBYTE pbPtr)
@@ -478,8 +515,13 @@ static void UpdateAceVariables(PACE_HEADER pAceHeader, LPBYTE pbPtr)
 
     if(AceHelper.SetAceType(pAceHeader->AceType))
     {
+        // If the ACE is of ACCESS_ALLOWED_COMPOUND_ACE_TYPE,
+        // the ACL revision must be 3 or higher
+        if(pAceHeader->AceType == ACCESS_ALLOWED_COMPOUND_ACE_TYPE)
+            ACL_AclRevision = ACL_REVISION3;
+
         // If the ACE is one of the object ACEs, raise the ACL revision
-        if(pAceHeader->AceType >= ACCESS_ALLOWED_OBJECT_ACE_TYPE)
+        if(AceHelper.AceLayout & ACE_FIELD_OBJECT_TYPE1)
             ACL_AclRevision = ACL_REVISION_DS;
 
         // Update the length of the ACE
@@ -556,7 +598,7 @@ static void TV_MakeItemText(
         if(pItemInfo->ToString != NULL)
         {
             // Format the numeric or whatever value
-            if(pItemInfo->ToString(pItemInfo, szDataText, _countof(szDataText), pbPtr, pbEnd, &cbMoveBy))
+            if(NT_SUCCESS(pItemInfo->ToString(pItemInfo, szDataText, _countof(szDataText), pbPtr, pbEnd, &cbMoveBy)))
             {
                 nIDFormat = pItemInfo->nIDFormat2;
                 bApplyIndex = true;
@@ -578,29 +620,29 @@ static void TV_MakeItemText(
 //-----------------------------------------------------------------------------
 // Conversion of String <-> Binary Data: BOOL
 
-static bool ToString_Bool(PTREE_ITEM_INFO /* pItemInfo */, LPTSTR szBuffer, size_t ccBuffer, LPBYTE pbPtr, LPBYTE pbEnd, PULONG pcbMoveBy = NULL)
+static NTSTATUS ToString_Bool(PTREE_ITEM_INFO /* pItemInfo */, LPTSTR szBuffer, size_t ccBuffer, LPBYTE pbPtr, LPBYTE pbEnd, PULONG pcbMoveBy = NULL)
 {
     if(pbPtr >= pbEnd)
-        return false;
+        return STATUS_BUFFER_OVERFLOW;
 
     if(pcbMoveBy != NULL)
         pcbMoveBy[0] = sizeof(BYTE);
     StringCchCopy(szBuffer, ccBuffer, pbPtr[0] ? _T("TRUE") : _T("FALSE"));
-    return true;
+    return STATUS_SUCCESS;
 }
 
 //-----------------------------------------------------------------------------
 // Conversion of String <-> Binary Data: Hex
 
-static bool ToString_Hex(PTREE_ITEM_INFO pItemInfo, LPTSTR szBuffer, size_t ccBuffer, LPBYTE pbPtr, LPBYTE pbEnd, PULONG pcbMoveBy = NULL)
+static NTSTATUS ToString_Hex(PTREE_ITEM_INFO pItemInfo, LPTSTR szBuffer, size_t ccBuffer, LPBYTE pbPtr, LPBYTE pbEnd, PULONG pcbMoveBy = NULL)
 {
     ULONG64 dwIntValue = 0;
     ULONG cbMoveBy = 0;
 
-#define FORMAT_VALUE_INTEGER(format, type)                               \
-    if((pbPtr + sizeof(type)) > pbEnd) { return false; }                 \
-    dwIntValue = *(type *)(pbPtr);                                       \
-    StringCchPrintf(szBuffer, ccBuffer, _T(format), (type)(dwIntValue)); \
+#define FORMAT_VALUE_INTEGER(format, type)                                \
+    if((pbPtr + sizeof(type)) > pbEnd) { return STATUS_BUFFER_OVERFLOW; } \
+    dwIntValue = *(type *)(pbPtr);                                        \
+    StringCchPrintf(szBuffer, ccBuffer, _T(format), (type)(dwIntValue));  \
     cbMoveBy = sizeof(type);
 
     // Determine the integer size
@@ -624,7 +666,7 @@ static bool ToString_Hex(PTREE_ITEM_INFO pItemInfo, LPTSTR szBuffer, size_t ccBu
 
         default:
             assert(false);
-            return false;
+            return STATUS_BAD_DATA;
     }
 
     // If the value has flags, we add the flags suffix
@@ -643,11 +685,12 @@ static bool ToString_Hex(PTREE_ITEM_INFO pItemInfo, LPTSTR szBuffer, size_t ccBu
     // Give the move by
     if(pcbMoveBy != NULL)
         pcbMoveBy[0] = cbMoveBy;
-    return (cbMoveBy != 0);
+    return (cbMoveBy != 0) ? STATUS_SUCCESS : STATUS_UNSUCCESSFUL;
 }
 
-static bool StringTo_Hex(PTREE_ITEM_INFO pItemInfo, LPCTSTR szString, LPBYTE pbPtr, LPBYTE pbEnd, PULONG pcbMoveBy = NULL)
+static NTSTATUS StringTo_Hex(PTREE_ITEM_INFO pItemInfo, LPCTSTR szString, LPBYTE pbPtr, LPBYTE pbEnd, PULONG pcbMoveBy = NULL)
 {
+    NTSTATUS Status = STATUS_BUFFER_OVERFLOW;
     ULONG dwIntValue = 0;
     ULONG cbMoveBy = 0;
 
@@ -658,6 +701,7 @@ static bool StringTo_Hex(PTREE_ITEM_INFO pItemInfo, LPCTSTR szString, LPBYTE pbP
         {                                                       \
             *(type *)(pbPtr) = (type)(dwIntValue);              \
             cbMoveBy = sizeof(type);                            \
+            Status = STATUS_SUCCESS;                            \
         }                                                       \
     }
 
@@ -684,20 +728,19 @@ static bool StringTo_Hex(PTREE_ITEM_INFO pItemInfo, LPCTSTR szString, LPBYTE pbP
     // Give the pcbMoveBy
     if(pcbMoveBy != NULL)
         pcbMoveBy[0] = cbMoveBy;
-    return (cbMoveBy != 0);
+    return Status;
 }
 
 static bool ToString_TrustLevel(PTREE_ITEM_INFO /* pItemInfo */, LPTSTR szBuffer, size_t ccBuffer, LPBYTE pbPtr, LPBYTE pbEnd, PULONG pcbMoveBy = NULL)
 {
-    DWORD dwTrustLevel1;
-    DWORD dwTrustLevel2;
+    LPTSTR szBufferEnd = szBuffer + ccBuffer - 1;
     ULONG cbMoveBy = 0;
 
     if((pbPtr + sizeof(DWORD64)) <= pbEnd)
     {
-        dwTrustLevel1 = *(LPDWORD)(pbPtr + 0);
-        dwTrustLevel2 = *(LPDWORD)(pbPtr + 4);
-        StringCchPrintf(szBuffer, ccBuffer, _T("%08x-%08x"), dwTrustLevel1, dwTrustLevel2);
+        szBuffer = FlagsToString(PsTrustTypes, szBuffer, (szBufferEnd - szBuffer), *(LPDWORD)(pbPtr + 0));
+        StringCchCatEx(szBuffer, (szBufferEnd - szBuffer), _T(" / "), &szBuffer, NULL, 0);
+        szBuffer = FlagsToString(PsTrustLevels, szBuffer, (szBufferEnd - szBuffer), *(LPDWORD)(pbPtr + 4));
         cbMoveBy = sizeof(DWORD64);
     }
 
@@ -710,20 +753,20 @@ static bool ToString_TrustLevel(PTREE_ITEM_INFO /* pItemInfo */, LPTSTR szBuffer
 //-----------------------------------------------------------------------------
 // Conversion of LPWSTR to string
 
-static bool ToString_STR(PTREE_ITEM_INFO /* pItemInfo */, LPTSTR szBuffer, size_t ccBuffer, LPBYTE pbPtr, LPBYTE /* pbEnd */, PULONG pcbMoveBy = NULL)
+static NTSTATUS ToString_STR(PTREE_ITEM_INFO /* pItemInfo */, LPTSTR szBuffer, size_t ccBuffer, LPBYTE pbPtr, LPBYTE /* pbEnd */, PULONG pcbMoveBy = NULL)
 {
     LPWSTR szString = (LPWSTR)(pbPtr);
 
     if(pcbMoveBy != NULL)
         pcbMoveBy[0] = (ULONG)((wcslen(szString) + 1) * sizeof(WCHAR));
     StringCchPrintf(szBuffer, ccBuffer, _T("\"%s\""), szString);
-    return true;
+    return STATUS_SUCCESS;
 }
 
 //-----------------------------------------------------------------------------
 // Conversion of OCTET_STRING to string
 
-static bool ToString_Octs(PTREE_ITEM_INFO /* pItemInfo */, LPTSTR szBuffer, size_t ccBuffer, LPBYTE pbPtr, LPBYTE pbEnd, PULONG pcbMoveBy = NULL)
+static NTSTATUS ToString_Octs(PTREE_ITEM_INFO /* pItemInfo */, LPTSTR szBuffer, size_t ccBuffer, LPBYTE pbPtr, LPBYTE pbEnd, PULONG pcbMoveBy = NULL)
 {
     PACE_OCTET_STRING pOctetString = (PACE_OCTET_STRING)(pbPtr);
     LPTSTR szBufferEnd;
@@ -753,10 +796,10 @@ static bool ToString_Octs(PTREE_ITEM_INFO /* pItemInfo */, LPTSTR szBuffer, size
             // Give the result to the caller
             if(pcbMoveBy != NULL)
                 pcbMoveBy[0] = OctetStringSize(pOctetString);
-            return true;
+            return STATUS_SUCCESS;
         }
     }
-    return false;
+    return STATUS_BUFFER_OVERFLOW;
 }
 
 //-----------------------------------------------------------------------------
@@ -766,43 +809,51 @@ static TREE_ITEM_INFO ItemType_IntLevel = {ItemTypeUint32,  0, IDS_FORMAT_INT_LE
 static TREE_ITEM_INFO ItemType_PolicyId = {ItemTypeUint32,  0, IDS_FORMAT_POLICY_ID};
 static TREE_ITEM_INFO ItemType_TrustLev = {ItemTypeUint32,  0, IDS_FORMAT_TRUST_LEVEL};
 
-static bool ToString_Sid(PTREE_ITEM_INFO /* pItemInfo */, LPTSTR szBuffer, size_t ccBuffer, LPBYTE pbPtr, LPBYTE pbEnd, PULONG pcbMoveBy = NULL)
+static NTSTATUS ToString_Sid(PTREE_ITEM_INFO /* pItemInfo */, LPTSTR szBuffer, size_t ccBuffer, LPBYTE pbPtr, LPBYTE pbEnd, PULONG pcbMoveBy = NULL)
 {
-    LPBYTE pbIntValue;
+    NTSTATUS Status = STATUS_SUCCESS;
     ULONG cbMoveBy = 0;
 
     // If there is a SID, format it to the buffer
-    if(pbPtr && pbEnd > pbPtr)
+    if(pbPtr != NULL)
     {
-        PSID_IDENTIFIER_AUTHORITY pSia;
-        PSID pSid = (PSID)(pbPtr);
+        if((pbPtr + 8) <= pbEnd)
+        {
+            PSID_IDENTIFIER_AUTHORITY pSia;
+            LPBYTE pbIntValue;
+            PSID pSid = (PSID)(pbPtr);
 
-        // Determine the SID type by the authority
-        pSia = GetSidIdentifierAuthority(pSid);
+            // Determine the SID type by the authority
+            pSia = GetSidIdentifierAuthority(pSid);
 
-        // Is it a mandatory label?
-        if(!memcmp(pSia, &SiaLabel, sizeof(SID_IDENTIFIER_AUTHORITY)))
-        {
-            if((pbIntValue = GetSidIntegrityLevel(pSid)) != NULL)
-                ToString_Hex(&ItemType_IntLevel, szBuffer, ccBuffer, pbIntValue, pbIntValue + sizeof(DWORD));
-            cbMoveBy = RtlLengthSid(pSid);
-        }
-        else if(!memcmp(pSia, &SiaPolicy, sizeof(SID_IDENTIFIER_AUTHORITY)))
-        {
-            if((pbIntValue = GetSidScopedPolicyId(pSid)) != NULL)
-                ToString_Hex(&ItemType_PolicyId, szBuffer, ccBuffer, pbIntValue, pbIntValue + sizeof(DWORD));
-            cbMoveBy = RtlLengthSid(pSid);
-        }
-        else if(!memcmp(pSia, &SiaTrust, sizeof(SID_IDENTIFIER_AUTHORITY)))
-        {
-            if((pbIntValue = GetSidProcessTrustLevel(pSid)) != NULL)
-                ToString_TrustLevel(&ItemType_TrustLev, szBuffer, ccBuffer, pbIntValue, pbIntValue + sizeof(ULONG64));
-            cbMoveBy = RtlLengthSid(pSid);
+            // Is it a mandatory label?
+            if(!memcmp(pSia, &SiaLabel, sizeof(SID_IDENTIFIER_AUTHORITY)))
+            {
+                if((pbIntValue = GetSidIntegrityLevel(pSid)) != NULL)
+                    ToString_Hex(&ItemType_IntLevel, szBuffer, ccBuffer, pbIntValue, pbIntValue + sizeof(DWORD));
+                cbMoveBy = RtlLengthSid(pSid);
+            }
+            else if(!memcmp(pSia, &SiaPolicy, sizeof(SID_IDENTIFIER_AUTHORITY)))
+            {
+                if((pbIntValue = GetSidScopedPolicyId(pSid)) != NULL)
+                    ToString_Hex(&ItemType_PolicyId, szBuffer, ccBuffer, pbIntValue, pbIntValue + sizeof(DWORD));
+                cbMoveBy = RtlLengthSid(pSid);
+            }
+            else if(!memcmp(pSia, &SiaTrust, sizeof(SID_IDENTIFIER_AUTHORITY)))
+            {
+                if((pbIntValue = GetSidProcessTrustLevel(pSid)) != NULL)
+                    ToString_TrustLevel(&ItemType_TrustLev, szBuffer, ccBuffer, pbIntValue, pbIntValue + sizeof(ULONG64));
+                cbMoveBy = RtlLengthSid(pSid);
+            }
+            else
+            {
+                SidToString(pSid, szBuffer, ccBuffer, true);
+                cbMoveBy = RtlLengthSid(pSid);
+            }
         }
         else
         {
-            SidToString(pSid, szBuffer, ccBuffer, true);
-            cbMoveBy = RtlLengthSid(pSid);
+            Status = STATUS_INVALID_PARAMETER;
         }
     }
     else
@@ -813,13 +864,13 @@ static bool ToString_Sid(PTREE_ITEM_INFO /* pItemInfo */, LPTSTR szBuffer, size_
     // Give the length to move
     if(pcbMoveBy != NULL)
         pcbMoveBy[0] = cbMoveBy;
-    return TRUE;
+    return Status;
 }
 
-static bool ToString_Sidn(PTREE_ITEM_INFO pItemInfo, LPTSTR szBuffer, size_t ccBuffer, LPBYTE pbPtr, LPBYTE pbEnd, PULONG pcbMoveBy = NULL)
+static NTSTATUS ToString_Sidn(PTREE_ITEM_INFO pItemInfo, LPTSTR szBuffer, size_t ccBuffer, LPBYTE pbPtr, LPBYTE pbEnd, PULONG pcbMoveBy = NULL)
 {
+    NTSTATUS Status = STATUS_BUFFER_OVERFLOW;
     ULONG cbLength = 0;
-    bool bResult = false;
 
     // Enough data to cover 32-bit int?
     if((pbPtr + sizeof(ULONG)) <= pbEnd)
@@ -831,37 +882,36 @@ static bool ToString_Sidn(PTREE_ITEM_INFO pItemInfo, LPTSTR szBuffer, size_t ccB
         // Give the result to the caller
         if(pcbMoveBy != NULL)
             pcbMoveBy[0] = sizeof(ULONG) + cbLength;
-        bResult = ToString_Sid(pItemInfo, szBuffer, ccBuffer, pbPtr, pbPtr + cbLength);
+        Status = ToString_Sid(pItemInfo, szBuffer, ccBuffer, pbPtr, pbPtr + cbLength);
 
     }
-    return bResult;
+    return Status;
 }
 
-static bool StringTo_Sid(PTREE_ITEM_INFO pItemInfo, LPCTSTR szText, LPBYTE pbPtr, LPBYTE pbEnd, PULONG pcbMoveBy = NULL)
+static NTSTATUS StringTo_Sid(PTREE_ITEM_INFO pItemInfo, LPCTSTR szText, LPBYTE pbPtr, LPBYTE pbEnd, PULONG pcbMoveBy = NULL)
 {
     SID_NAME_USE SidNameUse;
+    NTSTATUS Status = STATUS_INVALID_PARAMETER;
     TCHAR szDomainName[256];
     DWORD ccDomainName = _countof(szDomainName);
     DWORD cbSid = (ULONG)(pbEnd - pbPtr);
     PSID pSid = NULL;
-    bool bResult = false;
 
     // Mandatory SIDs have just integrity level
     if(pItemInfo->ItemType == ItemTypeSid11)
     {
         DWORD dwIntLevel = SECURITY_MANDATORY_MEDIUM_RID;
 
-        if(StringTo_Hex(&ItemType_IntLevel, szText, (LPBYTE)(&dwIntLevel), (LPBYTE)(&dwIntLevel) + sizeof(ULONG)))
+        Status = StringTo_Hex(&ItemType_IntLevel, szText, (LPBYTE)(&dwIntLevel), (LPBYTE)(&dwIntLevel) + sizeof(ULONG));
+        if(NT_SUCCESS(Status))
         {
-            if((pSid = ACE_HELPER::GetDefaultSid(SYSTEM_MANDATORY_LABEL_ACE_TYPE)) != NULL)
+            // Copy the default SID to the buffer
+            if((Status = CopyDataAway(pbPtr, pbEnd, SidLabelMedium, sizeof(SidLabelMedium), pcbMoveBy)) == STATUS_SUCCESS)
             {
-                if((bResult = CopyDataAway(pbPtr, pbEnd, pSid, cbSid, pcbMoveBy)) != ERROR_SUCCESS)
-                {
-                    SetSidIntegrityLevel((PSID)(pbPtr), dwIntLevel);
-                }
+                SetSidIntegrityLevel((PSID)(pbPtr), dwIntLevel);
             }
         }
-        return bResult;
+        return Status;
     }
 
     // SIDs entered in the raw format: "S-1-"
@@ -873,9 +923,9 @@ static bool StringTo_Sid(PTREE_ITEM_INFO pItemInfo, LPCTSTR szText, LPBYTE pbPtr
             {
                 if((ULONG)(pbEnd - pbPtr) >= cbSid)
                 {
-                    bResult = CopyDataAway(pbPtr, pbEnd, pSid, cbSid, pcbMoveBy);
+                    Status = CopyDataAway(pbPtr, pbEnd, pSid, cbSid, pcbMoveBy);
                     LocalFree(pSid);
-                    return bResult;
+                    return Status;
                 }
             }
         }
@@ -886,30 +936,27 @@ static bool StringTo_Sid(PTREE_ITEM_INFO pItemInfo, LPCTSTR szText, LPBYTE pbPtr
     {
         if(pcbMoveBy != NULL)
             pcbMoveBy[0] = cbSid;
-        return true;
+        Status = STATUS_SUCCESS;
     }
-    return false;
+    return Status;
 }
 
-static bool CreateNew_Sid(PTREE_ITEM_INFO /* pItemInfo */, LPBYTE pbDataBuffer, size_t * pcbDataBuffer)
+static NTSTATUS CreateNew_Sid(PTREE_ITEM_INFO /* pItemInfo */, LPBYTE pbDataBuffer, size_t * pcbDataBuffer)
 {
     PSID pSid;
     size_t cbDataBuffer = pcbDataBuffer[0];
-    bool bResult = false;
+    NTSTATUS Status = STATUS_UNSUCCESSFUL;
 
     // Create new SID
     if((pSid = ACE_HELPER::GetDefaultSid()) != NULL)
     {
-        ULONG SidLength = RtlLengthSid(pSid);
+        ULONG cbSid = RtlLengthSid(pSid);
 
-        if(SidLength <= cbDataBuffer)
-        {
-            memcpy(pbDataBuffer, pSid, SidLength);
-            pcbDataBuffer[0] = SidLength;
-            bResult = true;
-        }
+        if(pcbDataBuffer != NULL)
+            pcbDataBuffer[0] = cbSid;
+        Status = CopyDataAway(pbDataBuffer, pbDataBuffer + cbDataBuffer, pSid, cbSid);
     }
-    return bResult;
+    return Status;
 }
 
 //-----------------------------------------------------------------------------
@@ -918,11 +965,11 @@ static bool CreateNew_Sid(PTREE_ITEM_INFO /* pItemInfo */, LPBYTE pbDataBuffer, 
 // Get GUID from object-based ACEs, like ACCESS_ALLOWED_OBJECT_ACE
 // * ACCESS_ALLOWED_OBJECT_ACE::ObjectType is only present if ACE_OBJECT_TYPE_PRESENT
 // * ACCESS_ALLOWED_OBJECT_ACE::InheritedObjectType is only present if ACE_INHERITED_OBJECT_TYPE_PRESENT
-static bool ToString_Guid(PTREE_ITEM_INFO pItemInfo, LPTSTR szBuffer, size_t ccBuffer, LPBYTE pbPtr, LPBYTE pbEnd, PULONG pcbMoveBy = NULL)
+static NTSTATUS ToString_Guid(PTREE_ITEM_INFO pItemInfo, LPTSTR szBuffer, size_t ccBuffer, LPBYTE pbPtr, LPBYTE pbEnd, PULONG pcbMoveBy = NULL)
 {
+    NTSTATUS Status = STATUS_BUFFER_OVERFLOW;
     ULONG FlagToTest = (pItemInfo->ItemType == ItemTypeGuid2) ? ACE_INHERITED_OBJECT_TYPE_PRESENT : ACE_OBJECT_TYPE_PRESENT;
     ULONG cbMoveBy = 0;
-    bool bResult = false;
 
     // Only present if the 
     if(ACE_ObjAceFlags & FlagToTest)
@@ -931,22 +978,23 @@ static bool ToString_Guid(PTREE_ITEM_INFO pItemInfo, LPTSTR szBuffer, size_t ccB
         {
             GuidToString((LPGUID)(pbPtr), szBuffer, ccBuffer);
             cbMoveBy = sizeof(GUID);
-            bResult = true;
+            Status = STATUS_SUCCESS;
         }
     }
     else
     {
         LoadString(g_hInst, IDS_NOT_PRESENT, szBuffer, (int)(ccBuffer));
-        bResult = true;
+        Status = STATUS_SUCCESS;
     }
 
     if(pcbMoveBy != NULL)
         pcbMoveBy[0] = cbMoveBy;
-    return bResult;
+    return Status;
 }
 
-static bool StringTo_Guid(PTREE_ITEM_INFO pItemInfo, LPCTSTR szString, LPBYTE pbPtr, LPBYTE pbEnd, PULONG pcbMoveBy = NULL)
+static NTSTATUS StringTo_Guid(PTREE_ITEM_INFO pItemInfo, LPCTSTR szString, LPBYTE pbPtr, LPBYTE pbEnd, PULONG pcbMoveBy = NULL)
 {
+    NTSTATUS Status = STATUS_BUFFER_OVERFLOW;
     ULONG cbMoveBy = 0;
 
     // If the GUID is not present, we do not store anything
@@ -954,7 +1002,7 @@ static bool StringTo_Guid(PTREE_ITEM_INFO pItemInfo, LPCTSTR szString, LPBYTE pb
     {
         if(pcbMoveBy != NULL)
             pcbMoveBy[0] = 0;
-        return true;
+        return STATUS_SUCCESS;
     }
 
     // Check for free space
@@ -967,21 +1015,22 @@ static bool StringTo_Guid(PTREE_ITEM_INFO pItemInfo, LPCTSTR szString, LPBYTE pb
             if(pItemInfo->ItemType == ItemTypeGuid2)
                 ACE_ObjAceFlags |= ACE_INHERITED_OBJECT_TYPE_PRESENT;
             cbMoveBy = sizeof(GUID);
+            Status = STATUS_SUCCESS;
         }
     }
 
     // Give the pcbMoveBy
     if(pcbMoveBy != NULL)
         pcbMoveBy[0] = cbMoveBy;
-    return (cbMoveBy != 0);
+    return Status;
 }
 
 
-static bool CreateNew_Guid(PTREE_ITEM_INFO pItemInfo, LPBYTE pbDataBuffer, size_t * pcbDataBuffer)
+static NTSTATUS CreateNew_Guid(PTREE_ITEM_INFO pItemInfo, LPBYTE pbDataBuffer, size_t * pcbDataBuffer)
 {
     size_t cbDataBuffer = pcbDataBuffer[0];
+    NTSTATUS Status = STATUS_BUFFER_OVERFLOW;
     ULONG FlagToSet = (pItemInfo->ItemType == ItemTypeGuid2) ? ACE_INHERITED_OBJECT_TYPE_PRESENT : ACE_OBJECT_TYPE_PRESENT;
-    bool bResult = false;
 
     // Create new NULL GUID
     if(cbDataBuffer >= sizeof(GUID))
@@ -989,15 +1038,15 @@ static bool CreateNew_Guid(PTREE_ITEM_INFO pItemInfo, LPBYTE pbDataBuffer, size_
         memset(pbDataBuffer, 0, sizeof(GUID));
         ACE_ObjAceFlags |= FlagToSet;
         pcbDataBuffer[0] = sizeof(GUID);
-        bResult = true;
+        Status = STATUS_SUCCESS;
     }
-    return bResult;
+    return Status;
 }
 
-static bool ToString_Cnd(PTREE_ITEM_INFO /* pItemInfo */, LPTSTR szBuffer, size_t ccBuffer, LPBYTE pbPtr, LPBYTE pbEnd, PULONG pcbMoveBy = NULL)
+static NTSTATUS ToString_Cnd(PTREE_ITEM_INFO /* pItemInfo */, LPTSTR szBuffer, size_t ccBuffer, LPBYTE pbPtr, LPBYTE pbEnd, PULONG pcbMoveBy = NULL)
 {
+    NTSTATUS Status = STATUS_BUFFER_OVERFLOW;
     ULONG cbMoveBy = 0;
-    bool bResult = false;
 
     // If there is a SID, format it to the buffer
     if(pbPtr && pbEnd > pbPtr)
@@ -1011,22 +1060,22 @@ static bool ToString_Cnd(PTREE_ITEM_INFO /* pItemInfo */, LPTSTR szBuffer, size_
             StringCchCopy(szBuffer, ccBuffer, szCondition);
             LocalFree(szCondition);
             cbMoveBy = (ULONG)(pbEnd - pbPtr);
-            bResult = true;
+            Status = STATUS_SUCCESS;
         }
     }
     else
     {
         LoadString(g_hInst, IDS_EMPTY_STREAM, szBuffer, (int)(ccBuffer));
-        bResult = true;
+        Status = STATUS_SUCCESS;
     }
 
     // Give the length to move
     if(pcbMoveBy != NULL)
         pcbMoveBy[0] = cbMoveBy;
-    return bResult;
+    return Status;
 }
 
-static bool StringTo_Saved(PTREE_ITEM_INFO pItemInfo, LPCTSTR /* szText */, LPBYTE pbPtr, LPBYTE pbEnd, PULONG pcbMoveBy = NULL)
+static NTSTATUS StringTo_Saved(PTREE_ITEM_INFO pItemInfo, LPCTSTR /* szText */, LPBYTE pbPtr, LPBYTE pbEnd, PULONG pcbMoveBy = NULL)
 {
     PNON_EDITABLE_DATA pData;
 
@@ -1037,12 +1086,12 @@ static bool StringTo_Saved(PTREE_ITEM_INFO pItemInfo, LPCTSTR /* szText */, LPBY
         {
             return CopyDataAway(pbPtr, pbEnd, pData->Data, pData->Length, pcbMoveBy);
         }
-        return true;
+        return STATUS_SUCCESS;
     }
-    return false;
+    return STATUS_BAD_DATA;
 }
 
-static bool ToString_Ace(PTREE_ITEM_INFO /* pItemInfo */, LPTSTR szBuffer, size_t ccBuffer, LPBYTE pbPtr, LPBYTE pbEnd, PULONG pcbMoveBy = NULL)
+static NTSTATUS ToString_Ace(PTREE_ITEM_INFO /* pItemInfo */, LPTSTR szBuffer, size_t ccBuffer, LPBYTE pbPtr, LPBYTE pbEnd, PULONG pcbMoveBy = NULL)
 {
     PACE_HEADER pAceHeader = (PACE_HEADER)(pbPtr);
     ULONG cbMoveBy = 0;
@@ -1059,56 +1108,13 @@ static bool ToString_Ace(PTREE_ITEM_INFO /* pItemInfo */, LPTSTR szBuffer, size_
 
     if(pcbMoveBy != NULL)
         pcbMoveBy[0] = cbMoveBy;
-    return true;
+    return STATUS_SUCCESS;
 }
 
-static bool CreateNew_Ace(PCTREE_ITEM_INFO pItemInfo, LPBYTE pbDataBuffer, size_t * pcbDataBuffer)
+static NTSTATUS CreateNew_Acl(PTREE_ITEM_INFO pItemInfo, LPBYTE pbDataBuffer, size_t * pcbDataBuffer)
 {
     LPBYTE pbEnd = pbDataBuffer + pcbDataBuffer[0];
     LPBYTE pbPtr = pbDataBuffer;
-    bool bResult = false;
-
-    // Create ACCESS_ALLOWED_ACE / SYSTEM_MANDATORY_LABEL_ACE
-    if((pbPtr + FIELD_OFFSET(ACCESS_ALLOWED_ACE, SidStart)) <= pbEnd)
-    {
-        PACCESS_ALLOWED_ACE pAce = (PACCESS_ALLOWED_ACE)(pbPtr);
-        ULONG cbSid = 0;
-        PSID pSid;
-
-        pAce->Header.AceType = (pItemInfo->ItemType == ItemTypeSacl) ? SYSTEM_MANDATORY_LABEL_ACE_TYPE : ACCESS_ALLOWED_ACE_TYPE;
-        pAce->Header.AceSize = FIELD_OFFSET(ACCESS_ALLOWED_ACE, SidStart);
-        pAce->Mask = GENERIC_ALL;
-        pbPtr += FIELD_OFFSET(ACCESS_ALLOWED_ACE, SidStart);
-
-        // Append the SID
-        if((pSid = ACE_HELPER::GetDefaultSid(pAce->Header.AceType)) != NULL)
-        {
-            // Retrieve the length of the SID
-            cbSid = RtlLengthSid(pSid);
-
-            // Enough space for the SID?
-            if((pbPtr + cbSid) <= pbEnd)
-            {
-                // Copy the SID to the ACE
-                memcpy(pbPtr, pSid, cbSid);
-                bResult = true;
-            }
-
-            // Update the ACE size
-            pAce->Header.AceSize = (WORD)(pAce->Header.AceSize + cbSid);
-        }
-
-        // Update the ACE length
-        pcbDataBuffer[0] = pAce->Header.AceSize;
-    }
-    return bResult;
-}
-
-static bool CreateNew_Acl(PTREE_ITEM_INFO pItemInfo, LPBYTE pbDataBuffer, size_t * pcbDataBuffer)
-{
-    LPBYTE pbEnd = pbDataBuffer + pcbDataBuffer[0];
-    LPBYTE pbPtr = pbDataBuffer;
-    bool bResult = false;
 
     // Pre-fill the entire buffer with zeros
     memset(pbPtr, 0, (pbEnd - pbPtr));
@@ -1117,27 +1123,23 @@ static bool CreateNew_Acl(PTREE_ITEM_INFO pItemInfo, LPBYTE pbDataBuffer, size_t
     if((pbPtr + sizeof(ACL)) <= pbEnd)
     {
         PACE_HEADER pAceHeader;
-        size_t cbDataBuffer = 0;
+        DWORD dwAceType = GetDefaultAceTypeForAcl(pItemInfo);
         PACL pAcl = (PACL)(pbPtr);
 
         // Fill-in the ACL header
         pAcl->AclRevision = ACL_REVISION_DS;
-        pAcl->AclSize = sizeof(ACL);
+        pAcl->AclSize = (WORD)(pcbDataBuffer[0]);
         pbPtr += sizeof(ACL);
 
-        // Setup the pointer to the ACE
-        pAceHeader = (PACE_HEADER)(pbPtr);
-        cbDataBuffer = pbEnd - pbPtr;
-
-        // Create an ACE
-        if((bResult = CreateNew_Ace(pItemInfo, pbPtr, &cbDataBuffer)) != false)
+        // Create an ACE and imprint it into the ACL
+        if((pAceHeader = ACE_HELPER(dwAceType).AddToAcl(pAcl)) != NULL)
         {
-            pAcl->AclSize = pAcl->AclSize + pAceHeader->AceSize;
+            pcbDataBuffer[0] = pAcl->AclSize = (WORD)(pbPtr + pAceHeader->AceSize - pbDataBuffer);
             pAcl->AceCount++;
-            pcbDataBuffer[0] = pAcl->AclSize;
         }
+        return STATUS_SUCCESS;
     }
-    return bResult;
+    return STATUS_BUFFER_OVERFLOW;
 }
 
 static TREE_ITEM_INFO TreeItem_Owner    = {ItemTypeOwner,   IDS_OWNER_SECURITY_INFORMATION};
@@ -1188,8 +1190,7 @@ static ACE_FIELD_INFO AceFieldInfos[] =
     {ACE_FIELD_COMPOUND_RSVD,   {ItemTypeUint16,    0, IDS_FORMAT_RESERVED,   NULL,        ToString_Hex,  StringTo_Hex}},
     {ACE_FIELD_OBJECT_TYPE1,    {ItemTypeGuid,      0, IDS_FORMAT_OBJ_TYPE,   NULL,        ToString_Guid, StringTo_Guid, CreateNew_Guid}},
     {ACE_FIELD_OBJECT_TYPE2,    {ItemTypeGuid2,     0, IDS_FORMAT_OBJ_TYPEI,  NULL,        ToString_Guid, StringTo_Guid, CreateNew_Guid}},
-    {ACE_FIELD_ACCESS_SID,      {ItemTypeSid,       0, IDS_FORMAT_SID,        NULL,        ToString_Sid,  StringTo_Sid}},
-    {ACE_FIELD_SERVER_SID,      {ItemTypeSid,       0, IDS_FORMAT_SSID,       NULL,        ToString_Sid,  StringTo_Sid}},
+    {ACE_FIELD_SID,             {ItemTypeSid,       0, IDS_FORMAT_SID,        NULL,        ToString_Sid,  StringTo_Sid}},
     {ACE_FIELD_CLIENT_SID,      {ItemTypeSid,       0, IDS_FORMAT_CSID,       NULL,        ToString_Sid,  StringTo_Sid}},
     {ACE_FIELD_MANDATORY_SID,   {ItemTypeSid11,     0, IDS_FORMAT_INT_LEVEL,  IntgrLevels, ToString_Sid,  StringTo_Sid}},
     {ACE_FIELD_POLICY_SID,      {ItemTypeSid17,     0, IDS_FORMAT_POLICY_ID,  NULL,        ToString_Sid,  NULL}},
@@ -1625,7 +1626,7 @@ static void TV_InsertNewItemAcl(
     }
 }
 
-static bool TV_ItemsToData(
+static NTSTATUS TV_ItemsToData(
     HWND hWndTree,
     HTREEITEM hParent,
     LPBYTE pbPtr,
@@ -1645,9 +1646,9 @@ static bool TV_ItemsToData(
     // Keep going over all siblings
     while(hItem != NULL)
     {
+        NTSTATUS Status = STATUS_SUCCESS;
         TCHAR szItemText[256] = {0};
         ULONG cbMoveBy = 0;
-        bool bResult = false;
 
         // Retrieve the item info
         if((pItemInfo = TV_GetItemParamAndText(hWndTree, hItem, szItemText, _countof(szItemText))) != NULL)
@@ -1660,12 +1661,12 @@ static bool TV_ItemsToData(
             if(TreeView_GetChild(hWndTree, hItem) != NULL)
             {
                 // Retrieve items from all children
-                if((bResult = TV_ItemsToData(hWndTree, hItem, pbPtr, pbEnd, &cbMoveBy)) == FALSE)
+                if((Status = TV_ItemsToData(hWndTree, hItem, pbPtr, pbEnd, &cbMoveBy)) != STATUS_SUCCESS)
                 {
                     // Try to use normal StringTo
                     if(pItemInfo->StringTo != NULL)
                     {
-                        bResult = pItemInfo->StringTo(pItemInfo, szItemText, pbPtr, pbEnd, &cbMoveBy);
+                        Status = pItemInfo->StringTo(pItemInfo, szItemText, pbPtr, pbEnd, &cbMoveBy);
                     }
                 }
             }
@@ -1674,14 +1675,14 @@ static bool TV_ItemsToData(
                 // The item must have conversion routine, otherwise we bail out
                 if(pItemInfo->StringTo != NULL)
                 {
-                    bResult = pItemInfo->StringTo(pItemInfo, GetItemTextValue(szItemText), pbPtr, pbEnd, &cbMoveBy);
+                    Status = pItemInfo->StringTo(pItemInfo, GetItemTextValue(szItemText), pbPtr, pbEnd, &cbMoveBy);
                 }
             }
         }
 
         // If the operation failed, bail out
-        if(bResult == false)
-            return false;
+        if(!NT_SUCCESS(Status))
+            return Status;
 
         // Move the data pointer and the tree item
         hItem = TreeView_GetNextSibling(hWndTree, hItem);
@@ -1695,7 +1696,30 @@ static bool TV_ItemsToData(
     // Give length of the data to the caller
     if(pcbMoveBy != NULL)
         pcbMoveBy[0] = (ULONG)(pbPtr - pbBegin);
-    return true;
+    return STATUS_SUCCESS;
+}
+
+static DWORD TV_GetAceType(HWND hWndTree, HTREEITEM hItem)
+{
+    PTREE_ITEM_INFO pItemInfo;
+    PACE_HEADER pAceHeader;
+    DWORD dwAceType = ACCESS_ALLOWED_ACE_TYPE;
+    BYTE AceHeader[sizeof(ACE_HEADER)];
+
+    // Retrieve the tree item info
+    if((pItemInfo = TV_GetItemParam(hWndTree, hItem)) != NULL)
+    {
+        if(pItemInfo->ItemType == ItemTypeAce)
+        {
+            // The buffer will overflow here because the whole ACE can't fit in it
+            if(TV_ItemsToData(hWndTree, hItem, AceHeader, AceHeader + sizeof(ACE_HEADER)) == STATUS_BUFFER_OVERFLOW)
+            {
+                pAceHeader = (PACE_HEADER)(AceHeader);
+                dwAceType = pAceHeader->AceType;
+            }
+        }
+    }
+    return dwAceType;
 }
 
 static void TV_ResetAceItem(HWND hWndTree, HTREEITEM hItem, LPBYTE pbAceData, ULONG cbAceData)
@@ -1724,10 +1748,10 @@ static void TV_SwapItems(HWND hWndTree, HTREEITEM hItem1, HTREEITEM hItem2)
     SendMessage(hWndTree, WM_SETREDRAW, FALSE, 0);
 
     // Read the data from the first item
-    if(TV_ItemsToData(hWndTree, hItem1, AceData1, AceData1 + sizeof(AceData1), &cbAceData1))
+    if(NT_SUCCESS(TV_ItemsToData(hWndTree, hItem1, AceData1, AceData1 + sizeof(AceData1), &cbAceData1)))
     {
         // Read the data from the second item
-        if(TV_ItemsToData(hWndTree, hItem2, AceData2, AceData2 + sizeof(AceData2), &cbAceData2))
+        if(NT_SUCCESS(TV_ItemsToData(hWndTree, hItem2, AceData2, AceData2 + sizeof(AceData2), &cbAceData2)))
         {
             // Initialize the item texts
             TV_ResetAceItem(hWndTree, hItem1, AceData2, cbAceData2);
@@ -1740,8 +1764,9 @@ static void TV_SwapItems(HWND hWndTree, HTREEITEM hItem1, HTREEITEM hItem2)
     InvalidateRect(hWndTree, NULL, TRUE);
 }
 
-static PACL TreeView_ItemToAcl(HWND hWndTree, HTREEITEM hParent)
+static NTSTATUS TreeView_ItemToAcl(HWND hWndTree, HTREEITEM hParent, PACL * ppAcl)
 {
+    NTSTATUS Status = STATUS_NO_MEMORY;
     LPBYTE pbAcl;
     ULONG cbMoveBy = 0;
 
@@ -1753,19 +1778,24 @@ static PACL TreeView_ItemToAcl(HWND hWndTree, HTREEITEM hParent)
         ACL_AceCount = 0;
 
         // Process the ACL
-        if(TV_ItemsToData(hWndTree, hParent, pbAcl, pbAcl + MAX_ACL_LENGTH, &cbMoveBy))
+        if((Status = TV_ItemsToData(hWndTree, hParent, pbAcl, pbAcl + MAX_ACL_LENGTH, &cbMoveBy)) == STATUS_SUCCESS)
         {
             PACL pAcl = (PACL)(pbAcl);
 
             pAcl->AclRevision = ACL_AclRevision;
             pAcl->AceCount = ACL_AceCount;
             pAcl->AclSize = (WORD)(cbMoveBy);
+            ppAcl[0] = pAcl;
+            return Status;
         }
+
+        // Conversion to ACL failed, free the ACL
+        HeapFree(g_hHeap, 0, pbAcl);
     }
-    return (PACL)(pbAcl);
+    return Status;
 }
 
-static bool TreeView_ItemToAcl(
+static NTSTATUS TreeView_ItemToAcl(
     HWND hWndTree,
     HTREEITEM hParent,
     PACL * ppAcl,
@@ -1773,6 +1803,7 @@ static bool TreeView_ItemToAcl(
 {
     PTREE_ITEM_INFO pItemInfo;
     HTREEITEM hItem = TreeView_GetChild(hWndTree, hParent);
+    NTSTATUS Status;
 
     // Retrieve the item information
     if((pItemInfo = TV_GetItemParam(hWndTree, hItem)) != NULL)
@@ -1782,21 +1813,20 @@ static bool TreeView_ItemToAcl(
             case ItemTypeNoAcl:
                 pbAclPresent[0] = FALSE;
                 ppAcl[0] = NULL;
-                return true;
+                return STATUS_SUCCESS;
 
             case ItemTypeNullAcl:
                 pbAclPresent[0] = TRUE;
                 ppAcl[0] = NULL;
-                return true;
+                return STATUS_SUCCESS;
 
             default:
-                ppAcl[0] = TreeView_ItemToAcl(hWndTree, hParent);
-                pbAclPresent[0] = TRUE;
-                return (ppAcl[0] != NULL);
+                if((Status = TreeView_ItemToAcl(hWndTree, hParent, ppAcl)) == STATUS_SUCCESS)
+                    pbAclPresent[0] = TRUE;
+                return Status;
         }
     }
-
-    return false;
+    return STATUS_NOT_SUPPORTED;
 }
 
 static void TreeView_SecurityDescriptorToTreeView(
@@ -1857,7 +1887,7 @@ static void TreeView_SecurityDescriptorToTreeView(
     InvalidateRect(hWndTree, NULL, TRUE);
 }
 
-void TreeView_DeferItemText(HWND hDlg, WPARAM wParam, LPARAM lParam)
+static void TreeView_DeferItemText(HWND hDlg, WPARAM wParam, LPARAM lParam)
 {
     HWND hWndTree = GetDlgItem(hDlg, IDC_SECURITY);
     TVITEM tvi;
@@ -1870,6 +1900,31 @@ void TreeView_DeferItemText(HWND hDlg, WPARAM wParam, LPARAM lParam)
 
     // Free the text
     delete [] tvi.pszText;
+}
+
+static void TreeView_DeferChangeAceType(HWND hDlg, WPARAM wParam, LPARAM lParam)
+{
+    HWND hWndTree = GetDlgItem(hDlg, IDC_SECURITY);
+    PACE_HEADER pAceHeader = (PACE_HEADER)(lParam);
+    HTREEITEM hItem = (HTREEITEM)(wParam);
+
+    // The ACE_HEADER must be valid
+    if(pAceHeader != NULL)
+    {
+        // Stop redrawing
+        SendMessage(hWndTree, WM_SETREDRAW, FALSE, 0);
+
+        // Build the ACE into the item
+        TV_ResetAceItem(hWndTree, hItem, (LPBYTE)(pAceHeader), pAceHeader->AceSize);
+
+        // Select the root item
+        TreeView_SelectItem(hWndTree, hItem);
+
+        // Enable redrawing back
+        SendMessage(hWndTree, WM_SETREDRAW, TRUE, 0);
+        InvalidateRect(hWndTree, NULL, TRUE);
+        LocalFree(pAceHeader);
+    }
 }
 
 static SECURITY_INFORMATION GetDialogSecurityInfo(HWND hDlg)
@@ -1949,6 +2004,26 @@ static BOOL DeferSetItemTextValue(HWND hDlg, HTREEITEM hItem, LPCTSTR szItemText
     PostMessage(hDlg, WM_DEFER_ITEM_TEXT, (WPARAM)(hItem), (LPARAM)(szBuffer));
     return TRUE;
 }
+
+static void DeferChangeAceType(HWND hDlg, HTREEITEM hItem, DWORD dwAceType)
+{
+    // Create wholly new ACE and set it to the tree item
+    ACE_HELPER AceHelper(dwAceType);
+    LPBYTE pbAce;
+
+    if((pbAce = (LPBYTE)LocalAlloc(LPTR, MAX_ACL_LENGTH)) != NULL)
+    {
+        if(AceHelper.Export(pbAce, MAX_ACL_LENGTH))
+        {
+            PostMessage(hDlg, WM_DEFER_CHANGE_ACE_TYPE, (WPARAM)(hItem), (LPARAM)(pbAce));
+        }
+        else
+        {
+            SetResultInfo(hDlg, RSI_NTSTATUS, STATUS_CANNOT_EDIT_THIS);
+        }
+    }
+}
+
 
 static NTSTATUS QueryObjectSecurity(HANDLE hObject, SECURITY_INFORMATION SecInfo, PSECURITY_DESCRIPTOR * ppSD, DWORD * pcbSD)
 {
@@ -2088,7 +2163,7 @@ static int OnInsertSiblingAce(HWND hDlg, BOOL bBeforeSelected)
         if((pItemInfo = TV_GetItemParam(hWndTree, hParent)) != NULL)
         {
             HTREEITEM hInsertAfter = hItem;
-            size_t cbAceBuffer = sizeof(AceBuffer);
+            DWORD dwAceType = TV_GetAceType(hWndTree, hItem);
 
             // Get previous or next
             if(bBeforeSelected)
@@ -2099,13 +2174,19 @@ static int OnInsertSiblingAce(HWND hDlg, BOOL bBeforeSelected)
                 }
             }
 
-            // Insert the item
-            if(CreateNew_Ace(pItemInfo, AceBuffer, &cbAceBuffer))
+            // Ask the user which ACE he wants to insert
+            if(FlagsDialog(hDlg, IDS_ACE_TYPE, AceHdrTypes, dwAceType) == IDOK)
             {
-                hItem = TV_InsertNewItemAce(hWndTree, hParent, hInsertAfter, (PACE_HEADER)(AceBuffer));
-                if(hItem != NULL)
+                PACE_HEADER pAceHeader;
+                ACE_HELPER AceHelper(dwAceType);
+
+                // Export the ACE and convert to tree items
+                if((pAceHeader = AceHelper.Export(AceBuffer, sizeof(AceBuffer))) != NULL)
                 {
-                    TreeView_Select(hWndTree, hItem, TVGN_CARET);
+                    if((hItem = TV_InsertNewItemAce(hWndTree, hParent, hInsertAfter, pAceHeader)) != NULL)
+                    {
+                        TreeView_Select(hWndTree, hItem, TVGN_CARET);
+                    }
                 }
             }
         }
@@ -2142,42 +2223,23 @@ static int OnSwapAceWith(HWND hDlg, BOOL bWithPrevious)
 static int OnSetAceType(HWND hDlg)
 {
     PTREE_ITEM_INFO pItemInfo;
-    PACE_HEADER pAceHeader = NULL;
     HTREEITEM hItem;
-    DWORD dwAceType = ACCESS_ALLOWED_ACE_TYPE;
     HWND hWndTree = GetDlgItem(hDlg, IDC_SECURITY);
-    TCHAR szItemText[256];
-    BYTE AceBuffer[256];
 
     if((hItem = TreeView_GetSelection(hWndTree)) != NULL)
     {
-        if((pItemInfo = TV_GetItemParamAndText(hWndTree, hItem, szItemText, _countof(szItemText))) != NULL)
+        if((pItemInfo = TV_GetItemParam(hWndTree, hItem)) != NULL)
         {
-            // Ask the user for new ACE type
-            if(FlagsDialog(hDlg, IDS_ACE_TYPE, AceHdrTypes, szItemText, dwAceType) == IDOK)
+            if(pItemInfo->ItemType == ItemTypeAce)
             {
-                ACE_HELPER AceHelper(dwAceType);
+                DWORD dwSaveAceType = TV_GetAceType(hWndTree, hItem);
+                DWORD dwAceType = dwSaveAceType;
 
-                // Stop redrawing
-                SendMessage(hWndTree, WM_SETREDRAW, FALSE, 0);
-
-                // Build the ACE
-                if((pAceHeader = AceHelper.Export(AceBuffer, sizeof(AceBuffer))) != NULL)
+                // Ask the user for new ACE type
+                if(FlagsDialog(hDlg, IDS_ACE_TYPE, AceHdrTypes, dwAceType) == IDOK && dwAceType != dwSaveAceType)
                 {
-                    // Build the ACE into the item
-                    TV_ResetAceItem(hWndTree, hItem, AceBuffer, pAceHeader->AceSize);
-
-                    // Select the root item
-                    TreeView_SelectItem(hWndTree, hItem);
+                    DeferChangeAceType(hDlg, hItem, dwAceType);
                 }
-                else
-                {
-                    SetResultInfo(hDlg, RSI_NTSTATUS, STATUS_CANNOT_EDIT_THIS);
-                }
-
-                // Enable redrawing back
-                SendMessage(hWndTree, WM_SETREDRAW, TRUE, 0);
-                InvalidateRect(hWndTree, NULL, TRUE);
             }
         }
     }
@@ -2286,11 +2348,12 @@ static int OnSetSecurity(HWND hDlg)
     // Put owner into the security descriptor
     //
 
-    if(pData->SecurityInformation & OWNER_SECURITY_INFORMATION)
+    if(NT_SUCCESS(Status) && (pData->SecurityInformation & OWNER_SECURITY_INFORMATION))
     {
-        if(TV_ItemsToData(hWndTree, hChildItem[0], OwnerSid, OwnerSid + sizeof(OwnerSid)))
+        Status = TV_ItemsToData(hWndTree, hChildItem[0], OwnerSid, OwnerSid + sizeof(OwnerSid));
+        if(NT_SUCCESS(Status))
         {
-            RtlSetOwnerSecurityDescriptor(&sd, (PSID)(OwnerSid), FALSE);
+            Status = RtlSetOwnerSecurityDescriptor(&sd, (PSID)(OwnerSid), FALSE);
             AppliedSecInfo |= OWNER_SECURITY_INFORMATION;
         }
     }
@@ -2299,11 +2362,12 @@ static int OnSetSecurity(HWND hDlg)
     // Put group into the security descriptor
     //
 
-    if(pData->SecurityInformation & GROUP_SECURITY_INFORMATION)
+    if(NT_SUCCESS(Status) && (pData->SecurityInformation & GROUP_SECURITY_INFORMATION))
     {
-        if(TV_ItemsToData(hWndTree, hChildItem[1], GroupSid, GroupSid + sizeof(GroupSid)))
+        Status = TV_ItemsToData(hWndTree, hChildItem[1], GroupSid, GroupSid + sizeof(GroupSid));
+        if(NT_SUCCESS(Status))
         {
-            RtlSetGroupSecurityDescriptor(&sd, (PSID)(GroupSid), FALSE);
+            Status = RtlSetGroupSecurityDescriptor(&sd, (PSID)(GroupSid), FALSE);
             AppliedSecInfo |= GROUP_SECURITY_INFORMATION;
         }
     }
@@ -2312,11 +2376,12 @@ static int OnSetSecurity(HWND hDlg)
     // Put DACL into the security descriptor
     //
 
-    if(pData->SecurityInformation & DACL_SECURITY_INFORMATION)
+    if(NT_SUCCESS(Status) && (pData->SecurityInformation & DACL_SECURITY_INFORMATION))
     {
-        if(TreeView_ItemToAcl(hWndTree, hChildItem[2], &pDacl, &bDaclPresent))
+        Status = TreeView_ItemToAcl(hWndTree, hChildItem[2], &pDacl, &bDaclPresent);
+        if(NT_SUCCESS(Status))
         {
-            RtlSetDaclSecurityDescriptor(&sd, bDaclPresent, pDacl, FALSE);
+            Status = RtlSetDaclSecurityDescriptor(&sd, bDaclPresent, pDacl, FALSE);
             AppliedSecInfo |= DACL_SECURITY_INFORMATION;
         }
     }
@@ -2325,22 +2390,20 @@ static int OnSetSecurity(HWND hDlg)
     // Put SACL into the security descriptor
     //
 
-    if(pData->SecurityInformation & ALL_SACL_SECURITY_INFORMATION)
+    if(NT_SUCCESS(Status) && (pData->SecurityInformation & ALL_SACL_SECURITY_INFORMATION))
     {
-        if(TreeView_ItemToAcl(hWndTree, hChildItem[3], &pSacl, &bSaclPresent))
+        Status = TreeView_ItemToAcl(hWndTree, hChildItem[3], &pSacl, &bSaclPresent);
+        if(NT_SUCCESS(Status))
         {
-            RtlSetSaclSecurityDescriptor(&sd, bSaclPresent, pSacl, FALSE);
+            Status = RtlSetSaclSecurityDescriptor(&sd, bSaclPresent, pSacl, FALSE);
             AppliedSecInfo |= (pData->SecurityInformation & ALL_SACL_SECURITY_INFORMATION);
         }
     }
 
     // Apply the security descriptor to the file
-    if(AppliedSecInfo != 0)
-    {
-        // Set the result to the dialog controls
+    if(NT_SUCCESS(Status))
         Status = NtSetSecurityObject(pData->hFile, AppliedSecInfo, &sd);
-        SetResultInfo(hDlg, RSI_NTSTATUS | RSI_NOINFO, Status);
-    }
+    SetResultInfo(hDlg, RSI_NTSTATUS | RSI_NOINFO, Status);
 
     // Free all 4 parts of the security information
     if(pSacl != NULL)
@@ -2411,6 +2474,7 @@ static int OnBeginLabelEdit(HWND hDlg, LPNMTVDISPINFO pTVDispInfo)
 static int OnEndLabelEdit(HWND hDlg, LPNMTVDISPINFO pTVDispInfo)
 {
     PTREE_ITEM_INFO pItemInfo = (PTREE_ITEM_INFO)(pTVDispInfo->item.lParam);
+    HTREEITEM hParent;
     LPBYTE pbBuffer;
     ULONG cbBuffer = 0x1000;
     ULONG cbMoveBy = 0;
@@ -2426,11 +2490,21 @@ static int OnEndLabelEdit(HWND hDlg, LPNMTVDISPINFO pTVDispInfo)
             if((pbBuffer = (LPBYTE)LocalAlloc(LPTR, cbBuffer)) != NULL)
             {
                 // First we convert the item to binary format
-                if(pItemInfo->StringTo(pItemInfo, pTVDispInfo->item.pszText, pbBuffer, pbBuffer + cbBuffer, &cbMoveBy))
+                if(NT_SUCCESS(pItemInfo->StringTo(pItemInfo, pTVDispInfo->item.pszText, pbBuffer, pbBuffer + cbBuffer, &cbMoveBy)))
                 {
-                    // Convert the item to text
-                    TV_MakeItemText(pItemInfo, szItemText, _countof(szItemText), pbBuffer, pbBuffer + cbMoveBy);
-                    bAcceptChanges = DeferSetItemTextValue(hDlg, pTVDispInfo->item.hItem, szItemText);
+                    // Changing ACE type: We need to set the whole ACE again
+                    if(pItemInfo->pFlagInfos == AceHdrTypes)
+                    {
+                        hParent = TreeView_GetParent(pTVDispInfo->hdr.hwndFrom, pTVDispInfo->item.hItem);
+                        DeferChangeAceType(hDlg, hParent, pbBuffer[0]);
+                        bAcceptChanges = TRUE;
+                    }
+                    else
+                    {
+                        // Convert the item to text
+                        TV_MakeItemText(pItemInfo, szItemText, _countof(szItemText), pbBuffer, pbBuffer + cbMoveBy);
+                        bAcceptChanges = DeferSetItemTextValue(hDlg, pTVDispInfo->item.hItem, szItemText);
+                    }
                 }
 
                 // Set the result
@@ -2581,7 +2655,7 @@ static int OnTVDoubleClick(HWND hDlg)
                     pNewInfo = TV_GetItemParam(hWndTree, hParent);
 
                 // Let the item to create new one
-                if(pItemInfo->CreateNew(pNewInfo, DataBuffer, &cbDataBuffer))
+                if(NT_SUCCESS(pItemInfo->CreateNew(pNewInfo, DataBuffer, &cbDataBuffer)))
                 {
                     // Get the previous item
                     hInsertAfter = TreeView_GetPreviousItem(hWndTree, hItem);
@@ -2737,6 +2811,10 @@ INT_PTR CALLBACK PageProc09(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
         case WM_DEFER_ITEM_TEXT:
             TreeView_DeferItemText(hDlg, wParam, lParam);
+            return TRUE;
+
+        case WM_DEFER_CHANGE_ACE_TYPE:
+            TreeView_DeferChangeAceType(hDlg, wParam, lParam);
             return TRUE;
 
         case WM_CONTEXTMENU:
