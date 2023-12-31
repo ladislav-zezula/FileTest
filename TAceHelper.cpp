@@ -69,6 +69,7 @@ ACE_HELPER::ACE_HELPER(ACE_CSA_HELPER & CsaHelper, PSID pSid)
 
     // Set the ACE type. Prevent construction of ACE resource
     AceType = SYSTEM_RESOURCE_ATTRIBUTE_ACE_TYPE;
+    AceLayout = ACE_LAYOUT_RESOURCE;
     Mask = FILE_READ_DATA;
 
     // Set the default SID

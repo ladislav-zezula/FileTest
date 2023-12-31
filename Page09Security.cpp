@@ -517,11 +517,11 @@ static void UpdateAceVariables(PACE_HEADER pAceHeader, LPBYTE pbPtr)
     {
         // If the ACE is of ACCESS_ALLOWED_COMPOUND_ACE_TYPE,
         // the ACL revision must be 3 or higher
-        if(pAceHeader->AceType == ACCESS_ALLOWED_COMPOUND_ACE_TYPE)
+        if((pAceHeader->AceType == ACCESS_ALLOWED_COMPOUND_ACE_TYPE) && (ACL_AclRevision < ACL_REVISION3))
             ACL_AclRevision = ACL_REVISION3;
 
         // If the ACE is one of the object ACEs, raise the ACL revision
-        if(AceHelper.AceLayout & ACE_FIELD_OBJECT_TYPE1)
+        if((AceHelper.AceLayout & ACE_FIELD_OBJECT_TYPE1) && (ACL_AclRevision < ACL_REVISION_DS))
             ACL_AclRevision = ACL_REVISION_DS;
 
         // Update the length of the ACE
@@ -539,6 +539,7 @@ static void UpdateAceVariables(PACE_HEADER pAceHeader, LPBYTE pbPtr)
 // The item text is expected to be in format "Name: 0x12345678"
 static LPTSTR GetItemTextValue(LPTSTR szItemText, bool bKeepQuotedPart = false)
 {
+    LPTSTR szStringEnd;
     LPTSTR szTextPtr;
 
     // Retrieve the first occurence of ":"
@@ -551,11 +552,23 @@ static LPTSTR GetItemTextValue(LPTSTR szItemText, bool bKeepQuotedPart = false)
         while(szItemText[0] == ' ')
             szItemText++;
 
+        // Did we come across a quotation mark?
+        if(szItemText[0] == _T('\"'))
+        {
+            if((szStringEnd = _tcschr(szItemText + 1, _T('\"'))) > szItemText)
+            {
+                szStringEnd[0] = 0;
+                szItemText += 1;
+            }
+        }
+
         // If the number is followed by a space, cut it
         if(bKeepQuotedPart == false)
         {
             if((szTextPtr = _tcschr(szItemText, _T(' '))) != NULL)
+            {
                 szTextPtr[0] = 0;
+            }
         }
     }
 
@@ -761,6 +774,13 @@ static NTSTATUS ToString_STR(PTREE_ITEM_INFO /* pItemInfo */, LPTSTR szBuffer, s
         pcbMoveBy[0] = (ULONG)((wcslen(szString) + 1) * sizeof(WCHAR));
     StringCchPrintf(szBuffer, ccBuffer, _T("\"%s\""), szString);
     return STATUS_SUCCESS;
+}
+
+static NTSTATUS StringTo_STR(PTREE_ITEM_INFO pItemInfo, LPCTSTR szString, LPBYTE pbPtr, LPBYTE pbEnd, PULONG pcbMoveBy = NULL)
+{
+    size_t cbString = (wcslen(szString) + 1) * sizeof(WCHAR);
+
+    return CopyDataAway(pbPtr, pbEnd, szString, cbString, pcbMoveBy);
 }
 
 //-----------------------------------------------------------------------------
@@ -1157,12 +1177,12 @@ static TREE_ITEM_INFO TreeItem_AclSbz2  = {ItemTypeUint16,  0,                ID
 static TREE_ITEM_INFO TreeItem_Ace      = {ItemTypeAce,     IDS_NULL_ACL,     IDS_FORMAT_STR,       NULL,        ToString_Ace};
 
 static TREE_ITEM_INFO TreeItem_CSA_Name = {ItemTypeLPWSTR,  0,                IDS_FORMAT_NAME,      NULL,        ToString_STR};
-static TREE_ITEM_INFO TreeItem_CSA_VTyp = {ItemTypeUint16,  0,                IDS_FORMAT_VALTYPE,   CSA_ValTypes,ToString_Hex};
-static TREE_ITEM_INFO TreeItem_CSA_Res  = {ItemTypeUint16,  0,                IDS_FORMAT_RESERVED,  NULL,        ToString_Hex};
-static TREE_ITEM_INFO TreeItem_CSA_Flgs = {ItemTypeUint32,  0,                IDS_FORMAT_FLAGS,     CSA_Flags,   ToString_Hex};
+static TREE_ITEM_INFO TreeItem_CSA_VTyp = {ItemTypeUint16,  0,                IDS_FORMAT_VALTYPE,   CSA_ValTypes,ToString_Hex, StringTo_Hex};
+static TREE_ITEM_INFO TreeItem_CSA_Res  = {ItemTypeUint16,  0,                IDS_FORMAT_RESERVED,  NULL,        ToString_Hex, StringTo_Hex};
+static TREE_ITEM_INFO TreeItem_CSA_Flgs = {ItemTypeUint32,  0,                IDS_FORMAT_FLAGS,     CSA_Flags,   ToString_Hex, StringTo_Hex};
 static TREE_ITEM_INFO TreeItem_CSA_VCnt = {ItemTypeUint32,  0,                IDS_FORMAT_VALCOUNT,  NULL,        ToString_Hex};
 static TREE_ITEM_INFO TreeItem_CSA_U64  = {ItemTypeUint64,  IDS_FORMAT_VALUE, IDS_FORMAT_VALINDEX,  NULL,        ToString_Hex};
-static TREE_ITEM_INFO TreeItem_CSA_STR  = {ItemTypeLPWSTR,  IDS_FORMAT_VALUE, IDS_FORMAT_VALINDEX,  NULL,        ToString_STR};
+static TREE_ITEM_INFO TreeItem_CSA_STR  = {ItemTypeLPWSTR,  IDS_FORMAT_VALUE, IDS_FORMAT_VALINDEX,  NULL,        ToString_STR, StringTo_STR};
 static TREE_ITEM_INFO TreeItem_CSA_SID  = {ItemTypeCSASid,  IDS_FORMAT_VALUE, IDS_FORMAT_VALINDEX,  NULL,        ToString_Sidn};
 static TREE_ITEM_INFO TreeItem_CSA_BOOL = {ItemTypeBool,    IDS_FORMAT_VALUE, IDS_FORMAT_VALINDEX,  NULL,        ToString_Bool};
 static TREE_ITEM_INFO TreeItem_CSA_Octs = {ItemTypeOctStr,  IDS_FORMAT_VALUE, IDS_FORMAT_VALINDEX,  NULL,        ToString_Octs};
@@ -1219,6 +1239,32 @@ static PTREE_ITEM_INFO TV_GetItemParamAndText(HWND hWndTree, HTREEITEM hItem, LP
 
     // Return the item param
     return (PTREE_ITEM_INFO)(tvi.lParam);
+}
+
+static DWORD TV_GetRemainingItemCount(HWND hWndTree, HTREEITEM hItem)
+{
+    DWORD ValueCount = 0;
+
+    while(hItem != NULL)
+    {
+        ValueCount++;
+        hItem = TreeView_GetNextSibling(hWndTree, hItem);
+    }
+    return ValueCount;
+}
+
+template <typename INTEGER>
+static NTSTATUS TV_GetItemInteger(HWND hWndTree, HTREEITEM hItem, INTEGER & IntValue)
+{
+    PTREE_ITEM_INFO pItemInfo;
+    LPBYTE pbPtr = (LPBYTE)(&IntValue);
+    LPBYTE pbEnd = pbPtr + sizeof(INTEGER);
+    ULONG cbMoveBy = 0;
+    TCHAR szItemText[128];
+
+    if((pItemInfo = TV_GetItemParamAndText(hWndTree, hItem, szItemText, _countof(szItemText))) == NULL)
+        return STATUS_UNSUCCESSFUL;
+    return pItemInfo->StringTo(pItemInfo, GetItemTextValue(szItemText), pbPtr, pbEnd, &cbMoveBy);
 }
 
 static void TV_AllocateItemData(HWND hWndTree, HTREEITEM hItem, LPBYTE pbPtr, LPBYTE pbEnd)
@@ -1626,12 +1672,103 @@ static void TV_InsertNewItemAcl(
     }
 }
 
-static NTSTATUS TV_ItemsToData(
-    HWND hWndTree,
-    HTREEITEM hParent,
-    LPBYTE pbPtr,
-    LPBYTE pbEnd,
-    PULONG pcbMoveBy = NULL)
+static NTSTATUS TV_ItemsToCSA_v1(HWND hWndTree, HTREEITEM hParent, ACE_CSA_HELPER & CsaHelper)
+{
+    PTREE_ITEM_INFO pItemInfo;
+    HTREEITEM hItem;
+    NTSTATUS Status = STATUS_UNSUCCESSFUL;
+    TCHAR szItemText[256];
+    TCHAR szName[256];
+    DWORD ValueCount = 0;
+    DWORD Flags = 0;
+    DWORD Index = 0;
+    WORD ValueType = 0;
+    WORD Reserved = 0;
+
+    // Retrieve the first child
+    if((hItem = TreeView_GetChild(hWndTree, hParent)) != NULL)
+    {
+        // Get the name of the attribute
+        if((pItemInfo = TV_GetItemParamAndText(hWndTree, hItem, szName, _countof(szName))) == NULL)
+            return STATUS_UNSUCCESSFUL;
+        if((hItem = TreeView_GetNextSibling(hWndTree, hItem)) == NULL)
+            return STATUS_UNSUCCESSFUL;
+
+        // Get the value type
+        if((Status = TV_GetItemInteger(hWndTree, hItem, ValueType)) != STATUS_SUCCESS)
+            return Status;
+        if((hItem = TreeView_GetNextSibling(hWndTree, hItem)) == NULL)
+            return STATUS_UNSUCCESSFUL;
+
+        // Get the "Reserved" value
+        if((Status = TV_GetItemInteger(hWndTree, hItem, Reserved)) != STATUS_SUCCESS)
+            return Status;
+        if((hItem = TreeView_GetNextSibling(hWndTree, hItem)) == NULL)
+            return STATUS_UNSUCCESSFUL;
+
+        // Get the "Flags" value
+        if((Status = TV_GetItemInteger(hWndTree, hItem, Flags)) != STATUS_SUCCESS)
+            return Status;
+        if((hItem = TreeView_GetNextSibling(hWndTree, hItem)) == NULL)
+            return STATUS_UNSUCCESSFUL;
+
+        // Skip the "ValueCount"
+        if((hItem = TreeView_GetNextSibling(hWndTree, hItem)) == NULL)
+            return STATUS_UNSUCCESSFUL;
+
+        // Now get the *real* value count
+        if((ValueCount = TV_GetRemainingItemCount(hWndTree, hItem)) == 0)
+            return STATUS_UNSUCCESSFUL;
+
+        // Construct the CSA helper
+        if(CsaHelper.CreateVA(GetItemTextValue(szName), ValueType, ValueCount) == ERROR_SUCCESS)
+        {
+            // Store the missing members
+            CsaHelper.Reserved = Reserved;
+            CsaHelper.Flags = Flags;
+
+            // Load the values
+            while(hItem != NULL)
+            {
+                ULONG cbMoveBy = 0;
+                BYTE ValueData[512];
+
+                if((pItemInfo = TV_GetItemParamAndText(hWndTree, hItem, szItemText, _countof(szItemText))) == NULL)
+                    return STATUS_UNSUCCESSFUL;
+                if(pItemInfo->StringTo == NULL)
+                    return STATUS_UNSUCCESSFUL;
+                if((Status = pItemInfo->StringTo(pItemInfo, GetItemTextValue(szItemText), ValueData, ValueData + sizeof(ValueData), &cbMoveBy)) != STATUS_SUCCESS)
+                    return Status;
+                if(CsaHelper.ImportObject(ValueData, Index++) == NULL)
+                    return STATUS_UNSUCCESSFUL;
+                hItem = TreeView_GetNextSibling(hWndTree, hItem);
+            }
+        }
+    }
+    return Status;
+}
+
+static NTSTATUS TV_ItemsToCSA_v1(HWND hWndTree, HTREEITEM hParent, LPBYTE pbPtr, LPBYTE pbEnd, PULONG pcbMoveBy = NULL)
+{
+    PCLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1 pAttrRel;
+    ACE_CSA_HELPER CsaHelper;
+    NTSTATUS Status = STATUS_UNSUCCESSFUL;
+    ULONG cbAttrRel = 0;
+
+    // Create the CSA_HELPER from the tree view items
+    if(TV_ItemsToCSA_v1(hWndTree, hParent, CsaHelper) == ERROR_SUCCESS)
+    {
+        // Export the attribute structures from the tree item
+        if((pAttrRel = CsaHelper.Export(&cbAttrRel)) != NULL)
+        {
+            Status = CopyDataAway(pbPtr, pbEnd, pAttrRel, cbAttrRel, pcbMoveBy);
+            LocalFree(pAttrRel);
+        }
+    }
+    return Status;
+}
+
+static NTSTATUS TV_ItemsToData(HWND hWndTree, HTREEITEM hParent, LPBYTE pbPtr, LPBYTE pbEnd, PULONG pcbMoveBy = NULL)
 {
     PTREE_ITEM_INFO pParentInfo = TV_GetItemParam(hWndTree, hParent);
     PTREE_ITEM_INFO pItemInfo;
@@ -1660,14 +1797,16 @@ static NTSTATUS TV_ItemsToData(
             // If there is a child item, go recursively on the children
             if(TreeView_GetChild(hWndTree, hItem) != NULL)
             {
-                // Retrieve items from all children
-                if((Status = TV_ItemsToData(hWndTree, hItem, pbPtr, pbEnd, &cbMoveBy)) != STATUS_SUCCESS)
+                // Special treatment for CLAIM_SECURITY_ATTRIBUTES v1
+                if(pItemInfo->ItemType == ItemTypeCSA_V1)
+                    Status = TV_ItemsToCSA_v1(hWndTree, hItem, pbPtr, pbEnd, &cbMoveBy);
+                else
+                    Status = TV_ItemsToData(hWndTree, hItem, pbPtr, pbEnd, &cbMoveBy);
+
+                // If the items retrieval failed, we can try its own StringTo method
+                if(!NT_SUCCESS(Status) && pItemInfo->StringTo != NULL)
                 {
-                    // Try to use normal StringTo
-                    if(pItemInfo->StringTo != NULL)
-                    {
-                        Status = pItemInfo->StringTo(pItemInfo, szItemText, pbPtr, pbEnd, &cbMoveBy);
-                    }
+                    Status = pItemInfo->StringTo(pItemInfo, szItemText, pbPtr, pbEnd, &cbMoveBy);
                 }
             }
             else

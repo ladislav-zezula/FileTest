@@ -122,7 +122,7 @@ typedef struct _ACE_OCTET_STRING
     BYTE  pbData[1];
 } ACE_OCTET_STRING, *PACE_OCTET_STRING;
 
-inline ULONG OctetStringSize(PACE_OCTET_STRING pOctetString)
+inline size_t OctetStringSize(PACE_OCTET_STRING pOctetString)
 {
     return sizeof(ULONG) + pOctetString->cbData;
 }
@@ -135,16 +135,13 @@ struct ACE_CSA_OBJECT
     ACE_CSA_OBJECT();
     ~ACE_CSA_OBJECT();
 
-    LPBYTE ImportOctet(LPCVOID pbOctet, ULONG cbOctet);
+    LPBYTE ImportData(LPBYTE pbStructure, LPBYTE pbEnd, size_t Offset, size_t Length);
+    LPBYTE ImportOctet(PACE_OCTET_STRING pOctetString);
     void Clear();
 
-    virtual size_t ImportSize(LPBYTE pbStructure, LPBYTE pbEnd, ULONG Offset);
     virtual size_t ExportSize(size_t cbAlignSize = 1);
-
-    virtual LPBYTE Import(LPBYTE pbStructure, LPBYTE pbEnd, ULONG Offset);
     virtual LPBYTE Export(LPBYTE pbPtr, LPBYTE pbEnd);
-
-    virtual LPBYTE ImportObject(LPCVOID lpObject);
+    virtual LPBYTE Import(LPCVOID lpObject);
 
     void * lpData;
     size_t cbData;
@@ -152,43 +149,43 @@ struct ACE_CSA_OBJECT
 
 struct ACE_CSA_DWORD64 : public ACE_CSA_OBJECT
 {
-    size_t ImportSize(LPBYTE pbStructure, LPBYTE pbEnd, ULONG Offset);
-    LPBYTE ImportObject(LPCVOID lpObject);
+    LPBYTE Import(LPCVOID lpObject);
 };
 
 struct ACE_CSA_LPWSTR : public ACE_CSA_OBJECT
 {
-    size_t ImportSize(LPBYTE pbStructure, LPBYTE pbEnd, ULONG Offset);
-    LPBYTE ImportObject(LPCVOID lpObject);
+    LPBYTE Import(LPCVOID lpObject);
 };
 
 struct ACE_CSA_SID : public ACE_CSA_OBJECT
 {
-    size_t ImportSize(LPBYTE pbStructure, LPBYTE pbEnd, ULONG Offset);
+    LPBYTE Import(LPCVOID lpObject);
 };
 
 struct ACE_CSA_BOOLEAN : public ACE_CSA_OBJECT
 {
-    size_t ImportSize(LPBYTE pbStructure, LPBYTE pbEnd, ULONG Offset);
     size_t ExportSize(size_t cbAlignSize = 1);
-    LPBYTE ImportObject(LPCVOID lpObject);
+    LPBYTE Import(LPCVOID lpObject);
 };
 
 struct ACE_CSA_OCTET_STRING : public ACE_CSA_OBJECT
 {
-    size_t ImportSize(LPBYTE pbStructure, LPBYTE pbEnd, ULONG Offset);
+    LPBYTE Import(LPCVOID lpObject);
 };
 
 struct ACE_CSA_HELPER
 {
     ACE_CSA_HELPER();
     ~ACE_CSA_HELPER();
+    void InitialReset();
     void Clear();
 
+    DWORD CreateVA(LPCWSTR szName, WORD ValueType, DWORD ValueCount, va_list argList = NULL);
     DWORD Create(LPCWSTR szName, WORD ValueType, DWORD ValueCount, ...);
     DWORD Import(LPBYTE pbAttrRel, LPBYTE pbAttrEnd, PULONG pcbMoveBy = NULL);
 
     PCLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1 Export(PULONG pcbLength = NULL);
+    LPBYTE ImportObject(LPCVOID lpObject, ULONG nIndex);
 
     ULONG GetSizeAlignedToMax(LPBYTE pbPtr, LPBYTE pbEnd, ULONG cbLength);
     DWORD AllocateElements();

@@ -409,6 +409,8 @@ typedef struct _SYSTEM_MANDATORY_LABEL_ACE
 //
 // * Can be accessed with SecurityInformation = ATTRIBUTE_SECURITY_INFORMATION
 // * Presence checked by nt!SepSDContainsAttributeACE
+// * In case NtSetSecurityObject returns STATUS_INVALID_ACL, look here:
+//   nt!RtlpValidRelativeAttribute(PCLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1 pAttrRel, size_t cbAttrRel)
 // * Can be found on %USERPROFILE%\Downloads
 //
 
