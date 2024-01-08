@@ -16,23 +16,24 @@
 
 // Flags for fields included
 #define ACE_FIELD_HTYPE             0x00000001      // ACE_HEADER::AceType  (always included)
-#define ACE_FIELD_HFLAGS            0x00000002      // ACE_HEADER::AceFlags (always included)
-#define ACE_FIELD_HSIZE             0x00000004      // ACE_HEADER::AceSize  (always included)
-#define ACE_FIELD_ACCESS_MASK       0x00000008      // ACE::Mask
-#define ACE_FIELD_ADS_ACCESS_MASK   0x00000010      // ACE::Mask for ADS ACEs
-#define ACE_FIELD_MANDATORY_MASK    0x00000020      // SYSTEM_MANDATORY_LABEL_ACE::Mask
-#define ACE_FIELD_FLAGS             0x00000040      // XXX_YYY_OBJECT_ACE::Flags
-#define ACE_FIELD_COMPOUND_TYPE     0x00000080      // COMPOUND_ACCESS_ALLOWED_ACE::CompoundAceType
-#define ACE_FIELD_COMPOUND_RSVD     0x00000100      // COMPOUND_ACCESS_ALLOWED_ACE::Reserved
-#define ACE_FIELD_OBJECT_TYPE1      0x00000200      // XXX_YYY_OBJECT_ACE::ObjectType
-#define ACE_FIELD_OBJECT_TYPE2      0x00000400      // XXX_YYY_OBJECT_ACE::InheritedObjectType
-#define ACE_FIELD_SID               0x00000800      // ACE::SidStart contains a (server) SID
-#define ACE_FIELD_MANDATORY_SID     0x00001000      // ACE::SidStart contains a mandatory label SID
-#define ACE_FIELD_POLICY_SID        0x00002000      // ACE::SidStart contains a Policy ID SID
-#define ACE_FIELD_TRUST_SID         0x00004000
-#define ACE_FIELD_CLIENT_SID        0x00008000      // ACE::SidStart contains a client SID
-#define ACE_FIELD_CSA_V1            0x00010000      // Contains the CLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1 structure
-#define ACE_FIELD_CONDITION         0x00020000      // Contains the ACE condition
+#define ACE_FIELD_HFLAGS            0x00000002      // ACE_HEADER::AceFlags for all ACEs except SYSTEM_ACCESS_FILTER_ACE
+#define ACE_FIELD_HFLAGS2           0x00000004      // ACE_HEADER::AceFlags for SYSTEM_ACCESS_FILTER_ACE
+#define ACE_FIELD_HSIZE             0x00000008      // ACE_HEADER::AceSize  (always included)
+#define ACE_FIELD_ACCESS_MASK       0x00000010      // ACE::Mask
+#define ACE_FIELD_ADS_ACCESS_MASK   0x00000020      // ACE::Mask for ADS ACEs
+#define ACE_FIELD_MANDATORY_MASK    0x00000040      // SYSTEM_MANDATORY_LABEL_ACE::Mask
+#define ACE_FIELD_GUID_FLAGS        0x00000080      // Flags for ObjectType and InheritedObjectType
+#define ACE_FIELD_COMPOUND_TYPE     0x00000100      // COMPOUND_ACCESS_ALLOWED_ACE::CompoundAceType
+#define ACE_FIELD_COMPOUND_RSVD     0x00000200      // COMPOUND_ACCESS_ALLOWED_ACE::Reserved
+#define ACE_FIELD_OBJECT_TYPE1      0x00000400      // XXX_YYY_OBJECT_ACE::ObjectType
+#define ACE_FIELD_OBJECT_TYPE2      0x00000800      // XXX_YYY_OBJECT_ACE::InheritedObjectType
+#define ACE_FIELD_SID               0x00001000      // ACE::SidStart contains a (server) SID
+#define ACE_FIELD_MANDATORY_SID     0x00002000      // ACE::SidStart contains a mandatory label SID
+#define ACE_FIELD_POLICY_SID        0x00004000      // ACE::SidStart contains a Policy ID SID
+#define ACE_FIELD_TRUST_SID         0x00008000      // ACE::SidStart contains a trust SID
+#define ACE_FIELD_CLIENT_SID        0x00010000      // ACE::SidStart contains a client SID
+#define ACE_FIELD_CSA_V1            0x00020000      // Contains the CLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1 structure
+#define ACE_FIELD_CONDITION         0x00040000      // Contains the ACE condition
 
 #define ACE_FIELD_PRIMARY_SID_MASK (ACE_FIELD_SID|ACE_FIELD_MANDATORY_SID|ACE_FIELD_POLICY_SID|ACE_FIELD_TRUST_SID)
 
@@ -53,13 +54,13 @@
 #define ACE_LAYOUT_COMPOUND   (ACE_FIELD_HEADER | ACE_FIELD_ACCESS_MASK | ACE_FIELD_COMPOUND_TYPE | ACE_FIELD_COMPOUND_RSVD | ACE_FIELD_SID | ACE_FIELD_CLIENT_SID)
 
 // ACE layout for {Header-AdsMask-Flags-ObjectType-InheritedObjectType-SidStart}
-#define ACE_LAYOUT_OBJECT     (ACE_FIELD_HEADER | ACE_FIELD_ADS_ACCESS_MASK | ACE_FIELD_FLAGS | ACE_FIELD_OBJECT_TYPE1 | ACE_FIELD_OBJECT_TYPE2 | ACE_FIELD_SID)
+#define ACE_LAYOUT_OBJECT     (ACE_FIELD_HEADER | ACE_FIELD_ADS_ACCESS_MASK | ACE_FIELD_GUID_FLAGS | ACE_FIELD_OBJECT_TYPE1 | ACE_FIELD_OBJECT_TYPE2 | ACE_FIELD_SID)
 
 // Flag combinations for {Header-Mask-SidStart-Condition} ACEs
 #define ACE_LAYOUT_CONDITION  (ACE_FIELD_HEADER | ACE_FIELD_ACCESS_MASK | ACE_FIELD_SID | ACE_FIELD_CONDITION)
 
 // Flag combinations for {Header-Mask-Flags-ObjectType-InheritedObjectType-SidStart-Condition} ACEs
-#define ACE_LAYOUT_OBJECT_CONDITION  (ACE_FIELD_HEADER | ACE_FIELD_ADS_ACCESS_MASK | ACE_FIELD_FLAGS | ACE_FIELD_OBJECT_TYPE1 | ACE_FIELD_OBJECT_TYPE2 | ACE_FIELD_SID | ACE_FIELD_CONDITION)
+#define ACE_LAYOUT_OBJECT_CONDITION  (ACE_FIELD_HEADER | ACE_FIELD_ADS_ACCESS_MASK | ACE_FIELD_GUID_FLAGS | ACE_FIELD_OBJECT_TYPE1 | ACE_FIELD_OBJECT_TYPE2 | ACE_FIELD_SID | ACE_FIELD_CONDITION)
 
 // ACE Layout for SYSTEM_MANDATORY_LABEL_ACE_TYPE
 #define ACE_LAYOUT_MANDATORY  (ACE_FIELD_HEADER | ACE_FIELD_MANDATORY_MASK | ACE_FIELD_MANDATORY_SID)
@@ -74,10 +75,21 @@
 #define ACE_LAYOUT_TRUST_ID  (ACE_FIELD_HEADER | ACE_FIELD_ACCESS_MASK | ACE_FIELD_TRUST_SID)
 
 // ACE layout for SYSTEM_ACCESS_FILTER_ACE
-#define ACE_LAYOUT_TRUST_ID_CONDITION  (ACE_FIELD_HEADER | ACE_FIELD_ACCESS_MASK | ACE_FIELD_TRUST_SID | ACE_FIELD_CONDITION)
+#define ACE_LAYOUT_TRUST_ID_CONDITION  (ACE_FIELD_HTYPE | ACE_FIELD_HFLAGS2 | ACE_FIELD_HSIZE | ACE_FIELD_ACCESS_MASK | ACE_FIELD_TRUST_SID | ACE_FIELD_CONDITION)
 
 // An invalid ACCESS_MASK
 #define INVALID_ACCESS_MASK   0xFFFFFFFF
+
+//-----------------------------------------------------------------------------
+// Common structure of an ACE with GUID flags
+
+typedef struct _ACE
+{
+    ACE_HEADER Header;
+    ACCESS_MASK Mask;
+    DWORD Flags;
+    // Followed by more fields, depending on the ACE type
+} ACE, *PACE;
 
 //-----------------------------------------------------------------------------
 // External variables
@@ -95,16 +107,18 @@ extern const BYTE SidSystemAce19[0x10];
 struct ACE_HELPER
 {
     // Constructors and destructors
-    ACE_HELPER(DWORD dwAceType = 0, PSID pSid = NULL);
-    ACE_HELPER(ACE_CSA_HELPER & CsaHelper, PSID pSid);
+    ACE_HELPER(DWORD dwAceType = ACCESS_ALLOWED_ACE_TYPE, PSID pSid = NULL);
+    ACE_HELPER(DWORD dwAceType, ACCESS_MASK AccessMask, PSID pSid = NULL);
+    ACE_HELPER(const ACE_CSA_HELPER & CsaHelper, PSID pSid = NULL);
     ~ACE_HELPER();
-    void Reset();                                       // Resets everything
+
+    void Init(DWORD dwAceType, ACCESS_MASK AccessMask, PSID pSid1, PSID pSid2);
 
     bool SetAceType(DWORD dwAceType);                   // Sets a new ACE type
     bool SetAce(PACE_HEADER pAceHeader);                // Stores an ACE
     PSID SetSid(LPCVOID lpSid, size_t nSidIndex);       // Stores a SID that needs to be freed
     bool SetResource(LPCVOID lpAttrRel, size_t cbAttrRel);
-    bool SetResource(ACE_CSA_HELPER & CsaHelper);
+    bool SetResource(const ACE_CSA_HELPER & CsaHelper);
     bool SetCondition(LPCVOID lpAttrRel, size_t cbAttrRel);
 
     bool SetDummyResource();

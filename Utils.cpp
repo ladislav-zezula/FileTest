@@ -29,22 +29,6 @@ static BYTE CharToValue[0x80] =
 
 LPCTSTR HexaAlphabetUpper = _T("0123456789ABCDEF");
 
-static void Hex2TextXX(ULONGLONG Value, LPTSTR szBuffer, int nSize)
-{
-    // Get the number of hexa digits
-    nSize = nSize + nSize - 1;
-    
-    // Convert the number to string
-    for(int i = 0; i <= nSize; i++)
-    {
-        szBuffer[nSize - i] = HexaAlphabetUpper[Value & 0x0F];
-        Value >>= 4;
-    }
-    
-    // Terminate the string
-    szBuffer[nSize + 1] = 0;
-}
-
 static bool IsPossibleFileId(LPCTSTR szFileName)
 {
     size_t nLength = _tcslen(szFileName);
@@ -185,6 +169,22 @@ DWORD DlgText2Hex32(HWND hDlg, UINT nIDCtrl, PDWORD pValue)
     }
 
     return dwErrCode;
+}
+
+void Hex2TextXX(ULONGLONG Value, LPTSTR szBuffer, size_t nSize)
+{
+    // Get the number of hexa digits
+    nSize = nSize + nSize - 1;
+
+    // Convert the number to string
+    for(size_t i = 0; i <= nSize; i++)
+    {
+        szBuffer[nSize - i] = HexaAlphabetUpper[Value & 0x0F];
+        Value >>= 4;
+    }
+
+    // Terminate the string
+    szBuffer[nSize + 1] = 0;
 }
 
 void Hex2Text32(LPTSTR szBuffer, DWORD Value)

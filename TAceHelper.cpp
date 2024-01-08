@@ -33,7 +33,7 @@ const BYTE SidSystemAce19[0x10] = {0x01, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1
 
 // Dummy condition for various reasons
 // Obtained from "c:\Program Files\WindowsApps\Microsoft.ZuneMusic_11.2310.8.0_neutral_~_8wekyb3d8bbwe" 
-static const BYTE DummyCondition[] =
+static const BYTE DummyAllowedCondition[] =
 {
     0x61, 0x72, 0x74, 0x78, 0xf8, 0x1c, 0x00, 0x00, 0x00, 0x57, 0x00, 0x49, 0x00, 0x4e, 0x00, 0x3a,
     0x00, 0x2f, 0x00, 0x2f, 0x00, 0x53, 0x00, 0x59, 0x00, 0x53, 0x00, 0x41, 0x00, 0x50, 0x00, 0x50,
@@ -44,48 +44,41 @@ static const BYTE DummyCondition[] =
     0x64, 0x00, 0x38, 0x00, 0x62, 0x00, 0x62, 0x00, 0x77, 0x00, 0x65, 0x00, 0x86, 0x00, 0x00, 0x00
 };
 
+static const BYTE DummyOtherCondition[] =
+{
+    0x61, 0x72, 0x74, 0x78, 0xF8, 0x1C, 0x00, 0x00, 0x00, 0x57, 0x00, 0x49, 0x00, 0x4E, 0x00, 0x3A,
+    0x00, 0x2F, 0x00, 0x2F, 0x00, 0x53, 0x00, 0x59, 0x00, 0x53, 0x00, 0x41, 0x00, 0x50, 0x00, 0x50,
+    0x00, 0x49, 0x00, 0x44, 0x00, 0x10, 0x46, 0x00, 0x00, 0x00, 0x4D, 0x00, 0x69, 0x00, 0x63, 0x00,
+    0x72, 0x00, 0x6F, 0x00, 0x73, 0x00, 0x6F, 0x00, 0x66, 0x00, 0x74, 0x00, 0x2E, 0x00, 0x42, 0x00,
+    0x69, 0x00, 0x6E, 0x00, 0x67, 0x00, 0x57, 0x00, 0x65, 0x00, 0x61, 0x00, 0x74, 0x00, 0x68, 0x00,
+    0x65, 0x00, 0x72, 0x00, 0x5F, 0x00, 0x38, 0x00, 0x77, 0x00, 0x65, 0x00, 0x6B, 0x00, 0x79, 0x00,
+    0x62, 0x00, 0x33, 0x00, 0x64, 0x00, 0x38, 0x00, 0x62, 0x00, 0x62, 0x00, 0x77, 0x00, 0x65, 0x00,
+    0x80, 0xF8, 0x1C, 0x00, 0x00, 0x00, 0x57, 0x00, 0x49, 0x00, 0x4E, 0x00, 0x3A, 0x00, 0x2F, 0x00,
+    0x2F, 0x00, 0x53, 0x00, 0x59, 0x00, 0x53, 0x00, 0x41, 0x00, 0x50, 0x00, 0x50, 0x00, 0x49, 0x00,
+    0x44, 0x00, 0x01, 0xAA, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x81, 0xA1, 0x00,
+    0x00, 0x00, 0x00, 0x00
+};
+
 //-----------------------------------------------------------------------------
 // Constructor and destructor
 
 ACE_HELPER::ACE_HELPER(DWORD dwAceType, PSID pSid)
 {
-    // Set the object to default values
-    memset(this, 0, sizeof(ACE_HELPER));
-    Mask = INVALID_ACCESS_MASK;
-
-    // Set the ACE type
-    SetAceType(dwAceType);
-
-    // Put the main SID. If not provided, choose a default SID
-    if(pSid == NULL)
-        pSid = GetDefaultSid(dwAceType);
-    SetSid(pSid, 0);
+    Init(dwAceType, INVALID_ACCESS_MASK, pSid, NULL);
 }
 
-ACE_HELPER::ACE_HELPER(ACE_CSA_HELPER & CsaHelper, PSID pSid)
+ACE_HELPER::ACE_HELPER(DWORD dwAceType, ACCESS_MASK AccessMask, PSID pSid)
 {
-    // Set the object to default values
-    memset(this, 0, sizeof(ACE_HELPER));
+    Init(dwAceType, AccessMask, pSid, NULL);
+}
 
-    // Set the ACE type. Prevent construction of ACE resource
-    AceType = SYSTEM_RESOURCE_ATTRIBUTE_ACE_TYPE;
-    AceLayout = ACE_LAYOUT_RESOURCE;
-    Mask = FILE_READ_DATA;
-
-    // Set the default SID
-    pSid = (pSid != NULL) ? pSid : (PSID)(SidEveryone);
-    SetSid(pSid, 0);
-
-    // Set the resource
+ACE_HELPER::ACE_HELPER(const ACE_CSA_HELPER & CsaHelper, PSID pSid)
+{
+    Init(SYSTEM_RESOURCE_ATTRIBUTE_ACE_TYPE, FILE_READ_DATA, pSid, NULL);
     SetResource(CsaHelper);
 }
 
 ACE_HELPER::~ACE_HELPER()
-{
-    Reset();
-}
-
-void ACE_HELPER::Reset()
 {
     // Free the SIDs
     for(size_t i = 0; i < _countof(Sid); i++)
@@ -104,15 +97,24 @@ void ACE_HELPER::Reset()
     if(AttrRel != NULL)
         delete[] AttrRel;
     AttrRel = NULL;
+}
 
-    // Reset everything to zero
+void ACE_HELPER::Init(DWORD dwAceType, ACCESS_MASK AccessMask, PSID pSid1, PSID pSid2)
+{
+    // Set the object to default values
     memset(this, 0, sizeof(ACE_HELPER));
+    Mask = AccessMask;
 
-    // Set to default values
-    AceType = ACCESS_ALLOWED_ACE_TYPE;
-    Mask    = GENERIC_ALL;
-    Sid[0]  = (PSID)(SidEveryone);
-    Sid[1]  = (PSID)(SidLocAdmins);
+    // Set the ACE type
+    SetAceType(dwAceType);
+
+    // Put the main SID. If not provided, choose a default SID
+    if(pSid1 == NULL)
+        pSid1 = GetDefaultSid(AceType, AceFlags);
+    SetSid(pSid1, 0);
+
+    // Put the secondary SID, if any
+    SetSid(pSid2, 1);
 }
 
 //-----------------------------------------------------------------------------
@@ -150,21 +152,31 @@ bool ACE_HELPER::SetAceType(DWORD dwAceType)
             break;
 
         case ACCESS_ALLOWED_CALLBACK_ACE_TYPE:              // Conditional ACEs:
+            Mask = (Mask != INVALID_ACCESS_MASK) ? Mask : GENERIC_ALL;
+            AceLayout = ACE_LAYOUT_CONDITION;
+            SetCondition(DummyAllowedCondition, sizeof(DummyAllowedCondition));
+            break;
+
         case ACCESS_DENIED_CALLBACK_ACE_TYPE:               // {Header-Mask-SidStart-Condition}
         case SYSTEM_AUDIT_CALLBACK_ACE_TYPE:
         case SYSTEM_ALARM_CALLBACK_ACE_TYPE:
-            Mask = (Mask != INVALID_ACCESS_MASK) ? Mask : GENERIC_ALL;
+            Mask = (Mask != INVALID_ACCESS_MASK) ? Mask : FILE_EXECUTE;
             AceLayout = ACE_LAYOUT_CONDITION;
-            SetCondition(DummyCondition, sizeof(DummyCondition));
+            SetCondition(DummyOtherCondition, sizeof(DummyOtherCondition));
             break;
 
         case ACCESS_ALLOWED_CALLBACK_OBJECT_ACE_TYPE:       // Conditional object ACEs:
+            Mask = (Mask != INVALID_ACCESS_MASK) ? Mask : GENERIC_ALL;
+            AceLayout = ACE_LAYOUT_OBJECT_CONDITION;
+            SetCondition(DummyAllowedCondition, sizeof(DummyAllowedCondition));
+            break;
+
         case ACCESS_DENIED_CALLBACK_OBJECT_ACE_TYPE:        // {Header-AdsMask-Flags-ObjectType-InheritedObjectType-SidStart-Condition}
         case SYSTEM_AUDIT_CALLBACK_OBJECT_ACE_TYPE:
         case SYSTEM_ALARM_CALLBACK_OBJECT_ACE_TYPE:
-            Mask = (Mask != INVALID_ACCESS_MASK) ? Mask : GENERIC_ALL;
+            Mask = (Mask != INVALID_ACCESS_MASK) ? Mask : FILE_EXECUTE;
             AceLayout = ACE_LAYOUT_OBJECT_CONDITION;
-            SetCondition(DummyCondition, sizeof(DummyCondition));
+            SetCondition(DummyOtherCondition, sizeof(DummyOtherCondition));
             break;
 
         case SYSTEM_MANDATORY_LABEL_ACE_TYPE:
@@ -174,8 +186,6 @@ bool ACE_HELPER::SetAceType(DWORD dwAceType)
 
         case SYSTEM_RESOURCE_ATTRIBUTE_ACE_TYPE:
             Mask = (Mask != INVALID_ACCESS_MASK) ? Mask : FILE_READ_DATA;
-            if(AttrRel == NULL)
-                SetDummyResource();
             AceLayout = ACE_LAYOUT_RESOURCE;                // Contains the CLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1 structure
             break;
 
@@ -195,7 +205,7 @@ bool ACE_HELPER::SetAceType(DWORD dwAceType)
             Mask = (Mask != INVALID_ACCESS_MASK) ? Mask : FILE_READ_DATA;
             AceLayout = ACE_LAYOUT_TRUST_ID_CONDITION;
             AceFlags |= TRUST_PROTECTED_FILTER_ACE_FLAG;
-            SetCondition(DummyCondition, sizeof(DummyCondition));
+            SetCondition(DummyOtherCondition, sizeof(DummyOtherCondition));
             break;
 
         default:    // Unknown ACE type. Just assume ACE_HEADER and AccessMask
@@ -232,7 +242,7 @@ bool ACE_HELPER::SetAce(PACE_HEADER pAceHeader)
         }
 
         // Is there the ACE::Flags
-        if(AceLayout & ACE_FIELD_FLAGS)
+        if(AceLayout & ACE_FIELD_GUID_FLAGS)
         {
             // Copy the ACE::Flags
             Flags = *(PDWORD)(pbAcePtr);
@@ -332,7 +342,7 @@ bool ACE_HELPER::SetCondition(LPCVOID lpCondition, size_t cbCondition)
     return (Condition && ConditionLength);
 }
 
-bool ACE_HELPER::SetResource(ACE_CSA_HELPER & CsaHelper)
+bool ACE_HELPER::SetResource(const ACE_CSA_HELPER & CsaHelper)
 {
     PCLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1 pAttrRel;
     ULONG cbAttrRel = 0;
@@ -349,10 +359,9 @@ bool ACE_HELPER::SetResource(ACE_CSA_HELPER & CsaHelper)
 
 bool ACE_HELPER::SetDummyResource()
 {
-    ACE_CSA_HELPER CsaHelper;
+    ACE_CSA_HELPER CsaHelper(L"RESOURCE_STRINGS", CLAIM_SECURITY_ATTRIBUTE_TYPE_STRING, 4);
 
-    // Construct the resource object
-    CsaHelper.Create(L"RESOURCE_STRINGS", CLAIM_SECURITY_ATTRIBUTE_TYPE_STRING, 4, L"Daenerys", L"Targaryen", L"Tyrion", L"Lannister");
+    // Modify the flags
     CsaHelper.Flags = CLAIM_SECURITY_ATTRIBUTE_VALUE_CASE_SENSITIVE;
     return SetResource(CsaHelper);
 }
@@ -362,7 +371,6 @@ PACE_HEADER ACE_HELPER::Export(LPBYTE pbBuffer, size_t cbBuffer)
     PACE_HEADER pAceHeader = (PACE_HEADER)(pbBuffer);
     LPBYTE pbEnd = pbBuffer + cbBuffer;
     LPBYTE pbPtr = pbBuffer;
-    ULONG GuidFlags = Flags;
 
     // Fill-in the header
     if(AceLayout & ACE_FIELD_HEADER)
@@ -381,7 +389,7 @@ PACE_HEADER ACE_HELPER::Export(LPBYTE pbBuffer, size_t cbBuffer)
         return NULL;
 
     // Fill-in the ACE::Flags
-    pbPtr = PutAceValue(pbPtr, pbEnd, &GuidFlags, ACE_FIELD_FLAGS, sizeof(GuidFlags));
+    pbPtr = PutAceValue(pbPtr, pbEnd, &Flags, ACE_FIELD_GUID_FLAGS, sizeof(Flags));
     if(pbPtr == NULL)
         return NULL;
 
@@ -396,7 +404,7 @@ PACE_HEADER ACE_HELPER::Export(LPBYTE pbBuffer, size_t cbBuffer)
         return NULL;
 
     // Fill-in the ACE::ObjectType
-    if(GuidFlags & ACE_OBJECT_TYPE_PRESENT)
+    if((AceLayout & ACE_FIELD_GUID_FLAGS) && (Flags & ACE_OBJECT_TYPE_PRESENT))
     {
         pbPtr = PutAceValue(pbPtr, pbEnd, &ObjectType, ACE_FIELD_OBJECT_TYPE1, sizeof(ObjectType));
         if(pbPtr == NULL)
@@ -404,14 +412,14 @@ PACE_HEADER ACE_HELPER::Export(LPBYTE pbBuffer, size_t cbBuffer)
     }
 
     // Fill-in the ACE::InheritedObjectType
-    if(GuidFlags & ACE_INHERITED_OBJECT_TYPE_PRESENT)
+    if((AceLayout & ACE_FIELD_GUID_FLAGS) && (Flags & ACE_INHERITED_OBJECT_TYPE_PRESENT))
     {
         pbPtr = PutAceValue(pbPtr, pbEnd, &InheritedObjectType, ACE_FIELD_OBJECT_TYPE2, sizeof(InheritedObjectType));
         if(pbPtr == NULL)
             return NULL;
     }
 
-    // Fill-in the (server, mandatory, policy, trust) SID
+    // Fill-in the (server, mandatory, policy, trust, conditional trust) SID
     if(AceLayout & ACE_FIELD_PRIMARY_SID_MASK)
     {
         if((pbPtr = PutAceValueSid(pbPtr, pbEnd, Sid[0])) == NULL)
@@ -489,7 +497,7 @@ LPBYTE ACE_HELPER::PutAceValueSid(LPBYTE PtrAclData, LPBYTE PtrAclEnd, PSID pSou
 
     // If no SID is given, create one with Everyone
     if(pSourceSid == NULL)
-        pSourceSid = GetDefaultSid(AceType);
+        pSourceSid = GetDefaultSid(AceType, AceFlags);
 
     // If we have that SID, add it to the ACE data
     if(pSourceSid != NULL)

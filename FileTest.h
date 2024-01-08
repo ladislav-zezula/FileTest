@@ -82,7 +82,9 @@
 #define WM_WORK_COMPLETE            (WM_USER + 0x1006)
 #define WM_UPDATE_VIEW              (WM_USER + 0x1007)
 #define WM_DEFER_ITEM_TEXT          (WM_USER + 0x1008)  // WPARAM = hItem, LPARAM = LPTSTR
-#define WM_DEFER_CHANGE_ACE_TYPE    (WM_USER + 0x1009)  // WPARAM = hItem, LPARAM = ACE data
+#define WM_DEFER_CHANGE_INT_FLAGS   (WM_USER + 0x1009)  // WPARAM = hItem
+#define WM_DEFER_CHANGE_WHOLE_ACE   (WM_USER + 0x100A)  // WPARAM = hItem, LPARAM = pAceHelper
+#define WM_DEFER_CHANGE_ACE_CSA     (WM_USER + 0x100B)  // WPARAM = hItem, LPARAM = BOOL bShowFlagsDialog
 
 #define STATUS_INVALID_DATA_FORMAT  0xC1110001
 #define STATUS_CANNOT_EDIT_THIS     0xC1110002
@@ -453,6 +455,7 @@ LPCTSTR SkipHexaPrefix(LPCTSTR szString);
 DWORD Text2Bool(LPCTSTR szText, bool * pValue);
 DWORD Text2Hex32(LPCTSTR szText, PDWORD pValue);
 DWORD DlgText2Hex32(HWND hDlg, UINT nIDCtrl, PDWORD pValue);
+void  Hex2TextXX(ULONGLONG Value, LPTSTR szBuffer, size_t nSize);
 void  Hex2Text32(LPTSTR szBuffer, DWORD Value);
 void  Hex2DlgText32(HWND hDlg, UINT nIDCtrl, DWORD Value);
 

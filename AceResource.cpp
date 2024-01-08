@@ -11,6 +11,65 @@
 #include "FileTest.h"
 
 //-----------------------------------------------------------------------------
+// Local structures
+
+typedef struct _LOCAL_OCTET_STRING
+{
+    ULONG Length;
+    BYTE Data[256];
+} LOCAL_OCTET_STRING, *PLOCAL_OCTET_STRING;
+
+static void MakeOctetString(LOCAL_OCTET_STRING & OctetString, LPCVOID lpData, ULONG cbData)
+{
+    assert(cbData <= 256);
+
+    memset(&OctetString, 0, sizeof(LOCAL_OCTET_STRING));
+    memcpy(OctetString.Data, lpData, cbData);
+    OctetString.Length = cbData;
+}
+
+static void MakeOctetString(LOCAL_OCTET_STRING & OctetString, ULONGLONG IntValue)
+{
+    // Prepare an 8-byte octet string (little endian)
+    MakeOctetString(OctetString, &IntValue, sizeof(IntValue));
+}
+
+static void MakeOctetStringSid(LOCAL_OCTET_STRING & OctetString, PSID pSid)
+{
+    MakeOctetString(OctetString, pSid, RtlLengthSid(pSid));
+}
+
+
+//-----------------------------------------------------------------------------
+// Copies data to an output buffer
+
+NTSTATUS CopyDataAway(LPBYTE pbPtr, LPBYTE pbEnd, LPCVOID lpData, ULONG cbData, PULONG pcbMoveBy)
+{
+    if(cbData > (ULONG)(pbEnd - pbPtr))
+        return STATUS_BUFFER_OVERFLOW;
+
+    // Copy the data to the target buffer
+    memcpy(pbPtr, lpData, cbData);
+
+    // Give the length of the data
+    if(pcbMoveBy != NULL)
+        pcbMoveBy[0] = cbData;
+    return STATUS_SUCCESS;
+}
+
+static LPBYTE ExportDataAway(LPBYTE pbPtr, LPBYTE pbEnd, LPCVOID lpData, ULONG cbData)
+{
+    if(CopyDataAway(pbPtr, pbEnd, lpData, cbData, NULL) != STATUS_SUCCESS)
+        return NULL;
+    return pbPtr;
+}
+
+static LPBYTE ExportDataAway(LPBYTE pbPtr, LPBYTE pbEnd, LOCAL_OCTET_STRING & OctetString)
+{
+    return ExportDataAway(pbPtr, pbEnd, &OctetString, sizeof(ULONG) + OctetString.Length);
+}
+
+//-----------------------------------------------------------------------------
 // ACE_CSA_OBJECT implementation
 
 ACE_CSA_OBJECT::ACE_CSA_OBJECT()
@@ -26,34 +85,36 @@ ACE_CSA_OBJECT::~ACE_CSA_OBJECT()
 
 LPBYTE ACE_CSA_OBJECT::ImportData(LPBYTE pbStructure, LPBYTE pbEnd, size_t Offset, size_t Length)
 {
-    // The inner buffer should be reset at this point
-    assert(lpData == NULL);
-    assert(cbData == 0);
+    LPVOID lpNewData;
 
     // Check for length overflow
     if((Length & 0xFFFFFFFF) != Length)
     {
-        SetLastError(ERROR_INVALID_PARAMETER);
+        SetLastError((DWORD)STATUS_INVALID_PARAMETER);
         return NULL;
     }
 
     // Is there enough data in the input?
     if((pbStructure + Offset + Length) > pbEnd)
     {
-        SetLastError(ERROR_INVALID_PARAMETER);
+        SetLastError((DWORD)STATUS_INVALID_PARAMETER);
         return NULL;
     }
 
     // Allocate the buffer for the data.
     // Make sure that it's always aligned to 8
-    if((lpData = LocalAlloc(LPTR, ALIGN_TO_SIZE(Length, 8))) == NULL)
+    if((lpNewData = LocalAlloc(LPTR, ALIGN_TO_SIZE(Length, 8))) == NULL)
     {
-        SetLastError(ERROR_NOT_ENOUGH_MEMORY);
+        SetLastError((DWORD)STATUS_NO_MEMORY);
         return NULL;
     }
 
+    // Free any existing data
+    Clear();
+
     // Copy the data
-    memcpy(lpData, pbStructure + Offset, Length);
+    memcpy(lpNewData, pbStructure + Offset, Length);
+    lpData = lpNewData;
     cbData = (ULONG)(Length);
     
     // Return the position of the data after the input
@@ -76,12 +137,12 @@ void ACE_CSA_OBJECT::Clear()
     cbData = 0;
 }
 
-size_t ACE_CSA_OBJECT::ExportSize(size_t cbAlignSize)
+size_t ACE_CSA_OBJECT::ExportSize(size_t cbAlignSize) const
 {
     return ALIGN_TO_SIZE(cbData, cbAlignSize);
 }
 
-LPBYTE ACE_CSA_OBJECT::Export(LPBYTE pbPtr, LPBYTE pbEnd)
+LPBYTE ACE_CSA_OBJECT::Export(LPBYTE pbPtr, LPBYTE pbEnd) const
 {
     size_t cbLength = ExportSize();
 
@@ -97,15 +158,30 @@ LPBYTE ACE_CSA_OBJECT::Export(LPBYTE pbPtr, LPBYTE pbEnd)
     return pbPtr + ALIGN_TO_SIZE(cbLength, sizeof(DWORD));
 }
 
+LPBYTE ACE_CSA_OBJECT::Default(LPBYTE /* pbPtr */, LPBYTE /* pbEnd */, DWORD /* dwIndexHint */) const
+{
+    // Should never be called
+    assert(false);
+    return NULL;
+}
+
 LPBYTE ACE_CSA_OBJECT::Import(LPCVOID /* lpObject */)
 {
     // Import of an unknown object is not implemented
-    SetLastError(ERROR_NOT_SUPPORTED);
+    SetLastError((DWORD)STATUS_NOT_SUPPORTED);
     return NULL;
 }
 
 //-----------------------------------------------------------------------------
 // ACE_CSA_DWORD64 implementation
+
+LPBYTE ACE_CSA_DWORD64::Default(LPBYTE pbPtr, LPBYTE pbEnd, DWORD i) const
+{
+    DWORD64 DefaultValues[] = {0xDEADBABEULL, 0x12342ULL};
+    DWORD64 DefaultValue = (i < _countof(DefaultValues)) ? DefaultValues[i] : 0x1234567812345678ULL + i;
+
+    return ExportDataAway(pbPtr, pbEnd, &DefaultValue, sizeof(DefaultValue));
+}
 
 LPBYTE ACE_CSA_DWORD64::Import(LPCVOID lpObject)
 {
@@ -117,6 +193,20 @@ LPBYTE ACE_CSA_DWORD64::Import(LPCVOID lpObject)
 //-----------------------------------------------------------------------------
 // ACE_CSA_LPWSTR implementation
 
+LPBYTE ACE_CSA_LPWSTR::Default(LPBYTE pbPtr, LPBYTE pbEnd, DWORD i) const
+{
+    LPCWSTR DefaultValues[] = {L"Daenerys", L"Targaryen", L"TheStormBorn"};
+    LPCWSTR DefaultValue = DefaultValues[i];
+    WCHAR szBuffer[128];
+
+    if(i >= _countof(DefaultValues))
+    {
+        StringCchPrintfW(szBuffer, _countof(szBuffer), L"DefaultString%u", i);
+        DefaultValue = szBuffer;
+    }
+    return ExportDataAway(pbPtr, pbEnd, DefaultValue, (ULONG)StringLength(DefaultValue));
+}
+
 LPBYTE ACE_CSA_LPWSTR::Import(LPCVOID lpObject)
 {
     LPBYTE pbString = (LPBYTE)(lpObject);
@@ -125,15 +215,45 @@ LPBYTE ACE_CSA_LPWSTR::Import(LPCVOID lpObject)
     // Ignore the length, calculate it on our own
     if(lpObject == NULL)
         return pbString;
-    cbString = (wcslen((LPWSTR)(lpObject)) + 1) * sizeof(WCHAR);
+    cbString = StringLength(lpObject);
 
     // Proceed with the import
     return ImportData(pbString, pbString + cbString, 0, cbString);
 }
 
+size_t ACE_CSA_LPWSTR::StringLength(LPCVOID lpObject) const
+{
+    size_t cbString = 0;
+
+    if(lpObject != NULL)
+        cbString = (wcslen((LPWSTR)(lpObject)) + 1) * sizeof(WCHAR);
+    return cbString;
+}
+
 //-----------------------------------------------------------------------------
 // ACE_CSA_SID implementation
 // Windows kernel requires the SID to be prepended with 32-bit length: [Length] [SID]
+
+LPBYTE ACE_CSA_SID::Default(LPBYTE pbPtr, LPBYTE pbEnd, DWORD i) const
+{
+    LOCAL_OCTET_STRING OctetString;
+
+    switch(i)
+    {
+        case 0:
+            MakeOctetStringSid(OctetString, (PSID)(SidLocAdmins));
+            break;
+
+        case 1:
+            MakeOctetStringSid(OctetString, (PSID)(SidLocUsers));
+            break;
+
+        default:
+            MakeOctetStringSid(OctetString, (PSID)(SidEveryone));
+            break;
+    }
+    return ExportDataAway(pbPtr, pbEnd, OctetString);
+}
 
 LPBYTE ACE_CSA_SID::Import(LPCVOID lpObject)
 {
@@ -144,9 +264,16 @@ LPBYTE ACE_CSA_SID::Import(LPCVOID lpObject)
 // ACE_CSA_BOOLEAN implementation
 // Windows kernel requires each BOOLEAN value to have 8 bytes
 
-size_t ACE_CSA_BOOLEAN::ExportSize(size_t cbAlignSize)
+size_t ACE_CSA_BOOLEAN::ExportSize(size_t cbAlignSize) const
 {
     return ALIGN_TO_SIZE(sizeof(ULONG64), cbAlignSize);
+}
+
+LPBYTE ACE_CSA_BOOLEAN::Default(LPBYTE pbPtr, LPBYTE pbEnd, DWORD i) const
+{
+    ULONG64 DefaultValue = i & 1;
+
+    return ExportDataAway(pbPtr, pbEnd, &DefaultValue, sizeof(DefaultValue));
 }
 
 LPBYTE ACE_CSA_BOOLEAN::Import(LPCVOID lpObject)
@@ -159,6 +286,29 @@ LPBYTE ACE_CSA_BOOLEAN::Import(LPCVOID lpObject)
 //-----------------------------------------------------------------------------
 // ACE_CSA_OCTET_STRING implementation
 
+LPBYTE ACE_CSA_OCTET_STRING::Default(LPBYTE pbPtr, LPBYTE pbEnd, DWORD i) const
+{
+    LOCAL_OCTET_STRING OctetString;
+    BYTE OctetString0[] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07};
+    BYTE OctetString1[] = {0xA1, 0xB2, 0xC3, 0xD4, 0xE5, 0xF6, 0x07, 0x18, 0x29, 0x3A, 0x4B, 0x3C, 0x4D, 0x01, 0x02, 0x03, 0x04};
+
+    switch(i)
+    {
+        case 0:
+            MakeOctetString(OctetString, OctetString0, sizeof(OctetString0));
+            break;
+
+        case 1:
+            MakeOctetString(OctetString, OctetString1, sizeof(OctetString1));
+            break;
+
+        default:
+            MakeOctetString(OctetString, i);
+            break;
+    }
+    return ExportDataAway(pbPtr, pbEnd, OctetString);
+}
+
 LPBYTE ACE_CSA_OCTET_STRING::Import(LPCVOID lpObject)
 {
     return ImportOctet((PACE_OCTET_STRING)(lpObject));
@@ -166,6 +316,19 @@ LPBYTE ACE_CSA_OCTET_STRING::Import(LPCVOID lpObject)
 
 //-----------------------------------------------------------------------------
 // ACE_CSA_HELPER implementation
+
+ACE_CSA_HELPER::ACE_CSA_HELPER(LPCWSTR szName, WORD wValueType, DWORD dwValueCount)
+{
+    // Setup the object so that it does not contain anything
+    InitialReset();
+
+    // Create the object name
+    if(Name.Import(szName) == NULL)
+        return;
+
+    // Set the value type and count
+    SetValueType(wValueType, dwValueCount);
+}
 
 ACE_CSA_HELPER::ACE_CSA_HELPER()
 {
@@ -195,111 +358,135 @@ void ACE_CSA_HELPER::Clear()
     InitialReset();
 }
 
-DWORD ACE_CSA_HELPER::CreateVA(LPCWSTR szName, WORD aValueType, DWORD aValueCount, va_list argList)
+NTSTATUS ACE_CSA_HELPER::SetValueName(LPCWSTR szName)
 {
-    LPBYTE pbResult = NULL;
-    DWORD dwErrCode = ERROR_SUCCESS;
+    return (Name.Import(szName) != NULL) ? ERROR_SUCCESS : GetLastError();
+}
 
-    // Free the current values
-    Clear();
+NTSTATUS ACE_CSA_HELPER::SetValueType(WORD wValueType, DWORD dwValueCount)
+{
+    ACE_CSA_OBJECT * ppSaveObjects = NULL;
+    NTSTATUS Status;
+    DWORD dwSaveValueCount = 0;
+    BYTE CopyBuffer[MAX_ACL_LENGTH];
 
-    // Allocate new values
-    if(Name.Import(szName) == NULL)
-        return GetLastError();
-
-    // Fill-in the value type
-    ValueType = aValueType;
-    Flags = 0;
-
-    // Import all elements
-    if((ValueCount = aValueCount) != 0)
+    // If we are changing the value type, we need to free the current values
+    if(wValueType != ValueType)
     {
-        if((dwErrCode = AllocateElements()) == ERROR_SUCCESS)
+        // Free the current objects
+        if(ppObjects != NULL)
+            delete[] ppObjects;
+        ppSaveObjects = ppObjects = NULL;
+    }
+    else if(dwValueCount != ValueCount)
+    {
+        dwSaveValueCount = ValueCount;
+        ppSaveObjects = ppObjects;
+        ppObjects = NULL;
+    }
+    else
+    {
+        return STATUS_SUCCESS;
+    }
+
+    // Setup the value type and value count
+    ValueCount = dwValueCount;
+    ValueType = wValueType;
+
+    // Allocate elements and supply default values
+    if((Status = AllocateElements()) == STATUS_SUCCESS)
+    {
+        LPBYTE pbPtr = CopyBuffer;
+        LPBYTE pbEnd = pbPtr + sizeof(CopyBuffer);
+        LPBYTE pbResult;
+
+        for(DWORD i = 0; i < ValueCount; i++)
         {
-            if(argList != NULL)
+            // Make sure that the copy buffer is zeroed
+            memset(CopyBuffer, 0, sizeof(CopyBuffer));
+
+            // Export the existing object or create default value
+            if(ppSaveObjects && i < dwSaveValueCount)
             {
-                for(ULONG i = 0; i < ValueCount; i++)
-                {
-                    switch(ValueType)
-                    {
-                        case CLAIM_SECURITY_ATTRIBUTE_TYPE_INT64:
-                        case CLAIM_SECURITY_ATTRIBUTE_TYPE_UINT64:
-                        {
-                            DWORD64 Int64 = va_arg(argList, DWORD64);
+                pbResult = ppSaveObjects[i].Export(pbPtr, pbEnd);
+            }
+            else
+            {
+                pbResult = ppObjects[i].Default(pbPtr, pbEnd, i);
+            }
 
-                            pbResult = ImportObject(&Int64, i);
-                            break;
-                        }
-
-                        case CLAIM_SECURITY_ATTRIBUTE_TYPE_STRING:
-                        {
-                            LPCWSTR String = va_arg(argList, LPCWSTR);
-
-                            pbResult = ImportObject(String, i);
-                            break;
-                        }
-
-                        case CLAIM_SECURITY_ATTRIBUTE_TYPE_SID:
-                        {
-                            LPCVOID lpOctet = va_arg(argList, LPCVOID);
-
-                            pbResult = ImportObject(lpOctet, i);
-                            break;
-                        }
-
-                        case CLAIM_SECURITY_ATTRIBUTE_TYPE_BOOLEAN:
-                        {
-                            BOOLEAN BooleanValue = va_arg(argList, BOOLEAN);
-
-                            pbResult = ImportObject(&BooleanValue, i);
-                            break;
-                        }
-
-                        case CLAIM_SECURITY_ATTRIBUTE_TYPE_OCTET_STRING:
-                        {
-                            LPCVOID lpOctet = va_arg(argList, LPCVOID);
-
-                            pbResult = ImportObject(lpOctet, i);
-                            break;
-                        }
-
-                        default:
-                        {
-                            pbResult = NULL;
-                            assert(false);
-                            break;
-                        }
-                    }
-
-                    // Did the import succeed?
-                    if(pbResult == NULL)
-                    {
-                        dwErrCode = GetLastError();
-                        break;
-                    }
-                }
+            // Do we have some value?
+            if(pbResult != NULL)
+            {
+                ppObjects[i].Import(pbPtr);
             }
         }
     }
-    return dwErrCode;
+    else
+    {
+        ValueCount = dwSaveValueCount;
+        ppObjects = ppSaveObjects;
+    }
+    return Status;
 }
 
-DWORD ACE_CSA_HELPER::Create(LPCWSTR szName, WORD aValueType, DWORD aValueCount, ...)
+NTSTATUS ACE_CSA_HELPER::SetValueData(LPCVOID lpObject, ULONG Index)
 {
-    va_list argList;
-    DWORD dwErrCode;
+    // Objects must be already allocated
+    assert(ppObjects != NULL);
+    assert(ValueCount != 0);
 
-    va_start(argList, aValueCount);
-    dwErrCode = CreateVA(szName, aValueType, aValueCount, argList);
-    va_end(argList);
+    // Check for overflow
+    if(Index >= ValueCount)
+        return STATUS_BUFFER_OVERFLOW;
 
-    return dwErrCode;
+    // Import the object
+    return (ppObjects[Index].Import(lpObject) != NULL) ? STATUS_SUCCESS : GetLastError();
 }
 
-DWORD ACE_CSA_HELPER::Import(LPBYTE pbAttrRel, LPBYTE pbAttrEnd, PULONG pcbMoveBy)
+NTSTATUS ACE_CSA_HELPER::AllocateElements()
 {
+    // Sanity checks
+    assert(ppObjects == NULL);
+    assert(ValueCount != 0);
+    assert(ValueType != 0);
+
+    // Allocate the elements based on element type
+    switch(ValueType)
+    {
+        case CLAIM_SECURITY_ATTRIBUTE_TYPE_INT64:
+        case CLAIM_SECURITY_ATTRIBUTE_TYPE_UINT64:
+            ppObjects = new ACE_CSA_DWORD64[ValueCount];
+            break;
+
+        case CLAIM_SECURITY_ATTRIBUTE_TYPE_STRING:
+            ppObjects = new ACE_CSA_LPWSTR[ValueCount];
+            break;
+
+        case CLAIM_SECURITY_ATTRIBUTE_TYPE_SID:
+            ppObjects = new ACE_CSA_SID[ValueCount];
+            break;
+
+        case CLAIM_SECURITY_ATTRIBUTE_TYPE_BOOLEAN:
+            ppObjects = new ACE_CSA_BOOLEAN[ValueCount];
+            break;
+
+        case CLAIM_SECURITY_ATTRIBUTE_TYPE_OCTET_STRING:
+            ppObjects = new ACE_CSA_OCTET_STRING[ValueCount];
+            break;
+
+        default:
+            return STATUS_INVALID_PARAMETER;
+    }
+
+    // If the allocation failed, return error
+    return (ppObjects != NULL) ? STATUS_SUCCESS : STATUS_NO_MEMORY;
+}
+
+NTSTATUS ACE_CSA_HELPER::Import(LPBYTE pbAttrRel, LPBYTE pbAttrEnd, PULONG pcbMoveBy)
+{
+    NTSTATUS Status = STATUS_BAD_DATA;
     ULONG cbBase = FIELD_OFFSET(CLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1, Values);
-    DWORD dwErrCode = ERROR_BAD_FORMAT;
     ULONG cbMoveBy = 0;
 
     // Free the current values
@@ -321,13 +508,13 @@ DWORD ACE_CSA_HELPER::Import(LPBYTE pbAttrRel, LPBYTE pbAttrEnd, PULONG pcbMoveB
         // Import the name
         if((pbEndObject = Name.Import(pbAttrRel + pAttrRel->Name)) == NULL)
             return GetLastError();
-        cbMoveBy = max(cbMoveBy, (size_t)(pbEndObject - pbAttrRel));
+        cbMoveBy = max(cbMoveBy, (ULONG)(pbEndObject - pbAttrRel));
 
         // Enough to cover the value offsets too?
         if((pbAttrRel + (ValueCount * sizeof(DWORD))) <= pbAttrEnd)
         {
             // Make sure that we have the elements
-            if((dwErrCode = AllocateElements()) == ERROR_SUCCESS)
+            if((Status = AllocateElements()) == STATUS_SUCCESS)
             {
                 for(ULONG i = 0; i < ValueCount; i++)
                 {
@@ -337,8 +524,6 @@ DWORD ACE_CSA_HELPER::Import(LPBYTE pbAttrRel, LPBYTE pbAttrEnd, PULONG pcbMoveB
                         return GetLastError();
 
                     // Update the biggest offset
-                    if(dwErrCode != ERROR_SUCCESS)
-                        return dwErrCode;
                     cbMoveBy = max(cbMoveBy, (ULONG)(pbEndObject - pbAttrRel));
                 }
             }
@@ -348,12 +533,12 @@ DWORD ACE_CSA_HELPER::Import(LPBYTE pbAttrRel, LPBYTE pbAttrEnd, PULONG pcbMoveB
     // Give the result to the caller. Always try to eat up to 8-byte boundary
     if(pcbMoveBy != NULL)
         pcbMoveBy[0] = GetSizeAlignedToMax(pbAttrRel, pbAttrEnd, cbMoveBy);
-    return dwErrCode;
+    return Status;
 }
 
 // In case NtSetSecurityObject returns STATUS_INVALID_ACL, look here:
 // nt!RtlpValidRelativeAttribute(PCLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1 pAttrRel, size_t cbAttrRel)
-PCLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1 ACE_CSA_HELPER::Export(PULONG pcbLength)
+PCLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1 ACE_CSA_HELPER::Export(PULONG pcbLength) const
 {
     PCLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1 pAttrRel = NULL;
     ULONG cbLength = 0;
@@ -401,23 +586,6 @@ PCLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1 ACE_CSA_HELPER::Export(PULONG pcbLength)
     return pAttrRel;
 }
 
-LPBYTE ACE_CSA_HELPER::ImportObject(LPCVOID lpObject, ULONG Index)
-{
-    // Objects must be already allocated
-    assert(ppObjects != NULL);
-    assert(ValueCount != 0);
-
-    // Check for overflow
-    if(Index >= ValueCount)
-    {
-        SetLastError(ERROR_BUFFER_OVERFLOW);
-        return NULL;
-    }
-
-    // Import the object
-    return ppObjects[Index].Import(lpObject);
-}
-
 ULONG ACE_CSA_HELPER::GetSizeAlignedToMax(LPBYTE pbPtr, LPBYTE pbEnd, ULONG cbLength)
 {
     ULONG cbLengthAligned;
@@ -440,44 +608,4 @@ ULONG ACE_CSA_HELPER::GetSizeAlignedToMax(LPBYTE pbPtr, LPBYTE pbEnd, ULONG cbLe
     // Return the length as-is
     assert(false);
     return cbLength;
-}
-
-DWORD ACE_CSA_HELPER::AllocateElements()
-{
-    // Sanity checks
-    assert(ppObjects == NULL);
-    assert(ValueCount != 0);
-    assert(ValueType != 0);
-
-    // Allocate the elements based on element type
-    switch(ValueType)
-    {
-        case CLAIM_SECURITY_ATTRIBUTE_TYPE_INT64:
-        case CLAIM_SECURITY_ATTRIBUTE_TYPE_UINT64:
-            ppObjects = new ACE_CSA_DWORD64[ValueCount];
-            break;
-
-        case CLAIM_SECURITY_ATTRIBUTE_TYPE_STRING:
-            ppObjects = new ACE_CSA_LPWSTR[ValueCount];
-            break;
-
-        case CLAIM_SECURITY_ATTRIBUTE_TYPE_SID:
-            ppObjects = new ACE_CSA_SID[ValueCount];
-            break;
-
-        case CLAIM_SECURITY_ATTRIBUTE_TYPE_BOOLEAN:
-            ppObjects = new ACE_CSA_BOOLEAN[ValueCount];
-            break;
-
-        case CLAIM_SECURITY_ATTRIBUTE_TYPE_OCTET_STRING:
-            ppObjects = new ACE_CSA_OCTET_STRING[ValueCount];
-            break;
-
-        default:
-            assert(false);
-            break;
-    }
-
-    // If the allocation failed, return error
-    return (ppObjects != NULL) ? ERROR_SUCCESS : ERROR_NOT_ENOUGH_MEMORY;
 }

@@ -494,13 +494,14 @@
 #define IDC_SET_FULL_CONTROL            40066
 #define ID__SETACETYPE                  40067
 #define IDC_SET_ACE_TYPE                40068
+#define IDC_SET_ACE_GUID                40069
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        153
-#define _APS_NEXT_COMMAND_VALUE         40069
+#define _APS_NEXT_COMMAND_VALUE         40070
 #define _APS_NEXT_CONTROL_VALUE         1262
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
