@@ -204,10 +204,7 @@ void SetCustomSecurityDescriptor(LPCTSTR szPath)
 
 void DebugCode_SecurityDescriptor(LPCTSTR /* szPath */)
 {
-    EnablePrivilege(SE_TCB_NAME);
-    EnablePrivilege(SE_SECURITY_NAME);
-
-//  SetCustomSecurityDescriptor(_T("c:\\VMWARE\\TestValidAcl"));
+    //SetCustomSecurityDescriptor(_T("c:\\VMWARE\\TestValidAcl"));
 }
 #endif
 

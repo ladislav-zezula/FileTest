@@ -174,6 +174,7 @@ static NTSTATUS NtSetObjectNullDacl(IN HANDLE ObjectHandle)
     return Status;
 }
 */
+
 // Sets the access-control list for a handle to "Everyone:AccessMask"
 // The handle must be open for WRITE_DAC access
 static NTSTATUS NtSetObjectAccessForEveryone(

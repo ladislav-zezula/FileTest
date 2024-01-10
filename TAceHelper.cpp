@@ -129,10 +129,19 @@ bool ACE_HELPER::SetAceType(DWORD dwAceType)
     switch(dwAceType)
     {
         case ACCESS_ALLOWED_ACE_TYPE:                       // Simple ACEs:
+            Mask = (Mask != INVALID_ACCESS_MASK) ? Mask : GENERIC_ALL;
+            AceLayout = ACE_LAYOUT_SIMPLE;
+            break;
+
         case ACCESS_DENIED_ACE_TYPE:                        // {Header-Mask-SidStart}
+            Mask = (Mask != INVALID_ACCESS_MASK) ? Mask : FILE_EXECUTE;
+            AceLayout = ACE_LAYOUT_SIMPLE;
+            break;
+
         case SYSTEM_AUDIT_ACE_TYPE:
         case SYSTEM_ALARM_ACE_TYPE:
             Mask = (Mask != INVALID_ACCESS_MASK) ? Mask : GENERIC_ALL;
+            AceFlags |= SUCCESSFUL_ACCESS_ACE_FLAG;
             AceLayout = ACE_LAYOUT_SIMPLE;
             break;
 
@@ -145,38 +154,55 @@ bool ACE_HELPER::SetAceType(DWORD dwAceType)
 
         case ACCESS_ALLOWED_OBJECT_ACE_TYPE:                // Object ACEs:
         case ACCESS_DENIED_OBJECT_ACE_TYPE:                 // {Header-AdsMask-Flags-ObjectType-InheritedObjectType-SidStart-Condition}
-        case SYSTEM_AUDIT_OBJECT_ACE_TYPE:
-        case SYSTEM_ALARM_OBJECT_ACE_TYPE:
             Mask = (Mask != INVALID_ACCESS_MASK) ? Mask : ADS_RIGHT_DS_READ_PROP;
             AceLayout = ACE_LAYOUT_OBJECT;
             break;
 
+        case SYSTEM_AUDIT_OBJECT_ACE_TYPE:
+        case SYSTEM_ALARM_OBJECT_ACE_TYPE:
+            Mask = (Mask != INVALID_ACCESS_MASK) ? Mask : ADS_RIGHT_DS_READ_PROP;
+            AceFlags |= SUCCESSFUL_ACCESS_ACE_FLAG;
+            AceLayout = ACE_LAYOUT_OBJECT;
+            break;
+
         case ACCESS_ALLOWED_CALLBACK_ACE_TYPE:              // Conditional ACEs:
+            SetCondition(DummyAllowedCondition, sizeof(DummyAllowedCondition));
             Mask = (Mask != INVALID_ACCESS_MASK) ? Mask : GENERIC_ALL;
             AceLayout = ACE_LAYOUT_CONDITION;
-            SetCondition(DummyAllowedCondition, sizeof(DummyAllowedCondition));
             break;
 
         case ACCESS_DENIED_CALLBACK_ACE_TYPE:               // {Header-Mask-SidStart-Condition}
-        case SYSTEM_AUDIT_CALLBACK_ACE_TYPE:
-        case SYSTEM_ALARM_CALLBACK_ACE_TYPE:
+            SetCondition(DummyAllowedCondition, sizeof(DummyAllowedCondition));
             Mask = (Mask != INVALID_ACCESS_MASK) ? Mask : FILE_EXECUTE;
             AceLayout = ACE_LAYOUT_CONDITION;
+            break;
+
+        case SYSTEM_AUDIT_CALLBACK_ACE_TYPE:
+        case SYSTEM_ALARM_CALLBACK_ACE_TYPE:
             SetCondition(DummyOtherCondition, sizeof(DummyOtherCondition));
+            Mask = (Mask != INVALID_ACCESS_MASK) ? Mask : FILE_EXECUTE;
+            AceFlags |= SUCCESSFUL_ACCESS_ACE_FLAG;
+            AceLayout = ACE_LAYOUT_CONDITION;
             break;
 
         case ACCESS_ALLOWED_CALLBACK_OBJECT_ACE_TYPE:       // Conditional object ACEs:
+            SetCondition(DummyAllowedCondition, sizeof(DummyAllowedCondition));
             Mask = (Mask != INVALID_ACCESS_MASK) ? Mask : GENERIC_ALL;
             AceLayout = ACE_LAYOUT_OBJECT_CONDITION;
-            SetCondition(DummyAllowedCondition, sizeof(DummyAllowedCondition));
             break;
 
         case ACCESS_DENIED_CALLBACK_OBJECT_ACE_TYPE:        // {Header-AdsMask-Flags-ObjectType-InheritedObjectType-SidStart-Condition}
-        case SYSTEM_AUDIT_CALLBACK_OBJECT_ACE_TYPE:
-        case SYSTEM_ALARM_CALLBACK_OBJECT_ACE_TYPE:
+            SetCondition(DummyOtherCondition, sizeof(DummyOtherCondition));
             Mask = (Mask != INVALID_ACCESS_MASK) ? Mask : FILE_EXECUTE;
             AceLayout = ACE_LAYOUT_OBJECT_CONDITION;
+            break;
+
+        case SYSTEM_AUDIT_CALLBACK_OBJECT_ACE_TYPE:
+        case SYSTEM_ALARM_CALLBACK_OBJECT_ACE_TYPE:
             SetCondition(DummyOtherCondition, sizeof(DummyOtherCondition));
+            Mask = (Mask != INVALID_ACCESS_MASK) ? Mask : FILE_EXECUTE;
+            AceLayout = ACE_LAYOUT_OBJECT_CONDITION;
+            AceFlags |= SUCCESSFUL_ACCESS_ACE_FLAG;
             break;
 
         case SYSTEM_MANDATORY_LABEL_ACE_TYPE:

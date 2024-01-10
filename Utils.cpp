@@ -953,6 +953,11 @@ void SetResultInfo(HWND hDlg, DWORD dwFlags, ...)
                     nSeverity = SEVERITY_ERROR;
                     break;
 
+                case STATUS_AUTO_CALCULATED:
+                    szStatus = _T("This item is auto-calculated.");
+                    nSeverity = SEVERITY_ERROR;
+                    break;
+
                 case STATUS_CANNOT_EDIT_THIS:
                     szStatus = _T("This item is not editable.");
                     nSeverity = SEVERITY_ERROR;
@@ -1981,7 +1986,20 @@ NTSTATUS NtDeleteReparsePoint(POBJECT_ATTRIBUTES PtrObjectAttributes)
 }
 
 //-----------------------------------------------------------------------------
-// Local functions - Mandatory label ACE
+// Enable/disable redrawing
+
+void EnableRedraw(HWND hWnd, BOOL bEnableRedraw)
+{
+    // Enable / disable redrawing
+    SendMessage(hWnd, WM_SETREDRAW, (WPARAM)(bEnableRedraw), 0);
+
+    // Redraw the window if needed
+    if(bEnableRedraw)
+    {
+        InvalidateRect(hWnd, NULL, TRUE);
+    }
+}
+
 
 BOOL WINAPI MyAddMandatoryAce(PACL pAcl, DWORD dwAceRevision, DWORD dwAceFlags, DWORD MandatoryPolicy, PSID pSid)
 {
@@ -1991,10 +2009,6 @@ BOOL WINAPI MyAddMandatoryAce(PACL pAcl, DWORD dwAceRevision, DWORD dwAceFlags, 
     // Call the function
     return pfnAddMandatoryAce(pAcl, dwAceRevision, dwAceFlags, MandatoryPolicy, pSid);
 }
-
-// TODO: 
-// AddAccessAllowedObjectAce
-// AddAccessDeniedObjectAce
 
 //-----------------------------------------------------------------------------
 // My own implementation of RtlComputeCrc32

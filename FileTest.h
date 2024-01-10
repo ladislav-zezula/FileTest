@@ -84,12 +84,14 @@
 #define WM_DEFER_ITEM_TEXT          (WM_USER + 0x1008)  // WPARAM = hItem, LPARAM = LPTSTR
 #define WM_DEFER_CHANGE_INT_FLAGS   (WM_USER + 0x1009)  // WPARAM = hItem
 #define WM_DEFER_CHANGE_WHOLE_ACE   (WM_USER + 0x100A)  // WPARAM = hItem, LPARAM = pAceHelper
-#define WM_DEFER_CHANGE_ACE_CSA     (WM_USER + 0x100B)  // WPARAM = hItem, LPARAM = BOOL bShowFlagsDialog
+#define WM_DEFER_CHANGE_ACE_GUID    (WM_USER + 0x100B)  // WPARAM = GUID index, LPARAM: TRUE = CreateNew
+#define WM_DEFER_CHANGE_ACE_CSA     (WM_USER + 0x100C)  // WPARAM = hItem, LPARAM = BOOL bShowFlagsDialog
 
 #define STATUS_INVALID_DATA_FORMAT  0xC1110001
-#define STATUS_CANNOT_EDIT_THIS     0xC1110002
-#define STATUS_FILE_ID_CONVERSION   0xC1110003
-#define STATUS_COPIED_TO_CLIPBOARD  0xC1110004
+#define STATUS_AUTO_CALCULATED      0xC1110002
+#define STATUS_CANNOT_EDIT_THIS     0xC1110003
+#define STATUS_FILE_ID_CONVERSION   0xC1110004
+#define STATUS_COPIED_TO_CLIPBOARD  0xC1110005
 
 #define SEVERITY_PENDING            2
 
@@ -527,7 +529,9 @@ NTSTATUS NtDeleteReparsePoint(POBJECT_ATTRIBUTES PtrObjectAttributes);
 
 ULONG RtlComputeCrc32(ULONG InitialCrc, PVOID Buffer, ULONG Length);
 
-BOOL WINAPI MyAddMandatoryAce(PACL pAcl, DWORD dwAceRevision, DWORD dwAceFlags, DWORD MandatoryPolicy, PSID pLabelSid);
+//BOOL WINAPI MyAddMandatoryAce(PACL pAcl, DWORD dwAceRevision, DWORD dwAceFlags, DWORD MandatoryPolicy, PSID pLabelSid);
+
+void EnableRedraw(HWND hWnd, BOOL bEnableRedraw = TRUE);
 
 //-----------------------------------------------------------------------------
 // Common function to set result of an operation

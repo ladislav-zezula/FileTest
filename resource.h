@@ -446,6 +446,8 @@
 #define IDS_FORMAT_ACE_MASK             4107
 #define IDS_FORMAT_ACE_FLAGS            4108
 #define IDS_FORMAT_ACE_CTYPE            4109
+#define IDS_SET_VALUE                   4110
+#define IDS_SET_NEW_VALUE               4110
 #define IDS_FORMAT_CSID                 4111
 #define IDS_FORMAT_OBJ_TYPE             4112
 #define IDS_FORMAT_OBJ_TYPEI            4113
@@ -494,7 +496,6 @@
 #define IDC_SET_FULL_CONTROL            40066
 #define ID__SETACETYPE                  40067
 #define IDC_SET_ACE_TYPE                40068
-#define IDC_SET_ACE_GUID                40069
 
 // Next default values for new objects
 // 

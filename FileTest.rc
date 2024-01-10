@@ -1437,6 +1437,7 @@ BEGIN
     IDS_FORMAT_ACE_MASK     "AccessMask: %s"
     IDS_FORMAT_ACE_FLAGS    "Flags: %s"
     IDS_FORMAT_ACE_CTYPE    "CompoundAceType: %s"
+    IDS_SET_NEW_VALUE       "Set New Value"
     IDS_FORMAT_CSID         "ClientSid: %s"
 END
 
