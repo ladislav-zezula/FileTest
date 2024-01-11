@@ -27,28 +27,7 @@ static BYTE CharToValue[0x80] =
     0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 
 };
 
-static TCHAR ValueToChar[] = _T("0123456789ABCDEF");
-
-static inline LPCTSTR SkipHexaPrefix(LPCTSTR szString)
-{
-    return (szString[0] == _T('0') && (szString[1] == _T('x') || szString[1] == _T('X'))) ? szString + 2 : szString;
-}
-
-static void Hex2TextXX(ULONGLONG Value, LPTSTR szBuffer, int nSize)
-{
-    // Get the number of hexa digits
-    nSize = nSize + nSize - 1;
-    
-    // Convert the number to string
-    for(int i = 0; i <= nSize; i++)
-    {
-        szBuffer[nSize - i] = ValueToChar[Value & 0x0F];
-        Value >>= 4;
-    }
-    
-    // Terminate the string
-    szBuffer[nSize + 1] = 0;
-}
+LPCTSTR HexaAlphabetUpper = _T("0123456789ABCDEF");
 
 static bool IsPossibleFileId(LPCTSTR szFileName)
 {
@@ -119,7 +98,7 @@ DWORD StrToInt(LPCTSTR szString, LPTSTR * szEnd, int nRadix)
 //-----------------------------------------------------------------------------
 // bool values support
 
-int Text2Bool(LPCTSTR szText, bool * pValue)
+DWORD Text2Bool(LPCTSTR szText, bool * pValue)
 {
     bool bNewValue = false;
 
@@ -137,7 +116,12 @@ int Text2Bool(LPCTSTR szText, bool * pValue)
 //-----------------------------------------------------------------------------
 // 32-bit values support
 
-int Text2Hex32(LPCTSTR szText, PDWORD pValue)
+LPCTSTR SkipHexaPrefix(LPCTSTR szString)
+{
+    return (szString[0] == _T('0') && (szString[1] == _T('x') || szString[1] == _T('X'))) ? szString + 2 : szString;
+}
+
+DWORD Text2Hex32(LPCTSTR szText, PDWORD pValue)
 {
     DWORD Value = 0;
     int nDigit;
@@ -166,7 +150,7 @@ int Text2Hex32(LPCTSTR szText, PDWORD pValue)
     return ERROR_SUCCESS;
 }
 
-int DlgText2Hex32(HWND hDlg, UINT nIDCtrl, PDWORD pValue)
+DWORD DlgText2Hex32(HWND hDlg, UINT nIDCtrl, PDWORD pValue)
 {
     TCHAR szText[128];
     HWND hWndChild = GetDlgItem(hDlg, nIDCtrl);
@@ -187,6 +171,22 @@ int DlgText2Hex32(HWND hDlg, UINT nIDCtrl, PDWORD pValue)
     return dwErrCode;
 }
 
+void Hex2TextXX(ULONGLONG Value, LPTSTR szBuffer, size_t nSize)
+{
+    // Get the number of hexa digits
+    nSize = nSize + nSize - 1;
+
+    // Convert the number to string
+    for(size_t i = 0; i <= nSize; i++)
+    {
+        szBuffer[nSize - i] = HexaAlphabetUpper[Value & 0x0F];
+        Value >>= 4;
+    }
+
+    // Terminate the string
+    szBuffer[nSize + 1] = 0;
+}
+
 void Hex2Text32(LPTSTR szBuffer, DWORD Value)
 {
     Hex2TextXX(Value, szBuffer, sizeof(DWORD));
@@ -203,7 +203,7 @@ void Hex2DlgText32(HWND hDlg, UINT nIDCtrl, DWORD Value)
 //-----------------------------------------------------------------------------
 // Pointer support
 
-int Text2HexPtr(LPCTSTR szText, PDWORD_PTR pValue)
+DWORD Text2HexPtr(LPCTSTR szText, PDWORD_PTR pValue)
 {
     DWORD_PTR ValueMask = ((DWORD_PTR)0x0F << ((sizeof(DWORD_PTR) * 8) - 4));
     DWORD_PTR Value = 0;
@@ -234,7 +234,7 @@ int Text2HexPtr(LPCTSTR szText, PDWORD_PTR pValue)
     return ERROR_SUCCESS;
 }
 
-int DlgText2HexPtr(HWND hDlg, UINT nIDCtrl, PDWORD_PTR pValue)
+DWORD DlgText2HexPtr(HWND hDlg, UINT nIDCtrl, PDWORD_PTR pValue)
 {
     TCHAR szText[128];
     HWND hWndChild = GetDlgItem(hDlg, nIDCtrl);
@@ -271,7 +271,7 @@ void Hex2DlgTextPtr(HWND hDlg, UINT nIDCtrl, DWORD_PTR Value)
 //-----------------------------------------------------------------------------
 // 64-bit values support
 
-int Text2Hex64(LPCTSTR szText, PLONGLONG pValue)
+DWORD Text2Hex64(LPCTSTR szText, PLONGLONG pValue)
 {
     ULONGLONG SaveValue = 0;
     ULONGLONG Value = 0;
@@ -304,7 +304,7 @@ int Text2Hex64(LPCTSTR szText, PLONGLONG pValue)
     return ERROR_SUCCESS;
 }
 
-int DlgText2Hex64(HWND hDlg, UINT nIDCtrl, PLONGLONG pValue)
+DWORD DlgText2Hex64(HWND hDlg, UINT nIDCtrl, PLONGLONG pValue)
 {
     TCHAR szText[128];
     HWND hWndChild = GetDlgItem(hDlg, nIDCtrl);
@@ -473,26 +473,34 @@ ULONG GetEaEntrySize(PFILE_FULL_EA_INFORMATION EaInfo)
     return EntrySize;
 }
 
-DWORD TreeView_GetChildCount(HWND hTreeView, HTREEITEM hItem)
+void TreeView_SetItemText(HWND hWndTree, HTREEITEM hItem, LPCTSTR szText)
+{
+    TVITEM tvi = {TVIF_TEXT, hItem};
+
+    tvi.pszText = (LPTSTR)(szText);
+    TreeView_SetItem(hWndTree, &tvi);
+}
+
+DWORD TreeView_GetChildCount(HWND hWndTree, HTREEITEM hItem)
 {
     DWORD dwChildCount = 0;
 
     // If both TreeView and item handle are valid
-    if(hTreeView != NULL && hItem != NULL)
+    if(hWndTree != NULL && hItem != NULL)
     {
         // Count all children
-        hItem = TreeView_GetChild(hTreeView, hItem);
+        hItem = TreeView_GetChild(hWndTree, hItem);
         while(hItem != NULL)
         {
             dwChildCount++;
-            hItem = TreeView_GetNextSibling(hTreeView, hItem);
+            hItem = TreeView_GetNextSibling(hWndTree, hItem);
         }
     }
 
     return dwChildCount;
 }
 
-LPARAM TreeView_GetItemParam(HWND hTreeView, HTREEITEM hItem)
+LPARAM TreeView_GetItemParam(HWND hWndTree, HTREEITEM hItem)
 {
     TVITEM tvi;
 
@@ -500,13 +508,23 @@ LPARAM TreeView_GetItemParam(HWND hTreeView, HTREEITEM hItem)
     tvi.mask   = TVIF_PARAM;
     tvi.hItem  = hItem;
     tvi.lParam = 0;
-    TreeView_GetItem(hTreeView, &tvi);
+    TreeView_GetItem(hWndTree, &tvi);
 
     // Return the parameter
     return tvi.lParam;
 }
 
-HTREEITEM TreeView_SetTreeItem(HWND hTreeView, HTREEITEM hItem, LPCTSTR szText, LPARAM lParam)
+void TreeView_SetItemParam(HWND hWndTree, HTREEITEM hItem, LPARAM lParam)
+{
+    TVITEM tvi = {TVIF_PARAM};
+
+    // Set the new item param
+    tvi.hItem = hItem;
+    tvi.lParam = lParam;
+    TreeView_SetItem(hWndTree, &tvi);
+}
+
+HTREEITEM TreeView_SetTreeItem(HWND hWndTree, HTREEITEM hItem, LPCTSTR szText, LPARAM lParam)
 {
     TVITEM tvi = {TVIF_TEXT | TVIF_PARAM};
 
@@ -516,22 +534,22 @@ HTREEITEM TreeView_SetTreeItem(HWND hTreeView, HTREEITEM hItem, LPCTSTR szText, 
     tvi.pszText = (LPTSTR)szText;
 
     // Set the text&param to the tree item
-    return TreeView_SetItem(hTreeView, &tvi) ? hItem : NULL;
+    return TreeView_SetItem(hWndTree, &tvi) ? hItem : NULL;
 }
 
 BOOL TreeView_EditLabel_ID(HWND hDlg, UINT nID)
 {
     HTREEITEM hItem = NULL;
-    HWND hTreeView = GetDlgItem(hDlg, nID);
+    HWND hWndTree = GetDlgItem(hDlg, nID);
     BOOL bResult = FALSE;
 
     // Only start editing if the proper tree view has focus
-    if(GetFocus() == hTreeView)
+    if(GetFocus() == hWndTree)
     {
-        hItem = TreeView_GetSelection(hTreeView);
+        hItem = TreeView_GetSelection(hWndTree);
         if(hItem != NULL)
         {
-            TreeView_EditLabel(hTreeView, hItem);
+            TreeView_EditLabel(hWndTree, hItem);
             bResult = TRUE;
         }
     }
@@ -539,43 +557,53 @@ BOOL TreeView_EditLabel_ID(HWND hDlg, UINT nID)
     return bResult;
 }
 
-HTREEITEM InsertTreeItem(HWND hTreeView, HTREEITEM hParent, HTREEITEM hInsertAfter, LPCTSTR szText, PVOID pParam)
+HTREEITEM InsertTreeItem(HWND hWndTree, HTREEITEM hParent, HTREEITEM hInsertAfter, LPCTSTR szText, PVOID pParam)
 {
     TVINSERTSTRUCT tvis;
 
-    // If NULL specified as InsertAfter, we insert it after the last item
-    if(hInsertAfter == NULL)
-        hInsertAfter = TVI_LAST;
-    
     // Insert the item to the tree
-    tvis.hParent      = hParent;
-    tvis.hInsertAfter = hInsertAfter;
-    tvis.item.mask    = TVIF_TEXT | TVIF_PARAM;
+    tvis.hParent = (hParent != NULL) ? hParent : TVI_ROOT;
+    tvis.hInsertAfter = (hInsertAfter != NULL) ? hInsertAfter : TVI_LAST;
+    tvis.item.mask = TVIF_TEXT | TVIF_PARAM;
     tvis.item.pszText = (LPTSTR)szText;
-    tvis.item.lParam  = (LPARAM)pParam;
-    return TreeView_InsertItem(hTreeView, &tvis);
+    tvis.item.lParam = (LPARAM)pParam;
+    return TreeView_InsertItem(hWndTree, &tvis);
 }
 
-HTREEITEM InsertTreeItem(HWND hTreeView, HTREEITEM hParent, LPCTSTR szText, PVOID pParam)
+HTREEITEM InsertTreeItem(HWND hWndTree, HTREEITEM hParent, LPCTSTR szText, PVOID pParam)
 {
-    return InsertTreeItem(hTreeView, hParent, NULL, szText, pParam);
+    return InsertTreeItem(hWndTree, hParent, NULL, szText, pParam);
 }
 
-HTREEITEM InsertTreeItem(HWND hTreeView, HTREEITEM hParent, LPCTSTR szText, LPARAM lParam)
+HTREEITEM InsertTreeItem(HWND hWndTree, HTREEITEM hParent, LPCTSTR szText, LPARAM lParam)
 {
-    return InsertTreeItem(hTreeView, hParent, TVI_LAST, szText, (PVOID)lParam);
+    return InsertTreeItem(hWndTree, hParent, TVI_LAST, szText, (PVOID)lParam);
 }
 
-void TreeView_DeleteChildren(HWND hTreeView, HTREEITEM hParent)
+HTREEITEM InsertTreeItem(HWND hWndTree, HTREEITEM hParent, LPARAM lParam, UINT nID, ...)
+{
+    va_list argList;
+    TCHAR szItemText[512];
+
+    // Format the text
+    va_start(argList, nID);
+    rsvprintf(szItemText, _countof(szItemText), nID, argList);
+    va_end(argList);
+
+    // Insert the item text
+    return InsertTreeItem(hWndTree, hParent, TVI_LAST, szItemText, (PVOID)lParam);
+}
+
+void TreeView_DeleteChildren(HWND hWndTree, HTREEITEM hParent)
 {
     HTREEITEM hItem;
 
     // Remove all children, if any
-    while((hItem = TreeView_GetChild(hTreeView, hParent)) != NULL)
-        TreeView_DeleteItem(hTreeView, hItem);
+    while((hItem = TreeView_GetChild(hWndTree, hParent)) != NULL)
+        TreeView_DeleteItem(hWndTree, hItem);
 }
 
-HGLOBAL TreeView_CopyToClipboard(HWND hTreeView, HTREEITEM hItem, HGLOBAL hGlobal, size_t nLevel)
+HGLOBAL TreeView_CopyToClipboard(HWND hWndTree, HTREEITEM hItem, HGLOBAL hGlobal, size_t nLevel)
 {
     HTREEITEM hChild;
     TVITEMEX tvi;
@@ -596,7 +624,7 @@ HGLOBAL TreeView_CopyToClipboard(HWND hTreeView, HTREEITEM hItem, HGLOBAL hGloba
         tvi.pszText = szBuffer;
         tvi.cchTextMax = _countof(szBuffer);
         tvi.cchTextMax = _countof(szBuffer);
-        TreeView_GetItem(hTreeView, &tvi);
+        TreeView_GetItem(hWndTree, &tvi);
         StringCchCat(szBuffer, _countof(szBuffer), _T("\r\n"));
 
         // Put the text to clipboard
@@ -609,24 +637,24 @@ HGLOBAL TreeView_CopyToClipboard(HWND hTreeView, HTREEITEM hItem, HGLOBAL hGloba
         hGlobal = Clipboard_AddText(hGlobal, szBuffer);
 
         // Are there any children?
-        if((hChild = TreeView_GetChild(hTreeView, hItem)) != NULL)
+        if((hChild = TreeView_GetChild(hWndTree, hItem)) != NULL)
         {
-            hGlobal = TreeView_CopyToClipboard(hTreeView, hChild, hGlobal, nLevel + 1);
+            hGlobal = TreeView_CopyToClipboard(hWndTree, hChild, hGlobal, nLevel + 1);
         }
 
         // Get the next sibling
-        hItem = TreeView_GetNextSibling(hTreeView, hItem);
+        hItem = TreeView_GetNextSibling(hWndTree, hItem);
     }
 
     return hGlobal;
 }
 
-void TreeView_CopyToClipboard(HWND hTreeView)
+void TreeView_CopyToClipboard(HWND hWndTree)
 {
     HGLOBAL hGlobal = NULL;
 
-    hGlobal = TreeView_CopyToClipboard(hTreeView, TreeView_GetRoot(hTreeView), hGlobal, 0);
-    Clipboard_Finish(hTreeView, hGlobal);
+    hGlobal = TreeView_CopyToClipboard(hWndTree, TreeView_GetRoot(hWndTree), hGlobal, 0);
+    Clipboard_Finish(hWndTree, hGlobal);
 }
 
 int OnTVKeyDown_CopyToClipboard(HWND /* hDlg */, LPNMTVKEYDOWN pNMTVKeyDown)
@@ -642,7 +670,20 @@ int OnTVKeyDown_CopyToClipboard(HWND /* hDlg */, LPNMTVKEYDOWN pNMTVKeyDown)
 }
 
 //-----------------------------------------------------------------------------
-// Virtualization for the current process
+// Token operations
+
+HANDLE OpenCurrentToken(DWORD dwDesiredAccess)
+{
+    HANDLE hToken = NULL;
+
+    // Open process or thread token
+    if(!OpenThreadToken(GetCurrentThread(), dwDesiredAccess, TRUE, &hToken))
+    {
+        if(GetLastError() == ERROR_NO_TOKEN)
+            OpenProcessToken(GetCurrentProcess(), dwDesiredAccess, &hToken);
+    }
+    return hToken;
+}
 
 BOOL GetTokenElevation(PBOOL pbElevated)
 {
@@ -909,6 +950,11 @@ void SetResultInfo(HWND hDlg, DWORD dwFlags, ...)
 
                 case STATUS_INVALID_DATA_FORMAT:
                     szStatus = _T("The entered value has bad format.");
+                    nSeverity = SEVERITY_ERROR;
+                    break;
+
+                case STATUS_AUTO_CALCULATED:
+                    szStatus = _T("This item is auto-calculated.");
                     nSeverity = SEVERITY_ERROR;
                     break;
 
@@ -1673,6 +1719,14 @@ LPTSTR NamedValueToString(TFlagInfo * pFlags, LPTSTR szBuffer, size_t cchBuffer,
     return szSaveBuffer;
 }
 
+LPTSTR NamedValueToString(TFlagInfo * pFlags, LPTSTR szBuffer, size_t cchBuffer, UINT nIDFormat, DWORD dwBitMask)
+{
+    TCHAR szFormat[128];
+
+    LoadString(g_hInst, nIDFormat, szFormat, _countof(szFormat));
+    return NamedValueToString(pFlags, szBuffer, cchBuffer, szFormat, dwBitMask);
+}
+
 LPTSTR GuidValueToString(LPTSTR szBuffer, size_t cchBuffer, LPCTSTR szFormat, LPGUID PtrGuid)
 {
     LPTSTR szSaveBuffer = szBuffer;
@@ -1725,14 +1779,14 @@ void ObjectIDToString(PBYTE pbObjId, LPCTSTR szFileName, LPTSTR szObjectID)
     {
         BYTE OneByte = *pbObjId++;
 
-        *szObjectID++ = ValueToChar[OneByte >> 0x04];
-        *szObjectID++ = ValueToChar[OneByte & 0x0F];
+        *szObjectID++ = HexaAlphabetUpper[OneByte >> 0x04];
+        *szObjectID++ = HexaAlphabetUpper[OneByte & 0x0F];
     }
 
     *szObjectID = 0;
 }
 
-int StringToFileID(
+DWORD StringToFileID(
     LPCTSTR szFileOrObjId,
     LPTSTR szVolume,
     PVOID pvFileObjId,
@@ -1932,7 +1986,20 @@ NTSTATUS NtDeleteReparsePoint(POBJECT_ATTRIBUTES PtrObjectAttributes)
 }
 
 //-----------------------------------------------------------------------------
-// Local functions - Mandatory label ACE
+// Enable/disable redrawing
+
+void EnableRedraw(HWND hWnd, BOOL bEnableRedraw)
+{
+    // Enable / disable redrawing
+    SendMessage(hWnd, WM_SETREDRAW, (WPARAM)(bEnableRedraw), 0);
+
+    // Redraw the window if needed
+    if(bEnableRedraw)
+    {
+        InvalidateRect(hWnd, NULL, TRUE);
+    }
+}
+
 
 BOOL WINAPI MyAddMandatoryAce(PACL pAcl, DWORD dwAceRevision, DWORD dwAceFlags, DWORD MandatoryPolicy, PSID pSid)
 {
@@ -1942,10 +2009,6 @@ BOOL WINAPI MyAddMandatoryAce(PACL pAcl, DWORD dwAceRevision, DWORD dwAceFlags, 
     // Call the function
     return pfnAddMandatoryAce(pAcl, dwAceRevision, dwAceFlags, MandatoryPolicy, pSid);
 }
-
-// TODO: 
-// AddAccessAllowedObjectAce
-// AddAccessDeniedObjectAce
 
 //-----------------------------------------------------------------------------
 // My own implementation of RtlComputeCrc32

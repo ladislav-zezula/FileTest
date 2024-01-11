@@ -5,7 +5,7 @@
 /*---------------------------------------------------------------------------*/
 /*   Date    Ver   Who  Comment                                              */
 /* --------  ----  ---  -------                                              */
-/* 18.03.14  1.00  Lad  The first version of DlgSimple.cpp                   */
+/* 18.03.14  1.00  Lad  Created                                              */
 /*****************************************************************************/
 
 #include "FileTest.h"
@@ -137,27 +137,32 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM l
 //-----------------------------------------------------------------------------
 // Dialog functions
 
-INT_PTR HelpAboutDialog(HWND hParent)
+INT_PTR HelpAboutDialog(HWND hWndParent)
 {
-    return DialogBox(g_hInst, MAKEINTRESOURCE(IDD_HELP_ABOUT), hParent, DialogProc);
+    return DialogBox(g_hInst, MAKEINTRESOURCE(IDD_HELP_ABOUT), hWndParent, DialogProc);
 }
 
-INT_PTR ObjectIDActionDialog(HWND hParent)
+INT_PTR HelpCommandLineDialog(HWND hWndParent)
 {
-    return DialogBox(g_hInst, MAKEINTRESOURCE(IDD_OBJECT_ID_MORE), hParent, DialogProc);
+    return DialogBox(g_hInst, MAKEINTRESOURCE(IDD_HELP_COMMAND_LINE), hWndParent, DialogProc);
 }
 
-INT_PTR ObjectGuidHelpDialog(HWND hParent)
+INT_PTR ObjectIDActionDialog(HWND hWndParent)
 {
-    return DialogBox(g_hInst, MAKEINTRESOURCE(IDD_OBJECT_GUID_HELP), hParent, DialogProc);
+    return DialogBox(g_hInst, MAKEINTRESOURCE(IDD_OBJECT_ID_MORE), hWndParent, DialogProc);
 }
 
-INT_PTR FileAttributesDialog(HWND hParent, PFILE_BASIC_INFORMATION pBasicInfo)
+INT_PTR ObjectGuidHelpDialog(HWND hWndParent)
 {
-    return DialogBoxParam(g_hInst, MAKEINTRESOURCE(IDD_FILE_ATTRIBUTES), hParent, DialogProc, (LPARAM)(pBasicInfo));
+    return DialogBox(g_hInst, MAKEINTRESOURCE(IDD_OBJECT_GUID_HELP), hWndParent, DialogProc);
 }
 
-INT_PTR NtAttributesDialog(HWND hParent, PFILE_BASIC_INFORMATION pBasicInfo)
+INT_PTR FileAttributesDialog(HWND hWndParent, PFILE_BASIC_INFORMATION pBasicInfo)
 {
-    return DialogBoxParam(g_hInst, MAKEINTRESOURCE(IDD_NT_ATTRIBUTES), hParent, DialogProc, (LPARAM)(pBasicInfo));
+    return DialogBoxParam(g_hInst, MAKEINTRESOURCE(IDD_FILE_ATTRIBUTES), hWndParent, DialogProc, (LPARAM)(pBasicInfo));
+}
+
+INT_PTR NtAttributesDialog(HWND hWndParent, PFILE_BASIC_INFORMATION pBasicInfo)
+{
+    return DialogBoxParam(g_hInst, MAKEINTRESOURCE(IDD_NT_ATTRIBUTES), hWndParent, DialogProc, (LPARAM)(pBasicInfo));
 }

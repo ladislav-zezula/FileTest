@@ -16,6 +16,8 @@
 #define _UNICODE
 #endif
 
+#define __TEST_MODE__               // Uncomment this to activate test mode
+
 #pragma warning(disable: 4091)      // warning C4091: 'typedef ': ignored on left of 'tagGPFIDL_FLAGS' when no variable is declared
 #define OEMRESOURCE
 #include <tchar.h>
@@ -34,6 +36,7 @@
 #include "ntdll.h"
 #include "Utils.h"
 #include "AceCondition.h"
+#include "AceResource.h"
 #include "TFastString.h"
 #include "TFlagString.h"
 #include "TAceHelper.h"
@@ -58,6 +61,7 @@
 #define MAX_NT_PATH                 32767           // Maximum path name length in NT is 32767
 #define MAX_FILEID_PATH             0x24            // Maximum path name length of File ID string (C:\################ or C:\################################)
 #define MAX_CONTEXT_MENUS           0x08            // Maximum supported number of context menus
+#define MAX_ACL_LENGTH              0xFFF8          // The biggest ACL that can possibly exist
 
 #define OSVER_WINDOWS_NT4           0x0400
 #define OSVER_WINDOWS_2000          0x0500
@@ -78,11 +82,16 @@
 #define WM_WORK_COMPLETE            (WM_USER + 0x1006)
 #define WM_UPDATE_VIEW              (WM_USER + 0x1007)
 #define WM_DEFER_ITEM_TEXT          (WM_USER + 0x1008)  // WPARAM = hItem, LPARAM = LPTSTR
+#define WM_DEFER_CHANGE_INT_FLAGS   (WM_USER + 0x1009)  // WPARAM = hItem
+#define WM_DEFER_CHANGE_WHOLE_ACE   (WM_USER + 0x100A)  // WPARAM = hItem, LPARAM = pAceHelper
+#define WM_DEFER_CHANGE_ACE_GUID    (WM_USER + 0x100B)  // WPARAM = GUID index, LPARAM: TRUE = CreateNew
+#define WM_DEFER_CHANGE_ACE_CSA     (WM_USER + 0x100C)  // WPARAM = hItem, LPARAM = BOOL bShowFlagsDialog
 
 #define STATUS_INVALID_DATA_FORMAT  0xC1110001
-#define STATUS_CANNOT_EDIT_THIS     0xC1110002
-#define STATUS_FILE_ID_CONVERSION   0xC1110003
-#define STATUS_COPIED_TO_CLIPBOARD  0xC1110004
+#define STATUS_AUTO_CALCULATED      0xC1110002
+#define STATUS_CANNOT_EDIT_THIS     0xC1110003
+#define STATUS_FILE_ID_CONVERSION   0xC1110004
+#define STATUS_COPIED_TO_CLIPBOARD  0xC1110005
 
 #define SEVERITY_PENDING            2
 
@@ -102,6 +111,8 @@
 #endif
 
 #define INTEGRITY_LEVEL_NONE        0xFFFFFFFF
+#define INVALID_PAGE_INDEX          0xFFFFFFFF
+#define INVALID_ITEM_INDEX          (size_t)(-1)
 
 #define FILETEST_DATA_MAGIC         0x54534554454C4946ULL
 
@@ -248,7 +259,10 @@ struct TFileTestData : public TWindowData
     BOOL          bTransactionActive;
     BOOL          bUseTransaction;
     BOOL          bSectionViewMapped;
-    
+
+    ULONG         SecurityInformation;      // Combination of security information flags
+    ULONG         InitialPage;              // Initial page for the main dialog
+
     UINT_PTR      BlinkTimer;               // If nonzero, this is ID of the blink timer
     HWND          hWndBlink;                // It not NULL, this is the handle of blink window
     BOOL          bEnableResizing;          // TRUE if the dialog is allowed to be resized
@@ -406,6 +420,7 @@ typedef BOOL (WINAPI * CREATEHARDLINK)(
 
 extern TContextMenu g_ContextMenus[MAX_CONTEXT_MENUS];
 extern TToolTip g_Tooltip;
+extern LPCTSTR HexaAlphabetUpper;
 extern DWORD g_dwWinVer;
 extern DWORD g_dwWinBuild;
 extern TCHAR g_szInitialDirectory[MAX_PATH];
@@ -438,20 +453,21 @@ LPCTSTR NtStatus2Text(NTSTATUS Status);
 
 DWORD StrToInt(LPCTSTR ptr, LPTSTR * szEnd, int nRadix);
 
-int  Text2Bool(LPCTSTR szText, bool * pValue);
+LPCTSTR SkipHexaPrefix(LPCTSTR szString);
+DWORD Text2Bool(LPCTSTR szText, bool * pValue);
+DWORD Text2Hex32(LPCTSTR szText, PDWORD pValue);
+DWORD DlgText2Hex32(HWND hDlg, UINT nIDCtrl, PDWORD pValue);
+void  Hex2TextXX(ULONGLONG Value, LPTSTR szBuffer, size_t nSize);
+void  Hex2Text32(LPTSTR szBuffer, DWORD Value);
+void  Hex2DlgText32(HWND hDlg, UINT nIDCtrl, DWORD Value);
 
-int  Text2Hex32(LPCTSTR szText, PDWORD pValue);
-int  DlgText2Hex32(HWND hDlg, UINT nIDCtrl, PDWORD pValue);
-void Hex2Text32(LPTSTR szBuffer, DWORD Value);
-void Hex2DlgText32(HWND hDlg, UINT nIDCtrl, DWORD Value);
+DWORD Text2HexPtr(LPCTSTR szText, PDWORD_PTR pValue);
+DWORD DlgText2HexPtr(HWND hDlg, UINT nIDCtrl, PDWORD_PTR pValue);
+void  Hex2TextPtr(LPTSTR szBuffer, DWORD_PTR Value);
+void  Hex2DlgTextPtr(HWND hDlg, UINT nIDCtrl, DWORD_PTR Value);
 
-int  Text2HexPtr(LPCTSTR szText, PDWORD_PTR pValue);
-int  DlgText2HexPtr(HWND hDlg, UINT nIDCtrl, PDWORD_PTR pValue);
-void Hex2TextPtr(LPTSTR szBuffer, DWORD_PTR Value);
-void Hex2DlgTextPtr(HWND hDlg, UINT nIDCtrl, DWORD_PTR Value);
-
-int  Text2Hex64(LPCTSTR szText, PLONGLONG pValue);
-int  DlgText2Hex64(HWND hDlg, UINT nIDCtrl, PLONGLONG pValue);
+DWORD Text2Hex64(LPCTSTR szText, PLONGLONG pValue);
+DWORD DlgText2Hex64(HWND hDlg, UINT nIDCtrl, PLONGLONG pValue);
 void Hex2Text64(LPTSTR szBuffer, LONGLONG Value);
 void Hex2DlgText64(HWND hDlg, UINT nIDCtrl, LONGLONG Value);
 
@@ -460,17 +476,22 @@ LPTSTR FindNextPathSeparator(LPTSTR szPathPart);
 
 ULONG GetEaEntrySize(PFILE_FULL_EA_INFORMATION EaInfo);
 
-DWORD TreeView_GetChildCount(HWND hTreeView, HTREEITEM hItem);
-LPARAM TreeView_GetItemParam(HWND hTreeView, HTREEITEM hItem);
-HTREEITEM TreeView_SetTreeItem(HWND hTreeView, HTREEITEM hItem, LPCTSTR szText, LPARAM lParam);
+void TreeView_SetItemText(HWND hWndTree, HTREEITEM hItem, LPCTSTR szText);
+DWORD TreeView_GetChildCount(HWND hWndTree, HTREEITEM hItem);
+LPARAM TreeView_GetItemParam(HWND hWndTree, HTREEITEM hItem);
+void TreeView_SetItemParam(HWND hWndTree, HTREEITEM hItem, LPARAM lParam);
+HTREEITEM TreeView_SetTreeItem(HWND hWndTree, HTREEITEM hItem, LPCTSTR szText, LPARAM lParam);
 BOOL TreeView_EditLabel_ID(HWND hDlg, UINT nID);
-HTREEITEM InsertTreeItem(HWND hTreeView, HTREEITEM hParent, HTREEITEM hInsertAfter, LPCTSTR szText, PVOID pParam);
-HTREEITEM InsertTreeItem(HWND hTreeView, HTREEITEM hParent, LPCTSTR szText, PVOID pParam);
-HTREEITEM InsertTreeItem(HWND hTreeView, HTREEITEM hParent, LPCTSTR szText, LPARAM lParam = 0);
-void TreeView_DeleteChildren(HWND hTreeView, HTREEITEM hParent);
+HTREEITEM InsertTreeItem(HWND hWndTree, HTREEITEM hParent, HTREEITEM hInsertAfter, LPCTSTR szText, PVOID pParam);
+HTREEITEM InsertTreeItem(HWND hWndTree, HTREEITEM hParent, LPCTSTR szText, PVOID pParam);
+HTREEITEM InsertTreeItem(HWND hWndTree, HTREEITEM hParent, LPCTSTR szText, LPARAM lParam = 0);
+HTREEITEM InsertTreeItem(HWND hWndTree, HTREEITEM hParent, LPARAM lParam, UINT nID, ...);
+
+void TreeView_DeleteChildren(HWND hWndTree, HTREEITEM hParent);
 void TreeView_CopyToClipboard(HWND hWndTree);
 int OnTVKeyDown_CopyToClipboard(HWND hDlg, LPNMTVKEYDOWN pNMTVKeyDown);
 
+HANDLE OpenCurrentToken(DWORD dwDesiredAccess);
 BOOL GetTokenElevation(PBOOL pbElevated);
 BOOL GetTokenVirtualizationEnabled(PBOOL pbEnabled);
 BOOL SetTokenVirtualizationEnabled(BOOL bEnabled);
@@ -488,19 +509,16 @@ void     FreeFileNameString(PUNICODE_STRING FileName);
 NTSTATUS ConvertToNtName(HWND hDlg, UINT nIDEdit);
 int      ConvertToWin32Name(HWND hDlg, UINT nIDEdit);
 
-LPTSTR FlagsToString(TFlagInfo * pFlags, LPTSTR szBuffer, size_t cchBuffer, DWORD dwBitMask, bool bNewLineSeparated);
+LPTSTR FlagsToString(TFlagInfo * pFlags, LPTSTR szBuffer, size_t cchBuffer, DWORD dwBitMask, bool bNewLineSeparated = false);
 LPTSTR NamedValueToString(TFlagInfo * pFlags, LPTSTR szBuffer, size_t cchBuffer, LPCTSTR szFormat, DWORD dwBitMask);
+LPTSTR NamedValueToString(TFlagInfo * pFlags, LPTSTR szBuffer, size_t cchBuffer, UINT nIDFormat, DWORD dwBitMask);
 LPTSTR GuidValueToString(LPTSTR szBuffer, size_t cchBuffer, LPCTSTR szFormat, LPGUID PtrGuid);
 
 void FileIDToString(TFileTestData * pData, ULONGLONG FileId, LPTSTR szBuffer);
 void ObjectIDToString(PBYTE pbObjId, LPCTSTR szFileName, LPTSTR szObjectID);
-int  StringToFileID(LPCTSTR szFileOrObjId, LPTSTR szVolume, PVOID pvFileObjId, PDWORD pLength);
-
-PSID Sid_Allocate(DWORD dwLength);
-void Sid_Free(PSID pSid);
+DWORD StringToFileID(LPCTSTR szFileOrObjId, LPTSTR szVolume, PVOID pvFileObjId, PDWORD pLength);
 
 void SidToString(PSID pvSid, LPTSTR szString, size_t cchString, bool bAddUserName);
-bool StringToSid(LPTSTR szSid, PSID* ppSid);
 
 HMENU FindContextMenu(UINT nIDMenu);
 int ExecuteContextMenu(HWND hWndParent, HMENU hMenu, LPARAM lParam);
@@ -511,7 +529,9 @@ NTSTATUS NtDeleteReparsePoint(POBJECT_ATTRIBUTES PtrObjectAttributes);
 
 ULONG RtlComputeCrc32(ULONG InitialCrc, PVOID Buffer, ULONG Length);
 
-BOOL WINAPI MyAddMandatoryAce(PACL pAcl, DWORD dwAceRevision, DWORD dwAceFlags, DWORD MandatoryPolicy, PSID pLabelSid);
+//BOOL WINAPI MyAddMandatoryAce(PACL pAcl, DWORD dwAceRevision, DWORD dwAceFlags, DWORD MandatoryPolicy, PSID pLabelSid);
+
+void EnableRedraw(HWND hWnd, BOOL bEnableRedraw = TRUE);
 
 //-----------------------------------------------------------------------------
 // Common function to set result of an operation
@@ -553,17 +573,18 @@ BOOL GetSupportedDateTimeFormats(
 //-----------------------------------------------------------------------------
 // Dialogs
 
-INT_PTR HelpAboutDialog(HWND hParent);
+INT_PTR HelpAboutDialog(HWND hWndParent);
+INT_PTR HelpCommandLineDialog(HWND hWndParent);
 INT_PTR FlagsDialog(HWND hWndParent, UINT nIDTitle, TFlagInfo * pFlags, DWORD & dwBitMask);
 INT_PTR FlagsDialog_OnControl(HWND hWndParent, UINT nIDTitle, TFlagInfo * pFlags, UINT nIDCtrl);
 
-INT_PTR EaEditorDialog(HWND hParent, PFILE_FULL_EA_INFORMATION * pEaInfo);
-INT_PTR PrivilegesDialog(HWND hParent);
-INT_PTR ObjectIDActionDialog(HWND hParent);
-INT_PTR ObjectGuidHelpDialog(HWND hParent);
-INT_PTR FileAttributesDialog(HWND hParent, PFILE_BASIC_INFORMATION pBasicInfo);
-INT_PTR NtAttributesDialog(HWND hParent, PFILE_BASIC_INFORMATION pBasicInfo);
-INT_PTR CopyFileDialog(HWND hParent, TFileTestData * pData);
+INT_PTR EaEditorDialog(HWND hWndParent, PFILE_FULL_EA_INFORMATION * pEaInfo);
+INT_PTR PrivilegesDialog(HWND hWndParent);
+INT_PTR ObjectIDActionDialog(HWND hWndParent);
+INT_PTR ObjectGuidHelpDialog(HWND hWndParent);
+INT_PTR FileAttributesDialog(HWND hWndParent, PFILE_BASIC_INFORMATION pBasicInfo);
+INT_PTR NtAttributesDialog(HWND hWndParent, PFILE_BASIC_INFORMATION pBasicInfo);
+INT_PTR CopyFileDialog(HWND hWndParent, TFileTestData * pData);
 
 TApcEntry * CreateApcEntry(TWindowData * pData, UINT ApcType, size_t cbExtraSize = 0);
 bool InsertApcEntry(TWindowData * pData, TApcEntry * pApc);
@@ -571,7 +592,7 @@ void FreeApcEntry(TApcEntry * pApc);
 
 int NtUseFileId(HWND hDlg, LPCTSTR szFileId);
 void DisableCloseDialog(HWND hDlg, BOOL bDisable);
-INT_PTR FileTestDialog(HWND hParent, TFileTestData * pData);
+INT_PTR FileTestDialog(HWND hWndParent, TFileTestData * pData);
 
 //-----------------------------------------------------------------------------
 // Extended attributes dialog (shared functions)
@@ -579,8 +600,8 @@ INT_PTR FileTestDialog(HWND hParent, TFileTestData * pData);
 void ExtendedAttributesToListView(HWND hDlg, PFILE_FULL_EA_INFORMATION pFileEa);
 DWORD ListViewToExtendedAttributes(HWND hDlg, TOpenPacket & OpenPacket);
 INT_PTR CALLBACK ExtendedAttributesEditorProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);
-INT_PTR ExtendedAtributesEditorDialog(HWND hParent, TOpenPacket * pOP);
-INT_PTR DataEditorDialog(HWND hParent, LPVOID BaseAddress, size_t ViewSize);
+INT_PTR ExtendedAtributesEditorDialog(HWND hWndParent, TOpenPacket * pOP);
+INT_PTR DataEditorDialog(HWND hWndParent, LPVOID BaseAddress, size_t ViewSize);
 
 //-----------------------------------------------------------------------------
 // Message handlers for each page
@@ -601,8 +622,9 @@ INT_PTR CALLBACK PageProc12(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam);
 //-----------------------------------------------------------------------------
 // Debugging functions
 
-#ifdef _DEBUG
+#ifdef __TEST_MODE__
 void DebugCode_TEST();
-#endif
+void DebugCode_SecurityDescriptor(LPCTSTR szPath);
+#endif  // __TEST_MODE__
 
 #endif // __FILETEST_H__

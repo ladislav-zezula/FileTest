@@ -1,16 +1,16 @@
 /*****************************************************************************/
-/* Test.cpp                               Copyright (c) Ladislav Zezula 2010 */
+/* AceCondition.cpp                       Copyright (c) Ladislav Zezula 2023 */
 /*---------------------------------------------------------------------------*/
 /* Description:                                                              */
 /*---------------------------------------------------------------------------*/
 /*   Date    Ver   Who  Comment                                              */
 /* --------  ----  ---  -------                                              */
-/* 06.09.10  1.00  Lad  The first version of Test.cpp                        */
+/* 26.10.23  1.00  Lad  Created                                              */
 /*****************************************************************************/
 
 #include "FileTest.h"
 
-static LPCTSTR HexaAlphabet = _T("0123456789abcdef");
+LPCTSTR HexaAlphabetLower = _T("0123456789abcdef");
 
 static const CONDITION_OPERATOR Operators[] =
 {
@@ -115,10 +115,10 @@ static DWORD EncodeAttributeName(
         if(IsEncodedAttributeChar(chCharacter))
         {
             szAttributeName[nCharsCopied++] = '%';
-            szAttributeName[nCharsCopied++] = HexaAlphabet[(chCharacter >> 0x0C) & 0x0F];
-            szAttributeName[nCharsCopied++] = HexaAlphabet[(chCharacter >> 0x08) & 0x0F];
-            szAttributeName[nCharsCopied++] = HexaAlphabet[(chCharacter >> 0x04) & 0x0F];
-            szAttributeName[nCharsCopied++] = HexaAlphabet[(chCharacter >> 0x00) & 0x0F];
+            szAttributeName[nCharsCopied++] = HexaAlphabetLower[(chCharacter >> 0x0C) & 0x0F];
+            szAttributeName[nCharsCopied++] = HexaAlphabetLower[(chCharacter >> 0x08) & 0x0F];
+            szAttributeName[nCharsCopied++] = HexaAlphabetLower[(chCharacter >> 0x04) & 0x0F];
+            szAttributeName[nCharsCopied++] = HexaAlphabetLower[(chCharacter >> 0x00) & 0x0F];
         }
         
         // Non-encoded chars are copied as-is
@@ -343,8 +343,8 @@ static void GetStringForOctetString(LPWSTR szBuffer, LPBYTE pbOctetString, ULONG
     // Convert to hexa string
     while(pbOctetString < pbEndOfString)
     {
-        szBuffer[0] = HexaAlphabet[(pbOctetString[0] >> 0x04) & 0x0F];
-        szBuffer[1] = HexaAlphabet[(pbOctetString[0] >> 0x00) & 0x0F];
+        szBuffer[0] = HexaAlphabetLower[(pbOctetString[0] >> 0x04) & 0x0F];
+        szBuffer[1] = HexaAlphabetLower[(pbOctetString[0] >> 0x00) & 0x0F];
 
         pbOctetString++;
         szBuffer += 2;

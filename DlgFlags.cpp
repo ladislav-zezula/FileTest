@@ -18,7 +18,7 @@
 /*---------------------------------------------------------------------------*/
 /*   Date    Ver   Who  Comment                                              */
 /* --------  ----  ---  -------                                              */
-/* 06.01.04  1.00  Lad  The first version of DlgFlags.cpp                    */
+/* 06.01.04  1.00  Lad  Created                                              */
 /* 22.10.15  1.00  Lad  Flag info extended to contain mask as well           */
 /*****************************************************************************/
 
@@ -45,6 +45,9 @@ struct TFlagDialogData
     UINT        nIDTitle;                   // String ID of the dialog title
     size_t      nColumns;                   // Number of columns in the dialog
     size_t      nColumn1;                   // Number of bits in the first column
+
+    LPCSTR      szFocusText;                // If non-NULL, this string will be focused, if found
+    size_t      ccFocusText;                // Length of the szFocusText
     DWORD       dwBitMask;                  // Flag value (in/out)
 
     // Dialog layout
@@ -70,6 +73,16 @@ typedef void (*CHILD_WINDOW_CALLBACK)(TFlagDialogData * pData, TFlagInfo * pFlag
 
 //-----------------------------------------------------------------------------
 // Local functions
+
+static bool IsThisButtonChecked(TFlagDialogData * pData, TDlgFlagInfo & FlagInfo, DWORD dwFlags)
+{
+    // Is there a focus string?
+    if(pData->szFocusText && pData->ccFocusText)
+        return (_strnicmp(FlagInfo.szFlagText, pData->szFocusText, pData->ccFocusText) == 0);
+
+    // Default behavior
+    return FlagInfo.IsValuePresent(dwFlags);
+}
 
 static size_t BuildFlagList(TFlagDialogData * pData)
 {
@@ -310,7 +323,7 @@ static void CreateDialogLayout(TFlagDialogData * pData)
         // Check/uncheck the box
         if(!FlagInfo.IsSeparator())
         {
-            nChecked = FlagInfo.IsValuePresent(dwFlags) ? BST_CHECKED : BST_UNCHECKED;
+            nChecked = IsThisButtonChecked(pData, FlagInfo, dwFlags) ? BST_CHECKED : BST_UNCHECKED;
             if(nChecked == BST_CHECKED)
                 dwFlags = dwFlags & ~FlagInfo.dwMask;
             Button_SetCheck(hWndChild, nChecked);
@@ -461,19 +474,16 @@ INT_PTR FlagsDialog(HWND hWndParent, UINT nIDTitle, TFlagInfo * pFlags, DWORD & 
 
     // Retrieve the flags
     fdd.hWndParent = hWndParent;
-    fdd.pFlags     = pFlags;
-    fdd.dwBitMask  = dwBitMask;
-    fdd.nIDTitle   = nIDTitle;
+    fdd.pFlags = pFlags;
+    fdd.dwBitMask = dwBitMask;
+    fdd.nIDTitle = nIDTitle;
 
     // Execute the dialog
     Result = DialogBoxParam(g_hInst, MAKEINTRESOURCE(IDD_FLAGS_DIALOG), hWndParent, DialogProc, (LPARAM)&fdd);
 
     // Only change the value on success
     if(Result == IDOK)
-    {
         dwBitMask = fdd.dwBitMask;
-    }
-
     return Result;
 }
 

@@ -103,8 +103,6 @@ BYTE AsciiToPrintableTable[256] =
     0x2E, 0x2E, 0x2E, 0x2E, 0x2E, 0x2E, 0x2E, 0x2E, 0x2E, 0x2E, 0x2E, 0x2E, 0x2E, 0x2E, 0x2E, 0x2E
 };
 
-static LPCTSTR IntToHexTable = _T("0123456789ABCDEF");
-
 const LPTSTR szDataEditClassName = _T("DataEditor");
 
 //-----------------------------------------------------------------------------
@@ -246,28 +244,28 @@ static LPTSTR FormatPointer(TEditorData * pData, LPTSTR Buffer, ULONGLONG LineAd
         PointerHigh = (ULONG)(LineAddress >> 32);
 
         // Format the upper DWORD
-        *Buffer++ = IntToHexTable[(PointerHigh >> 0x1C) & 0x0F];
-        *Buffer++ = IntToHexTable[(PointerHigh >> 0x18) & 0x0F];
-        *Buffer++ = IntToHexTable[(PointerHigh >> 0x14) & 0x0F];
-        *Buffer++ = IntToHexTable[(PointerHigh >> 0x10) & 0x0F];
-        *Buffer++ = IntToHexTable[(PointerHigh >> 0x0C) & 0x0F];
-        *Buffer++ = IntToHexTable[(PointerHigh >> 0x08) & 0x0F];
-        *Buffer++ = IntToHexTable[(PointerHigh >> 0x04) & 0x0F];
-        *Buffer++ = IntToHexTable[(PointerHigh >> 0x00) & 0x0F];
+        *Buffer++ = HexaAlphabetUpper[(PointerHigh >> 0x1C) & 0x0F];
+        *Buffer++ = HexaAlphabetUpper[(PointerHigh >> 0x18) & 0x0F];
+        *Buffer++ = HexaAlphabetUpper[(PointerHigh >> 0x14) & 0x0F];
+        *Buffer++ = HexaAlphabetUpper[(PointerHigh >> 0x10) & 0x0F];
+        *Buffer++ = HexaAlphabetUpper[(PointerHigh >> 0x0C) & 0x0F];
+        *Buffer++ = HexaAlphabetUpper[(PointerHigh >> 0x08) & 0x0F];
+        *Buffer++ = HexaAlphabetUpper[(PointerHigh >> 0x04) & 0x0F];
+        *Buffer++ = HexaAlphabetUpper[(PointerHigh >> 0x00) & 0x0F];
 
         // Put the separator
         *Buffer++ = _T('\'');
     }
 
     // Format the upper DWORD
-    *Buffer++ = IntToHexTable[(PointerLow >> 0x1C) & 0x0F];
-    *Buffer++ = IntToHexTable[(PointerLow >> 0x18) & 0x0F];
-    *Buffer++ = IntToHexTable[(PointerLow >> 0x14) & 0x0F];
-    *Buffer++ = IntToHexTable[(PointerLow >> 0x10) & 0x0F];
-    *Buffer++ = IntToHexTable[(PointerLow >> 0x0C) & 0x0F];
-    *Buffer++ = IntToHexTable[(PointerLow >> 0x08) & 0x0F];
-    *Buffer++ = IntToHexTable[(PointerLow >> 0x04) & 0x0F];
-    *Buffer++ = IntToHexTable[(PointerLow >> 0x00) & 0x0F];
+    *Buffer++ = HexaAlphabetUpper[(PointerLow >> 0x1C) & 0x0F];
+    *Buffer++ = HexaAlphabetUpper[(PointerLow >> 0x18) & 0x0F];
+    *Buffer++ = HexaAlphabetUpper[(PointerLow >> 0x14) & 0x0F];
+    *Buffer++ = HexaAlphabetUpper[(PointerLow >> 0x10) & 0x0F];
+    *Buffer++ = HexaAlphabetUpper[(PointerLow >> 0x0C) & 0x0F];
+    *Buffer++ = HexaAlphabetUpper[(PointerLow >> 0x08) & 0x0F];
+    *Buffer++ = HexaAlphabetUpper[(PointerLow >> 0x04) & 0x0F];
+    *Buffer++ = HexaAlphabetUpper[(PointerLow >> 0x00) & 0x0F];
 
     // Put the end of string
     *Buffer = 0;
@@ -316,8 +314,8 @@ static int FormatOneLine(TEditorData * pData, size_t nLineIndex)
         {
             if(pbDataPtr < pData->pbEditorDataEnd)
             {
-                *szLineBuffer++ = IntToHexTable[*pbDataPtr >> 0x04];
-                *szLineBuffer++ = IntToHexTable[*pbDataPtr & 0x0F];
+                *szLineBuffer++ = HexaAlphabetUpper[*pbDataPtr >> 0x04];
+                *szLineBuffer++ = HexaAlphabetUpper[*pbDataPtr & 0x0F];
                 *szLineBuffer++ = _T(' ');
             }
             else

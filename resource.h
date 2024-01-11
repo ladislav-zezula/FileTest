@@ -53,6 +53,7 @@
 #define IDD_NT_ATTRIBUTES               147
 #define IDD_NT_ATTRIBUTES1              148
 #define IDD_PAGE02_NTCREATE_RELFILE     149
+#define IDD_HELP_COMMAND_LINE           150
 #define IDC_DESIRED_ACCESS_BROWSE       1002
 #define IDC_FILE_ATTRIBUTES_BROWSE      1003
 #define IDC_SHARE_ACCESS_BROWSE         1004
@@ -329,6 +330,8 @@
 #define IDC_ENCRYPT_FILE                1259
 #define IDC_USE_RELATIVE_FILE           1259
 #define IDC_DECRYPT_FILE                1260
+#define IDC_BUTTON2                     1261
+#define IDC_MORE_SECURITY_INFORMATION   1261
 #define IDS_TIP_FLUSH_FILE_BUFFERS      4000
 #define IDS_FLAGS_AND_ATTRIBUTES        4001
 #define IDS_OPLOCK_BROKE                4002
@@ -428,8 +431,42 @@
 #define IDS_NO_RELATIVE_FILE            4092
 #define IDS_TIP_RELATIVE_FILE           4093
 #define IDS_INVALID_ACE_CONDITION       4094
-#define IDS_FORMAT_ACE_CONDITION        4095
-#define IDS_FORMAT_SID                  4096
+#define IDS_OWNER_SECURITY_INFORMATION  4095
+#define IDS_GROUP_SECURITY_INFORMATION  4096
+#define IDS_DACL_SECURITY_INFORMATION   4097
+#define IDS_SACL_SECURITY_INFORMATION   4098
+#define IDS_SECURITY_INFORMATION        4099
+#define IDS_NULL_ACL                    4100
+#define IDS_FORMAT_STR                  4101
+#define IDS_FORMAT_SID                  4102
+#define IDS_FORMAT_RESERVED             4103
+#define IDS_FORMAT_ACE_HTYPE            4104
+#define IDS_FORMAT_ACE_HFLAGS           4105
+#define IDS_FORMAT_ACE_HSIZE            4106
+#define IDS_FORMAT_ACE_MASK             4107
+#define IDS_FORMAT_ACE_FLAGS            4108
+#define IDS_FORMAT_ACE_CTYPE            4109
+#define IDS_SET_VALUE                   4110
+#define IDS_SET_NEW_VALUE               4110
+#define IDS_FORMAT_CSID                 4111
+#define IDS_FORMAT_OBJ_TYPE             4112
+#define IDS_FORMAT_OBJ_TYPEI            4113
+#define IDS_FORMAT_CONDITION            4114
+#define IDS_FORMAT_INT_LEVEL            4115
+#define IDS_FORMAT_ACL_REVIS            4116
+#define IDS_FORMAT_ACL_SBZ1             4117
+#define IDS_FORMAT_ACL_SIZE             4118
+#define IDS_FORMAT_ACL_COUNT            4119
+#define IDS_FORMAT_ACL_SBZ2             4120
+#define IDS_FORMAT_CSA_V1               4121
+#define IDS_FORMAT_NAME                 4122
+#define IDS_FORMAT_VALTYPE              4123
+#define IDS_FORMAT_FLAGS                4124
+#define IDS_FORMAT_VALCOUNT             4125
+#define IDS_FORMAT_TRUST_LEVEL          4126
+#define IDS_FORMAT_VALUE                4127
+#define IDS_FORMAT_VALINDEX             4128
+#define IDS_FORMAT_POLICY_ID            4129
 #define ID_EDIT_LABEL                   40001
 #define ID_NEW_ACE_BEFORE               40008
 #define ID_NEW_ACE_AFTER                40009
@@ -455,14 +492,18 @@
 #define IDC_DELETE_OBJECT_SINGLE        40062
 #define IDC_DELETE_OBJECT_TREE          40063
 #define IDC_FORCE                       40064
+#define ID__EVERYONE                    40065
+#define IDC_SET_FULL_CONTROL            40066
+#define ID__SETACETYPE                  40067
+#define IDC_SET_ACE_TYPE                40068
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        152
-#define _APS_NEXT_COMMAND_VALUE         40065
-#define _APS_NEXT_CONTROL_VALUE         1260
+#define _APS_NEXT_RESOURCE_VALUE        153
+#define _APS_NEXT_COMMAND_VALUE         40070
+#define _APS_NEXT_CONTROL_VALUE         1262
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif

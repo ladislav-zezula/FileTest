@@ -213,24 +213,55 @@
 #endif
 
 //-----------------------------------------------------------------------------
-// Mandatory label definitions (not included in VS 2005 SDK)
+// Security information types (not included in VS 2005 SDK)
 
 #ifndef LABEL_SECURITY_INFORMATION
-#define LABEL_SECURITY_INFORMATION       (0x00000010L)
+#define LABEL_SECURITY_INFORMATION              (0x00000010L)
+#endif
+
+#ifndef ATTRIBUTE_SECURITY_INFORMATION
+#define ATTRIBUTE_SECURITY_INFORMATION          (0x00000020L)
+#define SCOPE_SECURITY_INFORMATION              (0x00000040L)
+#define PROCESS_TRUST_LABEL_SECURITY_INFORMATION (0x00000080L) 
+#define ACCESS_FILTER_SECURITY_INFORMATION      (0x00000100L)
+#define BACKUP_SECURITY_INFORMATION             (0x00010000L)
+#define PROTECTED_DACL_SECURITY_INFORMATION     (0x80000000L)
+#define PROTECTED_SACL_SECURITY_INFORMATION     (0x40000000L)
+#define UNPROTECTED_DACL_SECURITY_INFORMATION   (0x20000000L)
+#define UNPROTECTED_SACL_SECURITY_INFORMATION   (0x10000000L)
 #endif
 
 #ifndef SE_GROUP_INTEGRITY
-#define SE_GROUP_INTEGRITY                 (0x00000020L)
-#define SE_GROUP_INTEGRITY_ENABLED         (0x00000040L)
+#define SE_GROUP_INTEGRITY                      (0x00000020L)
+#define SE_GROUP_INTEGRITY_ENABLED              (0x00000040L)
 #endif // SE_GROUP_INTEGRITY
 
-#ifndef ACCESS_ALLOWED_COMPOUND_ACE_TYPE
-#define ACCESS_ALLOWED_COMPOUND_ACE_TYPE        (0x4)
+//-----------------------------------------------------------------------------
+// ACEs version 3 (not included in older SDKs)
+
+#ifndef ACCESS_MAX_MS_V3_ACE_TYPE
 #define ACCESS_MAX_MS_V3_ACE_TYPE               (0x4)
+#define ACCESS_ALLOWED_COMPOUND_ACE_TYPE        (0x4)
 #endif
 
-#ifndef ACCESS_MIN_MS_OBJECT_ACE_TYPE
-#define ACCESS_MIN_MS_OBJECT_ACE_TYPE           (0x5)
+#ifndef COMPOUND_ACE_IMPERSONATION
+#define COMPOUND_ACE_IMPERSONATION 1
+
+typedef struct _COMPOUND_ACCESS_ALLOWED_ACE
+{
+    ACE_HEADER Header;
+    ACCESS_MASK Mask;
+    USHORT CompoundAceType;     // Always COMPOUND_ACE_IMPERSONATION
+    USHORT Reserved;
+    ULONG SidStart;             // Server SID
+//                              // Client SID
+} COMPOUND_ACCESS_ALLOWED_ACE, * PCOMPOUND_ACCESS_ALLOWED_ACE;
+#endif
+
+//-----------------------------------------------------------------------------
+// ACEs version 4 (not included in older SDKs)
+
+#ifndef ACCESS_MAX_MS_V4_ACE_TYPE
 #define ACCESS_ALLOWED_OBJECT_ACE_TYPE          (0x5)
 #define ACCESS_DENIED_OBJECT_ACE_TYPE           (0x6)
 #define SYSTEM_AUDIT_OBJECT_ACE_TYPE            (0x7)
@@ -239,7 +270,12 @@
 #define ACCESS_MAX_MS_V4_ACE_TYPE               (0x8)
 #endif
 
-#ifndef ACCESS_ALLOWED_CALLBACK_ACE_TYPE
+//-----------------------------------------------------------------------------
+// ACEs version 5 (not included in older SDKs)
+
+#ifndef ACCESS_MAX_MS_V5_ACE_TYPE
+#define ACCESS_MAX_MS_V5_ACE_TYPE               (0x15)
+
 #define ACCESS_ALLOWED_CALLBACK_ACE_TYPE        (0x9)
 #define ACCESS_DENIED_CALLBACK_ACE_TYPE         (0xA)
 #define ACCESS_ALLOWED_CALLBACK_OBJECT_ACE_TYPE (0xB)
@@ -248,9 +284,88 @@
 #define SYSTEM_ALARM_CALLBACK_ACE_TYPE          (0xE)
 #define SYSTEM_AUDIT_CALLBACK_OBJECT_ACE_TYPE   (0xF)
 #define SYSTEM_ALARM_CALLBACK_OBJECT_ACE_TYPE   (0x10)
-#define SYSTEM_MANDATORY_LABEL_ACE_TYPE         (0x11)
-#define ACCESS_MAX_MS_V5_ACE_TYPE               (0x11)
+
+typedef struct _ACCESS_ALLOWED_CALLBACK_ACE
+{
+    ACE_HEADER Header;
+    ACCESS_MASK Mask;
+    DWORD SidStart;
+    // Opaque resouce manager specific data
+} ACCESS_ALLOWED_CALLBACK_ACE, * PACCESS_ALLOWED_CALLBACK_ACE;
+
+typedef struct _ACCESS_DENIED_CALLBACK_ACE
+{
+    ACE_HEADER Header;
+    ACCESS_MASK Mask;
+    DWORD SidStart;
+    // Opaque resouce manager specific data
+} ACCESS_DENIED_CALLBACK_ACE, * PACCESS_DENIED_CALLBACK_ACE;
+
+typedef struct _ACCESS_ALLOWED_CALLBACK_OBJECT_ACE
+{
+    ACE_HEADER Header;
+    ACCESS_MASK Mask;
+    DWORD Flags;
+    GUID ObjectType;
+    GUID InheritedObjectType;
+    DWORD SidStart;
+    // Opaque resouce manager specific data
+} ACCESS_ALLOWED_CALLBACK_OBJECT_ACE, * PACCESS_ALLOWED_CALLBACK_OBJECT_ACE;
+
+typedef struct _ACCESS_DENIED_CALLBACK_OBJECT_ACE
+{
+    ACE_HEADER Header;
+    ACCESS_MASK Mask;
+    DWORD Flags;
+    GUID ObjectType;
+    GUID InheritedObjectType;
+    DWORD SidStart;
+    // Opaque resouce manager specific data
+} ACCESS_DENIED_CALLBACK_OBJECT_ACE, * PACCESS_DENIED_CALLBACK_OBJECT_ACE;
+
+typedef struct _SYSTEM_AUDIT_CALLBACK_ACE
+{
+    ACE_HEADER Header;
+    ACCESS_MASK Mask;
+    DWORD SidStart;
+    // Opaque resouce manager specific data
+} SYSTEM_AUDIT_CALLBACK_ACE, * PSYSTEM_AUDIT_CALLBACK_ACE;
+
+typedef struct _SYSTEM_ALARM_CALLBACK_ACE
+{
+    ACE_HEADER Header;
+    ACCESS_MASK Mask;
+    DWORD SidStart;
+    // Opaque resouce manager specific data
+} SYSTEM_ALARM_CALLBACK_ACE, * PSYSTEM_ALARM_CALLBACK_ACE;
+
+typedef struct _SYSTEM_AUDIT_CALLBACK_OBJECT_ACE
+{
+    ACE_HEADER Header;
+    ACCESS_MASK Mask;
+    DWORD Flags;
+    GUID ObjectType;
+    GUID InheritedObjectType;
+    DWORD SidStart;
+    // Opaque resouce manager specific data
+} SYSTEM_AUDIT_CALLBACK_OBJECT_ACE, * PSYSTEM_AUDIT_CALLBACK_OBJECT_ACE;
+
+typedef struct _SYSTEM_ALARM_CALLBACK_OBJECT_ACE
+{
+    ACE_HEADER Header;
+    ACCESS_MASK Mask;
+    DWORD Flags;
+    GUID ObjectType;
+    GUID InheritedObjectType;
+    DWORD SidStart;
+    // Opaque resouce manager specific data
+} SYSTEM_ALARM_CALLBACK_OBJECT_ACE, * PSYSTEM_ALARM_CALLBACK_OBJECT_ACE;
+
 #endif
+
+//-----------------------------------------------------------------------------
+// SYSTEM_MANDATORY_LABEL_ACE (not included in older SDKs)
+// Can be found on %USERPROFILE%\AppData\LocalLow
 
 // Access mask for the mandatory label ACE
 #ifndef SYSTEM_MANDATORY_LABEL_NO_WRITE_UP
@@ -273,151 +388,141 @@
 #define SECURITY_MANDATORY_PROTECTED_PROCESS_RID    (0x00005000L)
 #endif  // SECURITY_MANDATORY_LABEL_AUTHORITY
 
+#ifndef SECURITY_MANDATORY_MEDIUM_PLUS_RID
+#define SECURITY_MANDATORY_MEDIUM_PLUS_RID          (SECURITY_MANDATORY_MEDIUM_RID + 0x100)
+#endif
+
+#ifndef SYSTEM_MANDATORY_LABEL_ACE_TYPE
+#define SYSTEM_MANDATORY_LABEL_ACE_TYPE         (0x11)
+
+typedef struct _SYSTEM_MANDATORY_LABEL_ACE
+{
+    ACE_HEADER Header;
+    ACCESS_MASK Mask;
+    DWORD SidStart;
+} SYSTEM_MANDATORY_LABEL_ACE, *PSYSTEM_MANDATORY_LABEL_ACE;
+
+#endif  // SYSTEM_MANDATORY_LABEL_ACE_TYPE
+
+//-----------------------------------------------------------------------------
+// SYSTEM_RESOURCE_ATTRIBUTE_ACE (not included in older SDKs)
+//
+// * Can be accessed with SecurityInformation = ATTRIBUTE_SECURITY_INFORMATION
+// * Presence checked by nt!SepSDContainsAttributeACE
+// * In case NtSetSecurityObject returns STATUS_INVALID_ACL, look here:
+//   nt!NtSetSecurityObject -> nt!SeCaptureSecurityDescriptor -> nt!RtlValidAcl -> nt!RtlpValidAttributeAce -> 
+//   nt!RtlpValidRelativeAttribute(PCLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1 pAttrRel, size_t cbAttrRel)
+// * Can be found on %USERPROFILE%\Downloads
+//
+
+#ifndef SYSTEM_RESOURCE_ATTRIBUTE_ACE_TYPE
+#define SYSTEM_RESOURCE_ATTRIBUTE_ACE_TYPE      (0x12)
+
+typedef struct _SYSTEM_RESOURCE_ATTRIBUTE_ACE
+{
+    ACE_HEADER Header;
+    ACCESS_MASK Mask;
+    DWORD SidStart;             // Sid followed by CLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1 structure
+
+} SYSTEM_RESOURCE_ATTRIBUTE_ACE, *PSYSTEM_RESOURCE_ATTRIBUTE_ACE;
+#endif
+
+//-----------------------------------------------------------------------------
+// SYSTEM_SCOPED_POLICY_ID_ACE (not included in older SDKs)
+//
+// * Can be accessed with SecurityInformation = SCOPE_SECURITY_INFORMATION
+// * ACE_HEADER::AceFlags must have INHERIT_ONLY_ACE set (tested by SepGetScopedPolicySid)
+// * SID must contain SECURITY_SCOPED_POLICY_ID_AUTHORITY
+// * Used by nt!SepGetScopedPolicySid
+//
+
+#ifndef SYSTEM_SCOPED_POLICY_ID_ACE_TYPE
+#define SYSTEM_SCOPED_POLICY_ID_ACE_TYPE        (0x13)
+#define SECURITY_SCOPED_POLICY_ID_AUTHORITY     {0,0,0,0,0,17}
+
+typedef struct _SYSTEM_SCOPED_POLICY_ID_ACE
+{
+    ACE_HEADER Header;
+    ACCESS_MASK Mask;
+    DWORD SidStart;
+} SYSTEM_SCOPED_POLICY_ID_ACE, *PSYSTEM_SCOPED_POLICY_ID_ACE;
+
+#endif  // SYSTEM_SCOPED_POLICY_ID_ACE_TYPE
+
+//-----------------------------------------------------------------------------
+// SYSTEM_PROCESS_TRUST_LABEL_ACE (not included in older SDKs)
+//
+// * Can be accessed with SecurityInformation = PROCESS_TRUST_LABEL_SECURITY_INFORMATION
+// * ACE_HEADER::AceFlags must have INHERIT_ONLY_ACE set (tested by SepGetProcessTrustLabelAce)
+// * The sid must be of SECURITY_PROCESS_TRUST_AUTHORITY and specifies
+//   required process protection level. Caller's with lower level will be limited
+//   to the subsets of rights specified in the ACE.
+// * SYSTEM_PROCESS_TRUST_LABEL_ACE::Mask must have upper 8 bits zeroed (tested by RtlpSetSecurityObject)
+// * Can be set only if the current token has a trust level SID. If not, nt!RtlpSetSecurityObject returns STATUS_ACCESS_DENIED 
+// * Can be found on C:\Program Files\WindowsApps\<any subfolder>
+//
+
+#ifndef SYSTEM_PROCESS_TRUST_LABEL_ACE_TYPE
+#define SYSTEM_PROCESS_TRUST_LABEL_ACE_TYPE     (0x14)
+#define SECURITY_PROCESS_TRUST_AUTHORITY        {0,0,0,0,0,19}
+
+typedef struct _SYSTEM_PROCESS_TRUST_LABEL_ACE
+{
+    ACE_HEADER Header;
+    ACCESS_MASK Mask;
+    DWORD SidStart;
+} SYSTEM_PROCESS_TRUST_LABEL_ACE, *PSYSTEM_PROCESS_TRUST_LABEL_ACE;
+#endif  // SYSTEM_PROCESS_TRUST_LABEL_ACE_TYPE
+
+//-----------------------------------------------------------------------------
+// SYSTEM_ACCESS_FILTER_ACE (not included in older SDKs)
+//
+// * Can be accessed with SecurityInformation = ACCESS_FILTER_SECURITY_INFORMATION
+// * Upper 8 bits of SYSTEM_ACCESS_FILTER_ACE::Mask must be zero
+// * If TRUST_PROTECTED_FILTER_ACE_FLAG in ACE_HEADER::AceFlags is NOT set, the SID must be Everyone, which means the system simply filters access according to the callback condition. 
+// * If TRUST_PROTECTED_FILTER_ACE_FLAG in ACE_HEADER::AceFlags is set, the SID must represent a trust level (S-1-19-x-y).
+//   In this case, the system performs access filtration according to the condition only when the caller's trust is lower. 
+//   In other words, a trust-protected Access Filter ACE works as a Trust Label Callback ACE would
+// * Can be set only if the current token has a trust level SID. If not, nt!RtlpSetSecurityObject returns STATUS_ACCESS_DENIED 
+// * Verified by nt!RtlpValidFilterAclSubjectContext(PACL pAcl, ULONG AceIndex)
+// * SID verified by nt!RtlpValidTrustSubjectContext
+
+#ifndef SYSTEM_ACCESS_FILTER_ACE_TYPE
+#define SYSTEM_ACCESS_FILTER_ACE_TYPE           (0x15)
+
+#define TRUST_PROTECTED_FILTER_ACE_FLAG  (0x40)
+
+typedef struct _SYSTEM_ACCESS_FILTER_ACE
+{
+    ACE_HEADER Header;
+    ACCESS_MASK Mask;
+    DWORD SidStart;
+    // Filter Condition follows the SID
+} SYSTEM_ACCESS_FILTER_ACE, *PSYSTEM_ACCESS_FILTER_ACE;
+#endif  // SYSTEM_ACCESS_FILTER_ACE_TYPE
+
 //-----------------------------------------------------------------------------
 // Definitions for token mandatory label
 
-#ifndef ACCESS_MAX_MS_V5_ACE_TYPE
-
+#ifndef TOKEN_MANDATORY_POLICY_OFF
 typedef struct _TOKEN_MANDATORY_LABEL
 {
     SID_AND_ATTRIBUTES Label;
 
 } TOKEN_MANDATORY_LABEL, *PTOKEN_MANDATORY_LABEL;
 
-typedef enum _TOKEN_ELEVATION_TYPE {
+typedef enum _TOKEN_ELEVATION_TYPE
+{
     TokenElevationTypeDefault = 1,
     TokenElevationTypeFull,
     TokenElevationTypeLimited,
 } TOKEN_ELEVATION_TYPE, *PTOKEN_ELEVATION_TYPE;
 
-typedef struct _TOKEN_ELEVATION {
+typedef struct _TOKEN_ELEVATION
+{
     DWORD TokenIsElevated;
 } TOKEN_ELEVATION, *PTOKEN_ELEVATION;
-
-#endif  // ACCESS_MAX_MS_V5_ACE_TYPE
-
-//-----------------------------------------------------------------------------
-// Additional ACE types version 4 (not included in VS 2005 SDK)
-
-#ifndef ACCESS_MAX_MS_V4_ACE_TYPE
-
-typedef struct _ACCESS_ALLOWED_OBJECT_ACE {
-    ACE_HEADER Header;
-    ACCESS_MASK Mask;
-    DWORD Flags;
-    GUID ObjectType;
-    GUID InheritedObjectType;
-    DWORD SidStart;
-} ACCESS_ALLOWED_OBJECT_ACE, *PACCESS_ALLOWED_OBJECT_ACE;
-
-typedef struct _ACCESS_DENIED_OBJECT_ACE {
-    ACE_HEADER Header;
-    ACCESS_MASK Mask;
-    DWORD Flags;
-    GUID ObjectType;
-    GUID InheritedObjectType;
-    DWORD SidStart;
-} ACCESS_DENIED_OBJECT_ACE, *PACCESS_DENIED_OBJECT_ACE;
-
-typedef struct _SYSTEM_AUDIT_OBJECT_ACE {
-    ACE_HEADER Header;
-    ACCESS_MASK Mask;
-    DWORD Flags;
-    GUID ObjectType;
-    GUID InheritedObjectType;
-    DWORD SidStart;
-} SYSTEM_AUDIT_OBJECT_ACE, *PSYSTEM_AUDIT_OBJECT_ACE;
-
-typedef struct _SYSTEM_ALARM_OBJECT_ACE {
-    ACE_HEADER Header;
-    ACCESS_MASK Mask;
-    DWORD Flags;
-    GUID ObjectType;
-    GUID InheritedObjectType;
-    DWORD SidStart;
-} SYSTEM_ALARM_OBJECT_ACE, *PSYSTEM_ALARM_OBJECT_ACE;
-#endif
-
-//-----------------------------------------------------------------------------
-// Additional ACE types version 5 (not included in VS 2005 SDK)
-
-#ifndef ACCESS_MAX_MS_V5_ACE_TYPE
-
-typedef struct _ACCESS_ALLOWED_CALLBACK_ACE {
-    ACE_HEADER Header;
-    ACCESS_MASK Mask;
-    DWORD SidStart;
-    // Opaque resouce manager specific data
-} ACCESS_ALLOWED_CALLBACK_ACE, *PACCESS_ALLOWED_CALLBACK_ACE;
-
-typedef struct _ACCESS_DENIED_CALLBACK_ACE {
-    ACE_HEADER Header;
-    ACCESS_MASK Mask;
-    DWORD SidStart;
-    // Opaque resouce manager specific data
-} ACCESS_DENIED_CALLBACK_ACE, *PACCESS_DENIED_CALLBACK_ACE;
-
-typedef struct _ACCESS_ALLOWED_CALLBACK_OBJECT_ACE {
-    ACE_HEADER Header;
-    ACCESS_MASK Mask;
-    DWORD Flags;
-    GUID ObjectType;
-    GUID InheritedObjectType;
-    DWORD SidStart;
-    // Opaque resouce manager specific data
-} ACCESS_ALLOWED_CALLBACK_OBJECT_ACE, *PACCESS_ALLOWED_CALLBACK_OBJECT_ACE;
-
-typedef struct _ACCESS_DENIED_CALLBACK_OBJECT_ACE {
-    ACE_HEADER Header;
-    ACCESS_MASK Mask;
-    DWORD Flags;
-    GUID ObjectType;
-    GUID InheritedObjectType;
-    DWORD SidStart;
-    // Opaque resouce manager specific data
-} ACCESS_DENIED_CALLBACK_OBJECT_ACE, *PACCESS_DENIED_CALLBACK_OBJECT_ACE;
-
-typedef struct _SYSTEM_AUDIT_CALLBACK_ACE {
-    ACE_HEADER Header;
-    ACCESS_MASK Mask;
-    DWORD SidStart;
-    // Opaque resouce manager specific data
-} SYSTEM_AUDIT_CALLBACK_ACE, *PSYSTEM_AUDIT_CALLBACK_ACE;
-
-typedef struct _SYSTEM_ALARM_CALLBACK_ACE {
-    ACE_HEADER Header;
-    ACCESS_MASK Mask;
-    DWORD SidStart;
-    // Opaque resouce manager specific data
-} SYSTEM_ALARM_CALLBACK_ACE, *PSYSTEM_ALARM_CALLBACK_ACE;
-
-typedef struct _SYSTEM_AUDIT_CALLBACK_OBJECT_ACE {
-    ACE_HEADER Header;
-    ACCESS_MASK Mask;
-    DWORD Flags;
-    GUID ObjectType;
-    GUID InheritedObjectType;
-    DWORD SidStart;
-    // Opaque resouce manager specific data
-} SYSTEM_AUDIT_CALLBACK_OBJECT_ACE, *PSYSTEM_AUDIT_CALLBACK_OBJECT_ACE;
-
-typedef struct _SYSTEM_ALARM_CALLBACK_OBJECT_ACE {
-    ACE_HEADER Header;
-    ACCESS_MASK Mask;
-    DWORD Flags;
-    GUID ObjectType;
-    GUID InheritedObjectType;
-    DWORD SidStart;
-    // Opaque resouce manager specific data
-} SYSTEM_ALARM_CALLBACK_OBJECT_ACE, *PSYSTEM_ALARM_CALLBACK_OBJECT_ACE;
-
-typedef struct _SYSTEM_MANDATORY_LABEL_ACE {
-    ACE_HEADER Header;
-    ACCESS_MASK Mask;
-    DWORD SidStart;
-} SYSTEM_MANDATORY_LABEL_ACE, *PSYSTEM_MANDATORY_LABEL_ACE;
-
-#endif  // ACCESS_MAX_MS_V5_ACE_TYPE
+#endif  // TOKEN_ELEVATION_TYPE
 
 //-----------------------------------------------------------------------------
 // Object ID definitions (not included in VS 2005 SDK)

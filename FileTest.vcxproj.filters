@@ -108,6 +108,12 @@
     <ClCompile Include="AceCondition.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="AceResource.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="TestCode.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="FileTest.rc">
@@ -143,6 +149,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="AceCondition.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="TAceHelper.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="AceResource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

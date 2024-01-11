@@ -110,8 +110,8 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 2,8,0,635
- PRODUCTVERSION 2,8,0,635
+ FILEVERSION 2,8,0,637
+ PRODUCTVERSION 2,8,0,637
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -128,13 +128,13 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Ladislav Zezula"
             VALUE "FileDescription", "Interactive File System API Test"
-            VALUE "FileVersion", "2, 8, 0, 635"
+            VALUE "FileVersion", "2, 8, 0, 637"
             VALUE "InternalName", "FileTest"
-            VALUE "LegalCopyright", "Copyright © 2004 - 2023 Ladislav Zezula"
+            VALUE "LegalCopyright", "Copyright ï¿½ 2004 - 2023 Ladislav Zezula"
             VALUE "LegalTrademarks", "http://www.zezula.net"
             VALUE "OriginalFilename", "FileTest.exe"
             VALUE "ProductName", "FileTest"
-            VALUE "ProductVersion", "2, 8, 0, 635"
+            VALUE "ProductVersion", "2, 8, 0, 637"
         END
     END
     BLOCK "VarFileInfo"
@@ -153,10 +153,11 @@ IDR_ACE_MENU MENU
 BEGIN
     POPUP "_ACE_MENU_"
     BEGIN
-        MENUITEM "Insert new ACE &before",      IDC_NEW_ACE_BEFORE
-        MENUITEM "Insert new ACE &after",       IDC_NEW_ACE_AFTER
+        MENUITEM "Insert new ACE &before ...",  IDC_NEW_ACE_BEFORE
+        MENUITEM "Insert new ACE &after ...",   IDC_NEW_ACE_AFTER
         MENUITEM "Move this ACE &up",           IDC_MOVE_ACE_UP
         MENUITEM "Move this ACE &down",         IDC_MOVE_ACE_DOWN
+        MENUITEM "&Set ACE type ...",           IDC_SET_ACE_TYPE
         MENUITEM "&Delete this ACE",            IDC_DELETE_ACE
     END
 END
@@ -202,6 +203,8 @@ BEGIN
     BEGIN
         MENUITEM "Set to &NULL Acl",            IDC_SET_NULL_ACL
         MENUITEM "Set to &Empty Acl",           IDC_SET_EMPTY_ACL
+        MENUITEM "Everyone: &Full Control",     IDC_SET_FULL_CONTROL
+        MENUITEM SEPARATOR
         MENUITEM "&Cancel",                     IDC_DO_NOTHING
     END
 END
@@ -513,8 +516,9 @@ BEGIN
                     "Button",BS_AUTOCHECKBOX | WS_TABSTOP,15,34,128,10
     CONTROL         "DACL_SECURITY_INFORMATION",IDC_DACL_INFORMATION,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,162,21,132,10
     CONTROL         "SACL_SECURITY_INFORMATION",IDC_SACL_INFORMATION,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,162,34,132,10
-    CONTROL         "LABEL_SECURITY_INFORMATION (requires Windows Vista)",IDC_LABEL_INFORMATION,
-                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,15,47,281,10
+    CONTROL         "LABEL_SECURITY_INFORMATION",IDC_LABEL_INFORMATION,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,15,47,128,10
+    CONTROL         "More ...",IDC_MORE_SECURITY_INFORMATION,"Button",BS_OWNERDRAW | WS_TABSTOP,162,47,132,10
     CONTROL         "",IDC_SECURITY,"SysTreeView32",TVS_HASBUTTONS | TVS_HASLINES | TVS_LINESATROOT | TVS_EDITLABELS | TVS_DISABLEDRAGDROP | TVS_SHOWSELALWAYS | TVS_TRACKSELECT | TVS_INFOTIP | WS_HSCROLL | WS_TABSTOP,7,66,294,198,WS_EX_CLIENTEDGE
     PUSHBUTTON      "NtQuerySecurityObject",IDC_QUERY_SECURITY,7,267,86,14
     PUSHBUTTON      "Set Blank",IDC_SET_BLANK,110,267,86,14
@@ -869,6 +873,43 @@ BEGIN
     PUSHBUTTON      "Cancel",IDCANCEL,251,203,50,14
 END
 
+IDD_HELP_COMMAND_LINE DIALOGEX 0, 0, 347, 295
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "FileTest Command Line Options"
+FONT 8, "MS Shell Dlg", 400, 0, 0x1
+BEGIN
+    GROUPBOX        "",IDC_STATIC,7,3,333,264
+    LTEXT           "Usage: FileTest.exe [FileName1] [FileName2] [Directory] [Options]",IDC_STATIC,13,13,321,8
+    LTEXT           "FileName1",IDC_STATIC,13,30,93,15
+    LTEXT           "The name of the first file. It's a file to be open, to be renamed, deleted, or the file to be copied from.",IDC_STATIC,110,30,225,15
+    LTEXT           "FileName1",IDC_STATIC,13,52,93,15
+    LTEXT           "The name of the second file. It's a file to be renamed to or the file to be copied to.",IDC_STATIC,110,52,225,15
+    LTEXT           "Directory",IDC_STATIC,13,75,93,15
+    LTEXT           "The name of the directory or a relative file",IDC_STATIC,110,75,225,15
+    LTEXT           "/DesiredAccess:Value",IDC_STATIC,13,98,93,8
+    LTEXT           "Desired access for opening the FileName1",IDC_STATIC,110,98,225,8
+    LTEXT           "/ShareAccess:Value",IDC_STATIC,13,112,93,8
+    LTEXT           "Share access for opening the FileName1",IDC_STATIC,110,112,225,8
+    LTEXT           "/CreateOptions:Value",IDC_STATIC,13,126,93,8
+    LTEXT           "Create options for opening the FileName1",IDC_STATIC,110,126,225,8
+    LTEXT           "/CopyFileFlags:Value",IDC_STATIC,13,140,93,8
+    LTEXT           "Flags for copy operation from FileName1 to FIleName2",IDC_STATIC,110,140,225,8
+    LTEXT           "/MoveFileFlags:HexValue",IDC_STATIC,13,154,93,8
+    LTEXT           "Flags for copy operation from FileName1 to FIleName2",IDC_STATIC,110,154,225,8
+    LTEXT           "/SecurityInformation:Value",IDC_STATIC,13,168,93,8
+    LTEXT           "SECURITY_INFORMATION for NtQuerySecurityObject",IDC_STATIC,110,168,225,8
+    LTEXT           "/InitialPage:Value",IDC_STATIC,13,182,93,8
+    LTEXT           "Upon startup, this page will be set as default",IDC_STATIC,110,182,225,8
+    LTEXT           "/OpenFile",IDC_STATIC,13,196,93,8
+    LTEXT           "Orders that FileName1 will be open right after the start of FileTest",IDC_STATIC,110,196,225,8
+    LTEXT           "/AsyncOpen",IDC_STATIC,13,210,93,8
+    LTEXT           "Pre-configures Desired Access for asynchronous operations",IDC_STATIC,110,210,225,8
+    LTEXT           "/Help, /?",IDC_STATIC,13,224,93,8
+    LTEXT           "Displays this dialog box",IDC_STATIC,110,224,225,8
+    LTEXT           "Values referred as ""Value"" may be in hexa-decimal format (prefixed with ""0x"") or in decimal format.",IDC_STATIC,13,243,321,16
+    DEFPUSHBUTTON   "Close",IDOK,290,274,50,14
+END
+
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -1101,6 +1142,14 @@ BEGIN
         TOPMARGIN, 7
         BOTTOMMARGIN, 217
     END
+
+    IDD_HELP_COMMAND_LINE, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 340
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 288
+    END
 END
 #endif    // APSTUDIO_INVOKED
 
@@ -1235,6 +1284,11 @@ BEGIN
     0
 END
 
+IDD_HELP_COMMAND_LINE AFX_DIALOG_LAYOUT
+BEGIN
+    0
+END
+
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -1364,12 +1418,53 @@ BEGIN
     IDS_NO_RELATIVE_FILE    "(No Relative File)"
     IDS_TIP_RELATIVE_FILE   "Click to refine create options for the relative file"
     IDS_INVALID_ACE_CONDITION "<invalid ACE condition>"
-    IDS_FORMAT_ACE_CONDITION "Condition: %s"
+    IDS_OWNER_SECURITY_INFORMATION "OWNER_SECURITY_INFORMATION"
 END
 
 STRINGTABLE
 BEGIN
+    IDS_GROUP_SECURITY_INFORMATION "GROUP_SECURITY_INFORMATION"
+    IDS_DACL_SECURITY_INFORMATION "DACL_SECURITY_INFORMATION"
+    IDS_SACL_SECURITY_INFORMATION "SACL_SECURITY_INFORMATION"
+    IDS_SECURITY_INFORMATION "Requested Security Information"
+    IDS_NULL_ACL            "<NULL ACL. Double-click to create new...>"
+    IDS_FORMAT_STR          "%s"
     IDS_FORMAT_SID          "Sid: %s"
+    IDS_FORMAT_RESERVED     "Reserved: %s"
+    IDS_FORMAT_ACE_HTYPE    "AceHeader.AceType: %s"
+    IDS_FORMAT_ACE_HFLAGS   "AceHeader.AceFlags: %s"
+    IDS_FORMAT_ACE_HSIZE    "AceHeader.AceSize: %s"
+    IDS_FORMAT_ACE_MASK     "AccessMask: %s"
+    IDS_FORMAT_ACE_FLAGS    "Flags: %s"
+    IDS_FORMAT_ACE_CTYPE    "CompoundAceType: %s"
+    IDS_SET_NEW_VALUE       "Set New Value"
+    IDS_FORMAT_CSID         "ClientSid: %s"
+END
+
+STRINGTABLE
+BEGIN
+    IDS_FORMAT_OBJ_TYPE     "ObjectType: %s"
+    IDS_FORMAT_OBJ_TYPEI    "InheritedObjectType: %s"
+    IDS_FORMAT_CONDITION    "Condition: %s"
+    IDS_FORMAT_INT_LEVEL    "IntegrityLevel: %s"
+    IDS_FORMAT_ACL_REVIS    "AclRevision: %s"
+    IDS_FORMAT_ACL_SBZ1     "Sbz1: %s"
+    IDS_FORMAT_ACL_SIZE     "AclSize: %s"
+    IDS_FORMAT_ACL_COUNT    "AceCount: %s"
+    IDS_FORMAT_ACL_SBZ2     "Sbz2: %s"
+    IDS_FORMAT_CSA_V1       "CLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1"
+    IDS_FORMAT_NAME         "Name: %s"
+    IDS_FORMAT_VALTYPE      "ValueType: %s"
+    IDS_FORMAT_FLAGS        "Flags: %s"
+    IDS_FORMAT_VALCOUNT     "ValueCount: %s"
+    IDS_FORMAT_TRUST_LEVEL  "Trust Level: %s"
+    IDS_FORMAT_VALUE        "Value"
+END
+
+STRINGTABLE
+BEGIN
+    IDS_FORMAT_VALINDEX     "Value[0x%02x]: %s"
+    IDS_FORMAT_POLICY_ID    "PolicyID: %s"
 END
 
 #endif    // English (United States) resources

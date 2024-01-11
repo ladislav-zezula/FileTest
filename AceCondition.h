@@ -111,6 +111,7 @@ typedef DWORD(WINAPI * LGSFC)(
     PSTRSD_SID_LOOKUP tSidLookupDomOrRootDomRelativeTable,
     bool DefaultToDomain);
 
+extern LPCTSTR HexaAlphabetLower;
 
 // advapi32.dll!_LocalpGetStringForCondition@32
 // (also aclui.dll!_LocalpGetStringForCondition@32)

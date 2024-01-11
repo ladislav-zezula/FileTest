@@ -5,7 +5,7 @@
 /*---------------------------------------------------------------------------*/
 /*   Date    Ver   Who  Comment                                              */
 /* --------  ----  ---  -------                                              */
-/* 19.05.09  1.00  Lad  The first version of DlgPrivileges.cpp               */
+/* 19.05.09  1.00  Lad  Created                                              */
 /*****************************************************************************/
 
 #include "FileTest.h"
@@ -63,20 +63,6 @@ static LPCTSTR szValName = _T("LongPathsEnabled");
 static TDialogData * GetData(HWND hDlg)
 {
     return (TDialogData *)GetWindowLongPtr(hDlg, DWLP_USER);
-}
-
-static HANDLE OpenCurrentToken(DWORD dwDesiredAccess)
-{
-    HANDLE hToken = NULL;
-
-    // Open process or thread token
-    if(!OpenThreadToken(GetCurrentThread(), dwDesiredAccess, TRUE, &hToken))
-    {
-        if(GetLastError() == ERROR_NO_TOKEN)
-            OpenProcessToken(GetCurrentProcess(), dwDesiredAccess, &hToken);
-    }
-
-    return hToken;
 }
 
 static void LoadSystemSettings(TDialogData & Data)

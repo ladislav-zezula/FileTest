@@ -5,7 +5,7 @@
 /*---------------------------------------------------------------------------*/
 /*   Date    Ver   Who  Comment                                              */
 /* --------  ----  ---  -------                                              */
-/* 27.05.09  1.00  Lad  The first version of DlgFileTest.cpp                 */
+/* 27.05.09  1.00  Lad  Created                                              */
 /*****************************************************************************/
 
 #include "FileTest.h"
@@ -198,12 +198,15 @@ static NTSTATUS SafeInitializeCriticalSection(CRITICAL_SECTION & Section)
     }
 }
 
-static void InitializeTabControl(HWND hDlg, TWindowData * pData)
+static void InitializeTabControl(HWND hDlg, LPARAM lParam)
 {
+    TFileTestData * pData = (TFileTestData *)(lParam);
     PROPSHEETHEADER psh = {sizeof(PROPSHEETHEADER)};
     PROPSHEETPAGE psp[13];
     TCHAR szAppTitle[256];
     HWND hTabCtrl = GetDlgItem(hDlg, IDC_TAB);
+    int nPageNtOpenFile = 0;
+    int nPageOpenFile = 0;
     int nPages = 0;
 
     // Get the title of FileTest application
@@ -226,7 +229,7 @@ static void InitializeTabControl(HWND hDlg, TWindowData * pData)
         psp[nPages].hInstance   = g_hInst;
         psp[nPages].pszTemplate = MAKEINTRESOURCE(IDD_PAGE00_TRANSACTION);
         psp[nPages].pfnDlgProc  = PageProc00;
-        psp[nPages].lParam      = (LPARAM)pData;
+        psp[nPages].lParam      = lParam;
         nPages++;
     }
 
@@ -237,7 +240,8 @@ static void InitializeTabControl(HWND hDlg, TWindowData * pData)
     psp[nPages].hInstance   = g_hInst;
     psp[nPages].pszTemplate = MAKEINTRESOURCE(IDD_PAGE01_CREATE);
     psp[nPages].pfnDlgProc  = PageProc01;
-    psp[nPages].lParam      = (LPARAM)pData;
+    psp[nPages].lParam      = lParam;
+    nPageOpenFile = nPages;
     psh.nStartPage = nPages++;
 
     // Fill the "NtCreateFile"
@@ -248,9 +252,8 @@ static void InitializeTabControl(HWND hDlg, TWindowData * pData)
     psp[nPages].hInstance   = g_hInst;
     psp[nPages].pszTemplate = MAKEINTRESOURCE(IDD_PAGE02_NTCREATE);
     psp[nPages].pfnDlgProc  = PageProc02;
-    psp[nPages].lParam      = (LPARAM)pData;
-    if(IsNativeName(((TFileTestData *)pData)->szFileName1))
-        psh.nStartPage = nPages;
+    psp[nPages].lParam      = lParam;
+    nPageNtOpenFile = nPages;
     nPages++;
 
     // Fill the "ReadWrite"
@@ -260,7 +263,7 @@ static void InitializeTabControl(HWND hDlg, TWindowData * pData)
     psp[nPages].hInstance   = g_hInst;
     psp[nPages].pszTemplate = MAKEINTRESOURCE(IDD_PAGE03_READWRITE);
     psp[nPages].pfnDlgProc  = PageProc03;
-    psp[nPages].lParam      = (LPARAM)pData;
+    psp[nPages].lParam      = lParam;
     nPages++;
 
     // Fill the "Mapping"
@@ -270,7 +273,7 @@ static void InitializeTabControl(HWND hDlg, TWindowData * pData)
     psp[nPages].hInstance   = g_hInst;
     psp[nPages].pszTemplate = MAKEINTRESOURCE(IDD_PAGE04_MAPPING);
     psp[nPages].pfnDlgProc  = PageProc04;
-    psp[nPages].lParam      = (LPARAM)pData;
+    psp[nPages].lParam      = lParam;
     nPages++;
 
     // Fill the "File Ops".
@@ -280,7 +283,7 @@ static void InitializeTabControl(HWND hDlg, TWindowData * pData)
     psp[nPages].hInstance   = g_hInst;
     psp[nPages].pszTemplate = MAKEINTRESOURCE(IDD_PAGE05_FILEOPS);
     psp[nPages].pfnDlgProc  = PageProc05;
-    psp[nPages].lParam      = (LPARAM)pData;
+    psp[nPages].lParam      = lParam;
     nPages++;
 
     // Fill the "NtFileInfo" page
@@ -290,7 +293,7 @@ static void InitializeTabControl(HWND hDlg, TWindowData * pData)
     psp[nPages].hInstance   = g_hInst;
     psp[nPages].pszTemplate = MAKEINTRESOURCE(IDD_PAGE06_NTFILEINFO);
     psp[nPages].pfnDlgProc  = PageProc06;
-    psp[nPages].lParam      = (LPARAM)pData;
+    psp[nPages].lParam      = lParam;
     nPages++;
 
     // Fill the "NtFsInfo" page.
@@ -300,7 +303,7 @@ static void InitializeTabControl(HWND hDlg, TWindowData * pData)
     psp[nPages].hInstance   = g_hInst;
     psp[nPages].pszTemplate = MAKEINTRESOURCE(IDD_PAGE07_NTVOLINFO);
     psp[nPages].pfnDlgProc  = PageProc06;
-    psp[nPages].lParam      = (LPARAM)pData;
+    psp[nPages].lParam      = lParam;
     nPages++;
 
     // Fill the "EA" page.
@@ -310,7 +313,7 @@ static void InitializeTabControl(HWND hDlg, TWindowData * pData)
     psp[nPages].hInstance   = g_hInst;
     psp[nPages].pszTemplate = MAKEINTRESOURCE(IDD_PAGE08_EA);
     psp[nPages].pfnDlgProc  = PageProc08;       // The same like NtFileInfo
-    psp[nPages].lParam      = (LPARAM)pData;
+    psp[nPages].lParam      = lParam;
     nPages++;
 
     // Fill the "Security".
@@ -320,7 +323,7 @@ static void InitializeTabControl(HWND hDlg, TWindowData * pData)
     psp[nPages].hInstance   = g_hInst;
     psp[nPages].pszTemplate = MAKEINTRESOURCE(IDD_PAGE09_SECURITY);
     psp[nPages].pfnDlgProc  = PageProc09;
-    psp[nPages].lParam      = (LPARAM)pData;
+    psp[nPages].lParam      = lParam;
     nPages++;
 
     // Fill the "Links".
@@ -330,7 +333,7 @@ static void InitializeTabControl(HWND hDlg, TWindowData * pData)
     psp[nPages].hInstance   = g_hInst;
     psp[nPages].pszTemplate = MAKEINTRESOURCE(IDD_PAGE10_LINKS);
     psp[nPages].pfnDlgProc  = PageProc10;
-    psp[nPages].lParam      = (LPARAM)pData;
+    psp[nPages].lParam      = lParam;
     nPages++;
 
     // Fill the "Streams" page.
@@ -340,7 +343,7 @@ static void InitializeTabControl(HWND hDlg, TWindowData * pData)
     psp[nPages].hInstance   = g_hInst;
     psp[nPages].pszTemplate = MAKEINTRESOURCE(IDD_PAGE11_STREAMS);
     psp[nPages].pfnDlgProc  = PageProc11;
-    psp[nPages].lParam      = (LPARAM)pData;
+    psp[nPages].lParam      = lParam;
     nPages++;
 
     // Fill the "Ioctl" page.
@@ -350,10 +353,12 @@ static void InitializeTabControl(HWND hDlg, TWindowData * pData)
     psp[nPages].hInstance   = g_hInst;
     psp[nPages].pszTemplate = MAKEINTRESOURCE(IDD_PAGE12_IOCTL);
     psp[nPages].pfnDlgProc  = PageProc12;
-    psp[nPages].lParam      = (LPARAM)pData;
+    psp[nPages].lParam      = lParam;
     nPages++;
 
-    // Set the number of pages and start page
+    // Set the start page and number of pages
+    if((psh.nStartPage = pData->InitialPage) == INVALID_PAGE_INDEX)
+        psh.nStartPage = IsNativeName(pData->szFileName1) ? nPageNtOpenFile : nPageOpenFile;
     psh.nPages = nPages;
 
     // Create Tab Control
@@ -558,7 +563,7 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
     g_Tooltip.Initialize(g_hInst, hDlg);
 
     // Initialize Tab Control
-    InitializeTabControl(hDlg, pData);
+    InitializeTabControl(hDlg, lParam);
 
     // Refresh information about screen rect and dialog rect
     RefreshScreenSize(hDlg);

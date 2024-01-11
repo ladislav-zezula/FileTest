@@ -41,7 +41,7 @@ inline const char * GetNewLineSeparator()
 
 struct TFlagInfo
 {
-    bool IsValuePresent(unsigned int dwBitMask)
+    bool IsValuePresent(ULONG64 dwBitMask)
     {
         return (IsSeparator() == false) && ((dwBitMask & dwMask) == (dwValue & dwMask));
     }
@@ -84,8 +84,11 @@ class TFlagString : public TFastString<TCHAR>
 {
     public:
 
-    TFlagString(TFlagInfo * pFlags, unsigned int dwBitMask, const char * szNextSep = NULL) : TFastString<TCHAR>()
+    TFlagString(TFlagInfo * pFlags, ULONG64 dwBitMask, const char * szNextSep = NULL) : TFastString<TCHAR>()
     {
+        // Reset the number of flags that were converted to text
+        dwFlagsConverted = 0;
+
         // Only if we have some flags given
         if(pFlags != NULL)
         {
@@ -98,9 +101,12 @@ class TFlagString : public TFastString<TCHAR>
             {
                 if(pFlags->IsValuePresent(dwBitMask))
                 {
+                    ULONG64 dwMask64 = pFlags->dwMask;
+
                     AppendSeparatorAndText(szSeparator, pFlags->szFlagText);
                     szSeparator = szNextSeparator;
-                    dwBitMask = dwBitMask & ~pFlags->dwMask;
+                    dwBitMask = dwBitMask & ~dwMask64;
+                    dwFlagsConverted++;
                 }
             }
 
@@ -119,6 +125,11 @@ class TFlagString : public TFastString<TCHAR>
         {
             AppendString(_T("0"));
         }
+    }
+
+    ULONG GetConvertedFlagsCount()
+    {
+        return dwFlagsConverted;
     }
 
     protected:
@@ -141,6 +152,8 @@ class TFlagString : public TFastString<TCHAR>
             m_pBufferPtr += (nLength1 + nLength2);
         }
     }
+
+    ULONG dwFlagsConverted;         // Number of flags that was converted to string
 };
 
 #endif // __TFLAGSTRING_H__

@@ -5,7 +5,7 @@
 /*---------------------------------------------------------------------------*/
 /*   Date    Ver   Who  Comment                                              */
 /* --------  ----  ---  -------                                              */
-/* 25.07.08  1.00  Lad  The first version of DlgEasEditor.cpp                */
+/* 25.07.08  1.00  Lad  Created                                              */
 /*****************************************************************************/
 
 #include "FileTest.h"
@@ -188,7 +188,7 @@ void MoveItem(HWND hDlg, BOOL bUp)
     }
 
     // Disable redrawing during item acrobatics
-    SendMessage(hListView, WM_SETREDRAW, FALSE, 0);
+    EnableRedraw(hListView, FALSE);
 
     // Retrieve the both items
     ZeroMemory(&lvi1, sizeof(LVITEM));
@@ -220,8 +220,7 @@ void MoveItem(HWND hDlg, BOOL bUp)
     ListView_SetItemText(hListView, nItem2, 1, szText1);
 
     // Enable redrawing and redraw the window
-    SendMessage(hListView, WM_SETREDRAW, TRUE, 0);
-    InvalidateRect(hListView, NULL, TRUE);
+    EnableRedraw(hListView);
 }
 
 static int OnInsertEa(HWND hDlg)

@@ -417,6 +417,10 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
     // On post-Vista, enable the virtualization button
     if(GetTokenVirtualizationEnabled(NULL))
         EnableDlgItems(hDlg, TRUE, IDC_VIRTUALIZATION, 0);
+
+    // If we already have handle, put it to the dialog
+    if(IsHandleValid(pData->hFile))
+        SetResultInfo(hDlg, RSI_HANDLE, pData->hFile);
     return TRUE;
 }
 

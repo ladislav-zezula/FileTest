@@ -1365,7 +1365,7 @@ static void FillComboBoxFiltered(HWND hWndCombo, TInfoData * pInfoList, LPCTSTR 
     TCHAR szItemText[256];
 
     // Disable redrawing and remove all items
-    SendMessage(hWndCombo, WM_SETREDRAW, FALSE, 0);
+    EnableRedraw(hWndCombo, FALSE);
     
     // Delete all items
     while(ComboBox_DeleteString(hWndCombo, 0) > 0);
@@ -1386,8 +1386,7 @@ static void FillComboBoxFiltered(HWND hWndCombo, TInfoData * pInfoList, LPCTSTR 
     }
 
     // Enable redrawing and redraw
-    SendMessage(hWndCombo, WM_SETREDRAW, TRUE, 0);
-    InvalidateRect(hWndCombo, NULL, TRUE);
+    EnableRedraw(hWndCombo);
 }
 /*
 static int SearchItemList(TInfoData * pInfoList, LPCTSTR szEditText, int nTextLength, int * piSelStart)

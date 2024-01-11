@@ -26,9 +26,59 @@ DWORD g_dwMenuCount = 0;
 //-----------------------------------------------------------------------------
 // Local functions
 
-inline bool IsCommandSwitch(LPCTSTR szArg)
+static LPCTSTR IsCommandSwitch(LPCTSTR szArg, LPCTSTR szSwitch)
 {
-    return (szArg[0] == _T('/') || szArg[0] == _T('-'));
+    size_t nLength;
+
+    // It must be valid
+    if(szArg && szArg[0] && szSwitch && szSwitch[0])
+    {
+        // It has to start with '/' or '-'
+        if(szArg[0] == _T('/') || szArg[0] == _T('-'))
+        {
+            // Get length and the inner switch
+            nLength = _tcslen(szSwitch);
+            szArg++;
+
+            if(!_tcsnicmp(szArg, szSwitch, nLength))
+            {
+                return szArg + nLength;
+            }
+        }
+    }
+    return NULL;
+}
+
+static bool CheckForCommandSwitch(LPCTSTR szArg, LPCTSTR szSwitch, LPDWORD PtrValue, bool bIsSingleSwitch = false)
+{
+    LPCTSTR szArgValue;
+    LPCTSTR szIntValue;
+    LPTSTR szEndValue;
+    int nRadix;
+
+    if((szArgValue = IsCommandSwitch(szArg, szSwitch)) != NULL)
+    {
+        // Pre-fill the value with zero
+        PtrValue[0] = 0;
+
+        // Variant #1: /Argument:IntValue
+        if(szArgValue[0] == _T(':') && bIsSingleSwitch == false)
+        {
+            szArgValue = szArgValue + 1;
+            szIntValue = SkipHexaPrefix(szArgValue);
+            nRadix = (szIntValue > szArgValue) ? 16 : 10;
+            PtrValue[0] = StrToInt(szIntValue, &szEndValue, nRadix);
+            return (szEndValue[0] == 0);
+        }
+
+        // Variant #2: /Argument
+        if(szArgValue[0] == 0 && bIsSingleSwitch)
+        {
+            PtrValue[0] = TRUE;
+            return true;
+        }
+    }
+    return false;
 }
 
 static void SetTokenObjectIntegrityLevel(DWORD dwIntegrityLevel)
@@ -106,18 +156,54 @@ BOOL CALLBACK EnumMenusProc(HMODULE hModule, LPCTSTR lpszType, LPTSTR lpszName, 
     return TRUE;
 }
 
+static HANDLE InitialOpenFile(TFileTestData * pData)
+{
+    OBJECT_ATTRIBUTES ObjAttr;
+    IO_STATUS_BLOCK IoStatus = {0};
+    UNICODE_STRING FileName;
+    HANDLE hFile = NULL;
+
+    if(pData->szFileName1 && pData->szFileName1[0])
+    {
+        if(IsNativeName(pData->szFileName1))
+        {
+            InitializeObjectAttributes(&ObjAttr, &FileName, OBJ_CASE_INSENSITIVE, NULL, NULL);
+            RtlInitUnicodeString(&FileName, pData->szFileName1);
+            NtCreateFile(&hFile,
+                          pData->OpenFile.dwDesiredAccess,
+                         &ObjAttr,
+                         &IoStatus,
+                         &pData->OpenFile.AllocationSize,
+                          pData->OpenFile.dwFlagsAndAttributes,
+                          pData->OpenFile.dwShareAccess,
+                          pData->OpenFile.dwCreateDisposition2,
+                          pData->OpenFile.dwCreateOptions,
+                          pData->OpenFile.pvFileEa,
+                          pData->OpenFile.cbFileEa);
+        }
+        else
+        {
+            hFile = CreateFile(pData->szFileName1,
+                               pData->OpenFile.dwDesiredAccess,
+                               pData->OpenFile.dwShareAccess,
+                               NULL,
+                               pData->OpenFile.dwCreateDisposition1,
+                               pData->OpenFile.dwFlagsAndAttributes,
+                               NULL);
+        }
+    }
+    return hFile;
+}
+
 //-----------------------------------------------------------------------------
 // WinMain
 
 int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
 {
     TFileTestData * pData;
-    DWORD dwDesiredAccess = GENERIC_READ;
-    DWORD dwShareAccess = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
-    DWORD dwCreateOptions = 0;
-    DWORD dwCopyFileFlags = 0;
-    DWORD dwMoveFileFlags = 0;
-    bool bAsynchronousOpen = false;
+    DWORD bAsynchronousOpen = 0;
+    DWORD bOpenFile = 0;
+    DWORD bShowHelp = 0;
     int nFileNameIndex = 0;
 
     // Initialize the instance
@@ -142,55 +228,88 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
         pData->OpenFile.szId = "MainFile";
         pData->pOP = &pData->OpenFile;
 
+        // Set default values for CreateFile and NtCreateFile
+        pData->OpenFile.dwOA_Attributes = OBJ_CASE_INSENSITIVE;
+        pData->OpenFile.dwCreateDisposition1 = OPEN_ALWAYS;
+        pData->OpenFile.dwCreateDisposition2 = FILE_OPEN_IF;
+        pData->OpenFile.dwDesiredAccess = GENERIC_READ;
+        pData->OpenFile.dwFlagsAndAttributes = FILE_ATTRIBUTE_NORMAL;
+        pData->OpenFile.dwShareAccess = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
+        pData->OpenFile.dwCreateOptions = 0;
+        pData->dwOplockLevel = OPLOCK_LEVEL_CACHE_READ | OPLOCK_LEVEL_CACHE_WRITE;
+        pData->dwCopyFileFlags = 0;
+        pData->dwMoveFileFlags = 0;
+
+        // Set default values for opening relative file by NtCreateFile
+        pData->RelaFile.dwOA_Attributes = OBJ_CASE_INSENSITIVE;
+        pData->RelaFile.dwCreateDisposition1 = OPEN_EXISTING;
+        pData->RelaFile.dwCreateDisposition2 = FILE_OPEN;
+        pData->RelaFile.dwDesiredAccess = FILE_READ_DATA;
+        pData->RelaFile.dwFlagsAndAttributes = FILE_ATTRIBUTE_NORMAL;
+        pData->RelaFile.dwShareAccess = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
+
+        // Set default values for NtCreateSection/NtOpenSection
+        pData->dwSectDesiredAccess = SECTION_ALL_ACCESS;
+        pData->dwSectPageProtection = PAGE_READONLY;
+        pData->dwSectAllocAttributes = SEC_COMMIT;
+        pData->dwSectWin32Protect = PAGE_READONLY;
+
+        // Set the default values for NtQuerySecurityObject
+        pData->SecurityInformation = OWNER_SECURITY_INFORMATION | GROUP_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION;
+        pData->InitialPage = INVALID_PAGE_INDEX;
+
         // Parse command line arguments
         for(int i = 1; i < __argc; i++)
         {
-            // If the argument a file name?
-            if(!IsCommandSwitch(__targv[i]))
+            LPCTSTR szPrivilegeName;
+
+            if(CheckForCommandSwitch(__targv[i], _T("DesiredAccess"), &pData->OpenFile.dwDesiredAccess))
+                continue;
+            if(CheckForCommandSwitch(__targv[i], _T("ShareAccess"), &pData->OpenFile.dwShareAccess))
+                continue;
+            if(CheckForCommandSwitch(__targv[i], _T("CreateOptions"), &pData->OpenFile.dwCreateOptions))
+                continue;
+            if(CheckForCommandSwitch(__targv[i], _T("CopyFileFlags"), &pData->dwCopyFileFlags))
+                continue;
+            if(CheckForCommandSwitch(__targv[i], _T("MoveFileFlags"), &pData->dwMoveFileFlags))
+                continue;
+            if(CheckForCommandSwitch(__targv[i], _T("SecurityInformation"), &pData->SecurityInformation))
+                continue;
+            if(CheckForCommandSwitch(__targv[i], _T("InitialPage"), &pData->InitialPage))
+                continue;
+            if(CheckForCommandSwitch(__targv[i], _T("AsyncOpen"), &bAsynchronousOpen, true))
+                continue;
+            if(CheckForCommandSwitch(__targv[i], _T("OpenFile"), &bOpenFile, true))
+                continue;
+            if(CheckForCommandSwitch(__targv[i], _T("Help"), &bShowHelp, true))
+                continue;
+            if(CheckForCommandSwitch(__targv[i], _T("?"), &bShowHelp, true))
+                continue;
+
+            // Check for privileges to enable
+            if((szPrivilegeName = IsCommandSwitch(__targv[i], _T("EnablePrivilege"))) != NULL)
             {
-                switch(nFileNameIndex)
-                {
-                    case 0: // The first file name argument
-                        StringCchCopy(pData->szFileName1, MAX_NT_PATH, __targv[i]);
-                        nFileNameIndex++;
-                        break;
-
-                    case 1: // The second file name argument
-                        StringCchCopy(pData->szFileName2, MAX_NT_PATH, __targv[i]);
-                        nFileNameIndex++;
-                        break;
-
-                    case 2: // The directory file name argument
-                        StringCchCopy(pData->szDirName, MAX_NT_PATH, __targv[i]);
-                        nFileNameIndex++;
-                        break;
-                }
+                EnablePrivilege(szPrivilegeName + 1);
+                continue;
             }
-            else
+
+            // We assume that the argument is a file name
+            switch(nFileNameIndex)
             {
-                LPCTSTR szArg = __targv[i] + 1;
+                case 0: // The first file name argument
+                    ExpandEnvironmentStrings(__targv[i], pData->szFileName1, MAX_NT_PATH);
+                    nFileNameIndex++;
+                    break;
 
-                // Check for default read+write access
-                if(!_tcsnicmp(szArg, _T("DesiredAccess:"), 14))
-                    Text2Hex32(szArg+14, &dwDesiredAccess);
+                case 1: // The second file name argument
+                    ExpandEnvironmentStrings(__targv[i], pData->szFileName2, MAX_NT_PATH);
+                    nFileNameIndex++;
+                    break;
 
-                // Check for default share read+write
-                if(!_tcsnicmp(szArg, _T("ShareAccess:"), 12))
-                    Text2Hex32(szArg+12, &dwShareAccess);
-
-                // Check for changed create options
-                if(!_tcsnicmp(szArg, _T("CreateOptions:"), 14))
-                    Text2Hex32(szArg+14, &dwCreateOptions);
-
-                if(!_tcsnicmp(szArg, _T("CopyFileFlags:"), 14))
-                    Text2Hex32(szArg+14, &dwCopyFileFlags);
-
-                if(!_tcsnicmp(szArg, _T("MoveFileFlags:"), 14))
-                    Text2Hex32(szArg+14, &dwMoveFileFlags);
-
-                // Check for asynchronous open
-                if(!_tcsicmp(szArg, _T("AsyncOpen")))
-                    bAsynchronousOpen = true;
+                case 2: // The directory file name argument
+                    ExpandEnvironmentStrings(__targv[i], pData->szDirName, MAX_NT_PATH);
+                    nFileNameIndex++;
+                    break;
             }
         }
 
@@ -244,27 +363,6 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
         memset(g_ContextMenus, 0, sizeof(g_ContextMenus));
         EnumResourceNames(g_hInst, RT_MENU, EnumMenusProc, NULL);
 
-        // Set default values for CreateFile and NtCreateFile
-        pData->OpenFile.dwOA_Attributes      = OBJ_CASE_INSENSITIVE;
-        pData->OpenFile.dwCreateDisposition1 = OPEN_ALWAYS;
-        pData->OpenFile.dwCreateDisposition2 = FILE_OPEN_IF;
-        pData->OpenFile.dwDesiredAccess      = dwDesiredAccess;
-        pData->OpenFile.dwFlagsAndAttributes = FILE_ATTRIBUTE_NORMAL;
-        pData->OpenFile.dwShareAccess        = dwShareAccess;
-        pData->OpenFile.dwCreateOptions      = dwCreateOptions;
-        pData->dwMoveFileFlags               = MOVEFILE_COPY_ALLOWED;
-        pData->dwOplockLevel                 = OPLOCK_LEVEL_CACHE_READ | OPLOCK_LEVEL_CACHE_WRITE;
-        pData->dwCopyFileFlags               = dwCopyFileFlags;
-        pData->dwMoveFileFlags               = dwMoveFileFlags;
-
-        // Set default values for opening relative file by NtCreateFile
-        pData->RelaFile.dwOA_Attributes      = OBJ_CASE_INSENSITIVE;
-        pData->RelaFile.dwCreateDisposition1 = OPEN_EXISTING;
-        pData->RelaFile.dwCreateDisposition2 = FILE_OPEN;
-        pData->RelaFile.dwDesiredAccess      = FILE_READ_DATA;
-        pData->RelaFile.dwFlagsAndAttributes = FILE_ATTRIBUTE_NORMAL;
-        pData->RelaFile.dwShareAccess        = FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE;
-
         // Modify for synchronous open, if required
         if(bAsynchronousOpen == false)
         {
@@ -274,18 +372,21 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
             pData->RelaFile.dwDesiredAccess |= SYNCHRONIZE;
         }
 
-        // Set default values for NtCreateSection/NtOpenSection
-        pData->dwSectDesiredAccess   = SECTION_ALL_ACCESS;
-        pData->dwSectPageProtection  = PAGE_READONLY;
-        pData->dwSectAllocAttributes = SEC_COMMIT;
-        pData->dwSectWin32Protect    = PAGE_READONLY;
-
-#ifdef _DEBUG
-        DebugCode_TEST();
+#ifdef __TEST_MODE__
+        //DebugCode_TEST();
+        DebugCode_SecurityDescriptor(pData->szFileName1);
 #endif
 
-        // Call the dialog
-        FileTestDialog(NULL, pData);
+        // Show the main dialog
+        if(bShowHelp == FALSE)
+        {
+            // Shall we open the file?
+            if(bOpenFile)
+                pData->hFile = InitialOpenFile(pData);
+            FileTestDialog(NULL, pData);
+        }
+        else
+            HelpCommandLineDialog(NULL);
 
         // Free the data blobs
         pData->NtInfoData.Free();

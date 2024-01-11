@@ -210,6 +210,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="AceCondition.cpp" />
+    <ClCompile Include="AceResource.cpp" />
     <ClCompile Include="DateTime.cpp" />
     <ClCompile Include="DlgCopyFile.cpp" />
     <ClCompile Include="DlgDataEditor.cpp" />
@@ -241,6 +242,7 @@
     <ClCompile Include="ReparseDataHsm.cpp" />
     <ClCompile Include="TAceHelper.cpp" />
     <ClCompile Include="TDataEditor.cpp" />
+    <ClCompile Include="TestCode.cpp" />
     <ClCompile Include="TToolTip.cpp" />
     <ClCompile Include="Utils.cpp" />
     <ClCompile Include="WinMain.cpp">
@@ -255,10 +257,12 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AceCondition.h" />
+    <ClInclude Include="AceResource.h" />
     <ClInclude Include="FileTest.h" />
     <ClInclude Include="ReparseDataHsm.h" />
     <ClInclude Include="ntstatus.h" />
     <ClInclude Include="resource.h" />
+    <ClInclude Include="TAceHelper.h" />
     <ClInclude Include="TDataEditor.h" />
     <ClInclude Include="TFastString.h" />
     <ClInclude Include="TFlagString.h" />
