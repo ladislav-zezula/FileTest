@@ -2,6 +2,10 @@
   FileTest history
   ================
 
+ Version 2.6.1.637
+
+ - ACE editor now supports new ACEs
+
  Version 2.6.1.601
 
  - Fixed crash when querying image name on System PID (4)
