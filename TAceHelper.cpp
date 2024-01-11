@@ -211,6 +211,8 @@ bool ACE_HELPER::SetAceType(DWORD dwAceType)
             break;
 
         case SYSTEM_RESOURCE_ATTRIBUTE_ACE_TYPE:
+            if(AttrRel == NULL || AttrRelLength == 0)
+                SetDummyResource();
             Mask = (Mask != INVALID_ACCESS_MASK) ? Mask : FILE_READ_DATA;
             AceLayout = ACE_LAYOUT_RESOURCE;                // Contains the CLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1 structure
             break;

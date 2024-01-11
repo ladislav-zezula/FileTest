@@ -18,6 +18,9 @@
 
 #define ITEM_DATA_MAGIC                 0xDEADBABE
 
+#define MAX_ITEM_TEXT                   1024
+#define MAX_NEST_LEVEL                  8
+
 #define ItemDataNULL    (PVOID)(INT_PTR)(NULL)
 #define ItemDataValid   (PVOID)(INT_PTR)(1)
 
@@ -90,18 +93,18 @@ typedef struct _ACE_FIELD_INFO
 
 } ACE_FIELD_INFO, *PACE_FIELD_INFO;
 
+typedef struct _TV_SELECTION
+{
+    size_t ItemIndex[MAX_NEST_LEVEL];       // Item index in each level
+    size_t nNestLevel;                      // Nest level of the item that was selected
+} TV_SELECTION, *PTV_SELECTION;
+
 static LPCTSTR szAceTypeSuffix = _T("_TYPE");
 static LPCSTR szUnknownAceType = "UNKNOWN_ACE_TYPE: %02x";
 
 static size_t GLOBAL_ItemIndex = INVALID_ITEM_INDEX;
 static PACL pAclInWork = NULL;              // Current ACL-in-construction
 static PACE pAceInWork = NULL;              // Current ACE-in-construction
-
-//#define _CHECK_ACL_BEFORE_AND_AFTER
-
-#ifdef _CHECK_ACL_BEFORE_AND_AFTER
-static BYTE SavedAcl[MAX_ACL_LENGTH];
-#endif  // _CHECK_ACL_BEFORE_AND_AFTER
 
 static SID_IDENTIFIER_AUTHORITY SiaNull   = SECURITY_NULL_SID_AUTHORITY;
 static SID_IDENTIFIER_AUTHORITY SiaWorld  = SECURITY_WORLD_SID_AUTHORITY;
@@ -345,7 +348,26 @@ static TFlagInfo CSA_Flags[] =
 };
 
 //-----------------------------------------------------------------------------
-// Local functions - SID
+// Local functions
+
+static void ReverseArrayItems(HTREEITEM array[], size_t length)
+{
+    size_t start = 0;
+    size_t end = length - 1;
+
+    while(start < end)
+    {
+        // Swap elements at start and end indices
+        HTREEITEM temp = array[start];
+        array[start] = array[end];
+        array[end] = temp;
+
+        // Move indices towards the center
+        start++;
+        end--;
+    }
+}
+
 
 static PNON_EDITABLE_DATA IsItemDataPointer(PVOID ptr)
 {
@@ -794,18 +816,10 @@ static NTSTATUS StringTo_Hex8(PTREE_ITEM_INFO pItemInfo, LPCTSTR szString, LPBYT
 }
 
 // For fields that are auto-calculated, such as ACE_HEADER::AceSize
-static NTSTATUS StringTo_Auto2(PTREE_ITEM_INFO /* pItemInfo */, LPCTSTR /* szString */, LPBYTE /* pbPtr */, LPBYTE /* pbEnd */, PULONG pcbMoveBy = NULL)
+static NTSTATUS StringTo_Auto(PTREE_ITEM_INFO pItemInfo, LPCTSTR /* szString */, LPBYTE /* pbPtr */, LPBYTE /* pbEnd */, PULONG pcbMoveBy = NULL)
 {
     if(pcbMoveBy != NULL)
-        pcbMoveBy[0] = sizeof(USHORT);
-    return (pAclInWork || pAceInWork) ? STATUS_SUCCESS : STATUS_AUTO_CALCULATED;
-}
-
-// For fields that are auto-calculated, such as ACE_HEADER::AceSize
-static NTSTATUS StringTo_Auto4(PTREE_ITEM_INFO /* pItemInfo */, LPCTSTR /* szString */, LPBYTE /* pbPtr */, LPBYTE /* pbEnd */, PULONG pcbMoveBy = NULL)
-{
-    if(pcbMoveBy != NULL)
-        pcbMoveBy[0] = sizeof(DWORD);
+        pcbMoveBy[0] = (pItemInfo->ItemType == ItemTypeUint16) ? sizeof(USHORT) : sizeof(DWORD);
     return (pAclInWork || pAceInWork) ? STATUS_SUCCESS : STATUS_AUTO_CALCULATED;
 }
 
@@ -1426,8 +1440,8 @@ static TREE_ITEM_INFO TreeItem_NoAcl    = {ItemTypeNoAcl,     IDS_NOT_PRESENT,  
 static TREE_ITEM_INFO TreeItem_UserSid  = {ItemTypeSid,       IDS_NOT_PRESENT,  IDS_FORMAT_SID,       NULL,        ToString_Sid,  StringTo_Sid, CreateNew_Sid};
 static TREE_ITEM_INFO TreeItem_AclRev   = {ItemTypeUint08,    0,                IDS_FORMAT_ACL_REVIS, AclRevFlags, ToString_Hex1, StringTo_Hex1};
 static TREE_ITEM_INFO TreeItem_AclSbz1  = {ItemTypeUint08,    0,                IDS_FORMAT_ACL_SBZ1,  NULL,        ToString_Hex1, StringTo_Hex1};
-static TREE_ITEM_INFO TreeItem_AclSize  = {ItemTypeUint16,    0,                IDS_FORMAT_ACL_SIZE,  NULL,        ToString_Hex2, StringTo_Auto2};
-static TREE_ITEM_INFO TreeItem_AceCnt   = {ItemTypeUint16,    0,                IDS_FORMAT_ACL_COUNT, NULL,        ToString_Hex2, StringTo_Auto2};
+static TREE_ITEM_INFO TreeItem_AclSize  = {ItemTypeUint16,    0,                IDS_FORMAT_ACL_SIZE,  NULL,        ToString_Hex2, StringTo_Auto};
+static TREE_ITEM_INFO TreeItem_AceCnt   = {ItemTypeUint16,    0,                IDS_FORMAT_ACL_COUNT, NULL,        ToString_Hex2, StringTo_Auto};
 static TREE_ITEM_INFO TreeItem_AclSbz2  = {ItemTypeUint16,    0,                IDS_FORMAT_ACL_SBZ2,  NULL,        ToString_Hex2, StringTo_Hex2};
 static TREE_ITEM_INFO TreeItem_Ace      = {ItemTypeAce,       IDS_NULL_ACL,     IDS_FORMAT_STR,       NULL,        ToString_Ace,  StringTo_Ace};
 
@@ -1457,11 +1471,11 @@ static ACE_FIELD_INFO AceFieldInfos[] =
     {ACE_FIELD_HTYPE,           {ItemTypeAceType,   0, IDS_FORMAT_ACE_HTYPE,  AceHdrTypes, ToString_Hex1, StringTo_Hex1}},
     {ACE_FIELD_HFLAGS,          {ItemTypeUint08,    0, IDS_FORMAT_ACE_HFLAGS, AceHdrFlags, ToString_Hex1, StringTo_Hex1}},
     {ACE_FIELD_HFLAGS2,         {ItemTypeUint08,    0, IDS_FORMAT_ACE_HFLAGS, AceHdrFlags2,ToString_Hex1, StringTo_Hex1}},
-    {ACE_FIELD_HSIZE,           {ItemTypeUint16,    0, IDS_FORMAT_ACE_HSIZE,  NULL,        ToString_Hex2, StringTo_Auto2}},
+    {ACE_FIELD_HSIZE,           {ItemTypeUint16,    0, IDS_FORMAT_ACE_HSIZE,  NULL,        ToString_Hex2, StringTo_Auto}},
     {ACE_FIELD_ACCESS_MASK,     {ItemTypeUint32,    0, IDS_FORMAT_ACE_MASK,   AceMasks,    ToString_Hex4, StringTo_Hex4}},
     {ACE_FIELD_ADS_ACCESS_MASK, {ItemTypeUint32,    0, IDS_FORMAT_ACE_MASK,   AdsAceMasks, ToString_Hex4, StringTo_Hex4}},
     {ACE_FIELD_MANDATORY_MASK,  {ItemTypeUint32,    0, IDS_FORMAT_ACE_MASK,   LabelMasks,  ToString_Hex4, StringTo_Hex4}},
-    {ACE_FIELD_GUID_FLAGS,      {ItemTypeUint32,    0, IDS_FORMAT_ACE_FLAGS,  ObjAceFlags, ToString_Hex4, StringTo_Auto4}},
+    {ACE_FIELD_GUID_FLAGS,      {ItemTypeUint32,    0, IDS_FORMAT_ACE_FLAGS,  ObjAceFlags, ToString_Hex4, StringTo_Auto}},
     {ACE_FIELD_COMPOUND_TYPE,   {ItemTypeUint16,    0, IDS_FORMAT_ACE_CTYPE,  CAceTypes,   ToString_Hex2, StringTo_Hex2}},
     {ACE_FIELD_COMPOUND_RSVD,   {ItemTypeUint16,    0, IDS_FORMAT_RESERVED,   NULL,        ToString_Hex2, StringTo_Hex2}},
     {ACE_FIELD_OBJECT_TYPE1,    {ItemTypeGuid,      0, IDS_FORMAT_OBJ_TYPE,   NULL,        ToString_Guid, StringTo_Guid}},
@@ -1471,8 +1485,8 @@ static ACE_FIELD_INFO AceFieldInfos[] =
     {ACE_FIELD_MANDATORY_SID,   {ItemTypeSid11,     0, IDS_FORMAT_INT_LEVEL,  IntgrLevels, ToString_Sid,  StringTo_Sid}},
     {ACE_FIELD_POLICY_SID,      {ItemTypeSid17,     0, IDS_FORMAT_POLICY_ID,  NULL,        ToString_Sid,  StringTo_Sid}},
     {ACE_FIELD_TRUST_SID,       {ItemTypeSid19,     0, IDS_FORMAT_TRUST_LEVEL,NULL,        ToString_Sid,  StringTo_Sid}},
-    {ACE_FIELD_CSA_V1,          {ItemTypeCSA_V1,    IDS_FORMAT_CSA_V1,     0, NULL,        NULL,          StringTo_Saved}},
-    {ACE_FIELD_CONDITION,       {ItemTypeCondition, 0, IDS_FORMAT_CONDITION,  NULL,        ToString_Cond, StringTo_Saved} }
+    {ACE_FIELD_CSA_V1,          {ItemTypeCSA_V1,    IDS_FORMAT_CSA_V1}},
+    {ACE_FIELD_CONDITION,       {ItemTypeCondition, 0, IDS_FORMAT_CONDITION,  NULL,        ToString_Cond, StringTo_Saved}}
 };
 
 //-----------------------------------------------------------------------------
@@ -1514,6 +1528,75 @@ static DWORD TV_GetRemainingItemCount(HWND hWndTree, HTREEITEM hItem)
         hItem = TreeView_GetNextSibling(hWndTree, hItem);
     }
     return ValueCount;
+}
+
+static bool TV_SaveSelection(HWND hWndTree, TV_SELECTION & tvs)
+{
+    HTREEITEM ItemChain[MAX_NEST_LEVEL] = {0};
+    HTREEITEM hSelected = TreeView_GetSelection(hWndTree);
+    HTREEITEM hParent = TVI_ROOT;
+    HTREEITEM hItem = hSelected;
+    size_t nIndex = 0;
+
+    // Reset the selection structure
+    memset(&tvs, 0, sizeof(TV_SELECTION));
+    tvs.nNestLevel = 0;
+
+    // Get the chain up to the root item
+    while(hItem != NULL)
+    {
+        if(tvs.nNestLevel >= _countof(ItemChain))
+            return false;
+        ItemChain[tvs.nNestLevel++] = hItem;
+        hItem = TreeView_GetParent(hWndTree, hItem);
+    }
+
+    // Reverse the array
+    ReverseArrayItems(ItemChain, tvs.nNestLevel);
+
+    // Search the multi-level tree view
+    for(size_t nLevel = 0; nLevel < tvs.nNestLevel; nLevel++)
+    {
+        // Retriueve the first item of that level
+        if((hItem = TreeView_GetChild(hWndTree, hParent)) == NULL)
+            return false;
+        nIndex = 0;
+
+        // Enumerate all next items
+        while(hItem != ItemChain[nLevel])
+        {
+            if((hItem = TreeView_GetNextSibling(hWndTree, hItem)) == NULL)
+                return false;
+            nIndex++;
+        }
+
+        // Remember the item count of that level
+        tvs.ItemIndex[nLevel] = nIndex;
+        hParent = hItem;
+    }
+    return true;
+}
+
+static bool TV_RestoreSelection(HWND hWndTree, TV_SELECTION & tvs, HTREEITEM hDefItem)
+{
+    HTREEITEM hParent = TVI_ROOT;
+    HTREEITEM hItem = NULL;
+
+    for(size_t nLevel = 0; nLevel < tvs.nNestLevel; nLevel++)
+    {
+        hItem = TreeView_GetChild(hWndTree, hParent);
+        for(size_t nIndex = 0; nIndex < tvs.ItemIndex[nLevel]; )
+        {
+            if((hItem = TreeView_GetNextSibling(hWndTree, hItem)) == NULL)
+                return false;
+            nIndex++;
+        }
+        hParent = hItem;
+    }
+
+    // Return the found item
+    TreeView_SelectItem(hWndTree, (hItem != NULL) ? hItem : hDefItem);
+    return true;
 }
 
 static size_t TV_GetAceResourceValueIndex(LPNMTVDISPINFO pTVDispInfo)
@@ -1610,7 +1693,7 @@ static HTREEITEM TV_InsertNewItem(
     PTREE_ITEM_INFO pNewInfo;
     TVINSERTSTRUCT tvis;
     HTREEITEM hItem = NULL;
-    TCHAR szItemText[0x400];
+    TCHAR szItemText[MAX_ITEM_TEXT];
     ULONG cbMoveBy = 0;
 
     // Create copy of the item info structure
@@ -1962,7 +2045,7 @@ static NTSTATUS TV_ItemToData(HWND hWndTree, HTREEITEM hItem, LPBYTE pbPtr, LPBY
 {
     PTREE_ITEM_INFO pItemInfo;
     NTSTATUS Status = STATUS_UNSUCCESSFUL;
-    TCHAR szItemText[512];
+    TCHAR szItemText[MAX_ITEM_TEXT];
 
     // Retrieve the item info
     if((pItemInfo = TV_GetItemParamAndText(hWndTree, hItem, szItemText, _countof(szItemText))) != NULL)
@@ -2154,7 +2237,7 @@ static void TV_ResetAceItem(HWND hWndTree, HTREEITEM hItem, LPBYTE pbAceData, UL
 {
     PACE_HEADER pAceHeader = (PACE_HEADER)(pbAceData);
     ACE_HELPER AceHelper;
-    TCHAR szItemText[256];
+    TCHAR szItemText[MAX_ITEM_TEXT];
 
     // Init the item text
     GetAceTypeString(szItemText, _countof(szItemText), pAceHeader);
@@ -2308,11 +2391,6 @@ static void TreeView_SecurityDescriptorToTreeView(
     RtlGetDaclSecurityDescriptor(pSD, &bAclPresent, &pAcl, &bDefaulted);
     TV_InsertNewItemAcl(hWndTree, NULL, NULL, &TreeItem_Dacl, pAcl, bAclPresent);
 
-#ifdef _CHECK_ACL_BEFORE_AND_AFTER
-    if(pAcl && pAcl->AclSize)
-        memcpy(SavedAcl, pAcl, pAcl->AclSize);
-#endif
-
     //
     // Insert tree item for SACL security information
     //
@@ -2353,7 +2431,7 @@ static void TreeView_DeferChangeIntWithFlags(HWND hDlg, WPARAM wParam)
     {
         LPBYTE pbPtr = (LPBYTE)(&dwIntValue);
         LPBYTE pbEnd = pbPtr + sizeof(dwIntValue);
-        TCHAR szItemText[256];
+        TCHAR szItemText[MAX_ITEM_TEXT];
 
         // Sanity checks
         assert(pItemInfo->pFlagInfos != NULL);
@@ -2376,10 +2454,11 @@ static void TreeView_DeferChangeIntWithFlags(HWND hDlg, WPARAM wParam)
 
 static void TreeView_DeferChangeWholeAce(HWND hDlg, WPARAM wParam, LPARAM lParam)
 {
-    HWND hWndTree = GetDlgItem(hDlg, IDC_SECURITY);
+    TV_SELECTION tvs;
     ACE_HELPER * pAceHelper = (ACE_HELPER *)(lParam);
     PACE_HEADER pAceHeader;
     HTREEITEM hItem = (HTREEITEM)(wParam);
+    HWND hWndTree = GetDlgItem(hDlg, IDC_SECURITY);
     BYTE AceBuffer[MAX_ACL_LENGTH];
 
     // The ACE_HELPER must be valid
@@ -2391,11 +2470,14 @@ static void TreeView_DeferChangeWholeAce(HWND hDlg, WPARAM wParam, LPARAM lParam
             // Stop redrawing
             EnableRedraw(hWndTree, FALSE);
 
+            // Save the selection of the tree view item
+            TV_SaveSelection(hWndTree, tvs);
+
             // Build the ACE into the item
             TV_ResetAceItem(hWndTree, hItem, (LPBYTE)(pAceHeader), pAceHeader->AceSize);
 
             // Select the root item
-            TreeView_SelectItem(hWndTree, hItem);
+            TV_RestoreSelection(hWndTree, tvs, hItem);
 
             // Enable redrawing back
             EnableRedraw(hWndTree);
@@ -2970,10 +3052,6 @@ static int OnSetSecurity(HWND hDlg)
         Status = TreeView_ItemToAcl(hWndTree, hChildItem[2], &pDacl, &bDaclPresent);
         if(NT_SUCCESS(Status))
         {
-#ifdef _CHECK_ACL_BEFORE_AND_AFTER
-            assert(memcmp(pDacl, SavedAcl, pDacl->AclSize) == 0);
-#endif
-
             Status = RtlSetDaclSecurityDescriptor(&sd, bDaclPresent, pDacl, FALSE);
             AppliedSecInfo |= DACL_SECURITY_INFORMATION;
         }
@@ -3074,7 +3152,7 @@ static int OnEndLabelEdit(HWND hDlg, LPNMTVDISPINFO pTVDispInfo)
     ULONG cbBuffer = 0x1000;
     ULONG cbMoveBy = 0;
     BOOL bAcceptChanges = FALSE;
-    TCHAR szItemText[256];
+    TCHAR szItemText[MAX_ITEM_TEXT];
 
     // If pszText contains NULL, it means that the user cancelled the editing
     if(pTVDispInfo->item.pszText && pTVDispInfo->item.pszText[0])
