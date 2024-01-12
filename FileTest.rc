@@ -110,8 +110,8 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 2,8,0,639
- PRODUCTVERSION 2,8,0,639
+ FILEVERSION 2,8,0,642
+ PRODUCTVERSION 2,8,0,642
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -128,13 +128,13 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Ladislav Zezula"
             VALUE "FileDescription", "Interactive File System API Test"
-            VALUE "FileVersion", "2, 8, 0, 639"
+            VALUE "FileVersion", "2, 8, 0, 642\0"
             VALUE "InternalName", "FileTest"
             VALUE "LegalCopyright", "Copyright (c) 2004 - 2024 Ladislav Zezula"
             VALUE "LegalTrademarks", "http://www.zezula.net"
             VALUE "OriginalFilename", "FileTest.exe"
             VALUE "ProductName", "FileTest"
-            VALUE "ProductVersion", "2, 8, 0, 639"
+            VALUE "ProductVersion", "2, 8, 0, 642\0"
         END
     END
     BLOCK "VarFileInfo"
@@ -706,7 +706,7 @@ BEGIN
     GROUPBOX        "",IDC_STATIC,7,4,209,51
     LTEXT           "FileTest version %u.%u.%u.%u",IDC_VERSION,13,13,167,8
     LTEXT           "Copyright (c) Ladislav Zezula 2003-2024",IDC_STATIC,13,24,167,8
-    CONTROL         "http://www.zezula.net/fstools.html",IDC_FILETEST_WEB,
+    CONTROL         "http://www.zezula.net/en/tools/filetest.html",IDC_FILETEST_WEB,
                     "Button",BS_OWNERDRAW | BS_LEFT | WS_TABSTOP,13,36,167,9
     DEFPUSHBUTTON   "Close",IDOK,167,63,50,14
 END

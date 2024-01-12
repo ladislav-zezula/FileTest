@@ -348,6 +348,15 @@ static TFlagInfo CSA_Flags[] =
 };
 
 //-----------------------------------------------------------------------------
+// Debug
+
+//#define _COMPARE_ACLS
+
+#ifdef _COMPARE_ACLS
+BYTE SaveAclBuffer[MAX_ACL_LENGTH] = {0};
+#endif
+
+//-----------------------------------------------------------------------------
 // Local functions
 
 static void ReverseArrayItems(HTREEITEM array[], size_t length)
@@ -1485,6 +1494,7 @@ static ACE_FIELD_INFO AceFieldInfos[] =
     {ACE_FIELD_MANDATORY_SID,   {ItemTypeSid11,     0, IDS_FORMAT_INT_LEVEL,  IntgrLevels, ToString_Sid,  StringTo_Sid}},
     {ACE_FIELD_POLICY_SID,      {ItemTypeSid17,     0, IDS_FORMAT_POLICY_ID,  NULL,        ToString_Sid,  StringTo_Sid}},
     {ACE_FIELD_TRUST_SID,       {ItemTypeSid19,     0, IDS_FORMAT_TRUST_LEVEL,NULL,        ToString_Sid,  StringTo_Sid}},
+    {ACE_FIELD_TRUST_SID_E,     {ItemTypeSid19e,    0, IDS_FORMAT_TRUST_LEVEL,NULL,        ToString_Sid,  StringTo_Sid}},
     {ACE_FIELD_CSA_V1,          {ItemTypeCSA_V1,    IDS_FORMAT_CSA_V1}},
     {ACE_FIELD_CONDITION,       {ItemTypeCondition, 0, IDS_FORMAT_CONDITION,  NULL,        ToString_Cond, StringTo_Saved}}
 };
@@ -2400,6 +2410,14 @@ static void TreeView_SecurityDescriptorToTreeView(
     RtlGetSaclSecurityDescriptor(pSD, &bAclPresent, &pAcl, &bDefaulted);
     TV_InsertNewItemAcl(hWndTree, NULL, NULL, &TreeItem_Sacl, pAcl, bAclPresent);
 
+#ifdef _COMPARE_ACLS
+    if(pAcl != NULL)
+    {
+        assert(pAcl->AclSize <= sizeof(SaveAclBuffer));
+        memcpy(SaveAclBuffer, pAcl, pAcl->AclSize);
+    }
+#endif
+
     // Enable redrawing back
     EnableRedraw(hWndTree, TRUE);
 }
@@ -2681,7 +2699,7 @@ static BOOL DeferSetItemTextValue(HWND hDlg, HTREEITEM hItem, LPCTSTR szItemText
     return TRUE;
 }
 
-static NTSTATUS QueryObjectSecurity(HANDLE hObject, SECURITY_INFORMATION SecInfo, PSECURITY_DESCRIPTOR * ppSD, DWORD * pcbSD)
+static NTSTATUS NtQuerySecurityObject(HANDLE hObject, SECURITY_INFORMATION SecInfo, PSECURITY_DESCRIPTOR * ppSD, DWORD * pcbSD)
 {
     PSECURITY_DESCRIPTOR lpSD = NULL;
     NTSTATUS Status = STATUS_UNSUCCESSFUL;
@@ -2979,7 +2997,7 @@ static int OnQuerySecurity(HWND hDlg)
     GetDialogSecurityInfo(hDlg);
 
     // Query the security information
-    Status = QueryObjectSecurity(pData->hFile, pData->SecurityInformation, &lpSD, &cbSD);
+    Status = NtQuerySecurityObject(pData->hFile, pData->SecurityInformation, &lpSD, &cbSD);
 
     // If succeeded, load our tree view with security information
     if(NT_SUCCESS(Status))
@@ -3066,6 +3084,11 @@ static int OnSetSecurity(HWND hDlg)
         Status = TreeView_ItemToAcl(hWndTree, hChildItem[3], &pSacl, &bSaclPresent);
         if(NT_SUCCESS(Status))
         {
+#ifdef _COMPARE_ACLS
+            assert(pSacl->AclSize <= sizeof(SaveAclBuffer));
+            assert(memcmp(SaveAclBuffer, pSacl, pSacl->AclSize) == 0);
+#endif
+
             Status = RtlSetSaclSecurityDescriptor(&sd, bSaclPresent, pSacl, FALSE);
             AppliedSecInfo |= (pData->SecurityInformation & ALL_SACL_SECURITY_INFORMATION);
         }
