@@ -48,7 +48,6 @@ typedef enum _ITEM_TYPE
     ItemTypeSid11,                                  // mandatory label SID
     ItemTypeSid17,                                  // Policy label SID
     ItemTypeSid19,                                  // Trust level SID
-    ItemTypeSid19e,                                 // Trust level SID or "Everyone"
     ItemTypeCSA_V1,                                 // The CLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1 structure
     ItemTypeCSA_VType,                              // CLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1::ValueType
     ItemTypeCSA_VCnt,                               // CLAIM_SECURITY_ATTRIBUTE_RELATIVE_V1::ValueCount
@@ -1067,14 +1066,8 @@ static NTSTATUS StringTo_Sid(PTREE_ITEM_INFO pItemInfo, LPCTSTR szText, LPBYTE p
         return Status;
     }
 
-    // Trust level SID: 64-bit trust level present in the sub-authorities
+    // Trust level SID: Either two 32-bit values or the "Everyone" SID
     if(pItemInfo->ItemType == ItemTypeSid19)
-    {
-        return StringTo_Sid19(pItemInfo, szText, pbPtr, pbEnd, pcbMoveBy);
-    }
-
-    // Trust level SIDs have 64-bit trust level
-    if(pItemInfo->ItemType == ItemTypeSid19e)
     {
         // Try to convert a trust level SID
         if((Status = StringTo_Sid19(pItemInfo, szText, pbPtr, pbEnd, pcbMoveBy)) != STATUS_SUCCESS)
@@ -1494,7 +1487,6 @@ static ACE_FIELD_INFO AceFieldInfos[] =
     {ACE_FIELD_MANDATORY_SID,   {ItemTypeSid11,     0, IDS_FORMAT_INT_LEVEL,  IntgrLevels, ToString_Sid,  StringTo_Sid}},
     {ACE_FIELD_POLICY_SID,      {ItemTypeSid17,     0, IDS_FORMAT_POLICY_ID,  NULL,        ToString_Sid,  StringTo_Sid}},
     {ACE_FIELD_TRUST_SID,       {ItemTypeSid19,     0, IDS_FORMAT_TRUST_LEVEL,NULL,        ToString_Sid,  StringTo_Sid}},
-    {ACE_FIELD_TRUST_SID_E,     {ItemTypeSid19e,    0, IDS_FORMAT_TRUST_LEVEL,NULL,        ToString_Sid,  StringTo_Sid}},
     {ACE_FIELD_CSA_V1,          {ItemTypeCSA_V1,    IDS_FORMAT_CSA_V1}},
     {ACE_FIELD_CONDITION,       {ItemTypeCondition, 0, IDS_FORMAT_CONDITION,  NULL,        ToString_Cond, StringTo_Saved}}
 };
