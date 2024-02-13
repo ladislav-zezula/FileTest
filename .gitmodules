@@ -1,0 +1,3 @@
+[submodule "lib/Aaa"]
+	path = lib/Aaa
+	url = https://github.com/ladislav-zezula/Aaa.git
