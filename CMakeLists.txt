@@ -44,6 +44,10 @@ target_link_options(FileTest PRIVATE "/SUBSYSTEM:WINDOWS")
 
 target_include_directories(FileTest PRIVATE "${LIB_AAA_ROOT}/inc")
 target_compile_definitions(FileTest PUBLIC WDK_BUILD PUBLIC _DEBUG)
+
+# This causes the linker to fail because wchar_t is not converted to unsigned int and
+# mangling of the names changes, we should instruct it to not use built-in
+# wchar_t 
 target_compile_options(FileTest PUBLIC /Zc:wchar_t-)
 
 message(CMAKE_GENERATOR_PLATFORM="${CMAKE_GENERATOR_PLATFORM}")
