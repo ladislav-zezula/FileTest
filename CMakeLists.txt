@@ -42,7 +42,7 @@ set(CMAKE_MFC_FLAG 2)
 
 target_link_options(FileTest PRIVATE "/SUBSYSTEM:WINDOWS")
 
-target_include_directories(FileTest PRIVATE "lib/Aaa/inc")
+target_include_directories(FileTest PRIVATE "${LIB_AAA_ROOT}/inc")
 target_compile_definitions(FileTest PUBLIC WDK_BUILD PUBLIC _DEBUG)
 target_compile_options(FileTest PUBLIC /Zc:wchar_t-)
 
