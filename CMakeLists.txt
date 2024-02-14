@@ -37,18 +37,16 @@ add_executable(FileTest
     ${CMAKE_SOURCE_DIR}/WinMain.cpp
     ${CMAKE_SOURCE_DIR}/FileTest.rc
 )
+
 add_definitions(-D_AFXDLL)
 set(CMAKE_MFC_FLAG 2)
 
 target_link_options(FileTest PRIVATE "/SUBSYSTEM:WINDOWS")
 
 target_include_directories(FileTest PRIVATE "${LIB_AAA_ROOT}/inc")
-target_compile_definitions(FileTest PUBLIC WDK_BUILD PUBLIC _DEBUG)
 
-# This causes the linker to fail because wchar_t is not converted to unsigned int and
-# mangling of the names changes, we should instruct it to not use built-in
-# wchar_t 
-target_compile_options(FileTest PUBLIC /Zc:wchar_t-)
+# Make sure that CRT library is statically linked
+target_compile_options(FileTest PUBLIC /MT)
 
 message(CMAKE_GENERATOR_PLATFORM="${CMAKE_GENERATOR_PLATFORM}")
 
@@ -62,7 +60,7 @@ endif()
 
 target_link_libraries(FileTest PRIVATE kernel32.lib shell32.lib Comctl32.lib
     Comdlg32.lib Version.lib ${CMAKE_SOURCE_DIR}/${LIB_AAA_ROOT}/${LIB_AAA_VER}/ntdll.lib
-    ${CMAKE_SOURCE_DIR}/${LIB_AAA_ROOT}/${LIB_AAA_VER}/UtilsWDK.lib
+    ${CMAKE_SOURCE_DIR}/${LIB_AAA_ROOT}/${LIB_AAA_VER}/UtilsRUS.lib
     )
 
 project(FileTest)

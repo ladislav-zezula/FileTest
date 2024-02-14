@@ -8,11 +8,12 @@ If you use this tool with [Process Monitor](http://technet.microsoft.com/en-us/s
 ![Interactive File System Test Tool](http://www.zezula.net/images/tools/filetest_001.png)
 
 ### Build Requirements
-To build FileTest, you need to have one of these build environments
-* Visual Studio 2017
+* Visual Studio 2022+
 * Visual Studio 2008
 * WDK 6001
+* CMake
 
+To build FileTest with Visual Studio 2022+, you need to do the following steps:
 1) Make a new directory, e.g. C:\Projects
 ```
 md C:\Projects
@@ -20,8 +21,19 @@ cd C:\Projects
 ```
 2) Run the following batch script
 ```
-git clone git@github.com:ladislav-zezula/Aaa.git
-git clone git@github.com:ladislav-zezula/FileTest.git
+git clone https://github.com/ladislav-zezula/Aaa.git
+git clone https://github.com/ladislav-zezula/FileTest.git
 cd FileTest
 call make-msvc.bat
+```
+
+To build FileTest with CMake, do the following steps:
+```
+git clone https://github.com/ladislav-zezula/FileTest.git
+cd FileTest
+git submodule add https://github.com/ladislav-zezula/Aaa.git ./lib/Aaa/
+md build
+cd build
+cmake -G "Visual Studio 17 2022" -A Win32 ../
+cmake --build . --config Release
 ```
