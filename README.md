@@ -14,14 +14,10 @@ FileTest can be built with one of these build environments:
 * WDK 6001
 * CMake
 
-To build FileTest with Visual Studio 2008 or 2022+, you need to do the following steps:
-1) Make a new directory, e.g. C:\Projects
+To build FileTest with Visual Studio 2008 or 2022+, do the following steps:
 ```
 md C:\Projects
 cd C:\Projects
-```
-2) Run the following batch script
-```
 git clone https://github.com/ladislav-zezula/Aaa.git
 git clone https://github.com/ladislav-zezula/FileTest.git
 cd FileTest
