@@ -14,7 +14,7 @@ FileTest can be built with one of these build environments:
 * WDK 6001
 * CMake
 
-To build FileTest with Visual Studio 2022+, you need to do the following steps:
+To build FileTest with Visual Studio 2008 or 2022+, you need to do the following steps:
 1) Make a new directory, e.g. C:\Projects
 ```
 md C:\Projects
