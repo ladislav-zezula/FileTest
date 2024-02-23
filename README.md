@@ -7,7 +7,7 @@ If you use this tool with [Process Monitor](http://technet.microsoft.com/en-us/s
 
 ![Interactive File System Test Tool](http://www.zezula.net/images/tools/filetest_github.png)
 
-## Supported ways to build
+### Supported ways to build
 FileTest can be built with one of these build environments:
 * Visual Studio 2022+
 * Visual Studio 2008
