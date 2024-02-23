@@ -52,10 +52,8 @@ message(CMAKE_GENERATOR_PLATFORM="${CMAKE_GENERATOR_PLATFORM}")
 
 if(CMAKE_GENERATOR_PLATFORM STREQUAL "Win32")
     set(LIB_AAA_VER "lib32")
-elseif (CMAKE_GENERATOR_PLATFORM STREQUAL "Win64")
-    set(LIB_AAA_VER "lib64")
 else()
-    message(FATAL_ERROR "Cannot identify is it 32 or 64 bit")
+    set(LIB_AAA_VER "lib64")
 endif()
 
 target_link_libraries(FileTest PRIVATE kernel32.lib shell32.lib Comctl32.lib
