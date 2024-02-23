@@ -23,7 +23,7 @@ git clone https://github.com/ladislav-zezula/FileTest.git
 cd FileTest
 call make-msvc.bat
 ```
-The final EXEs will be in ./bin/Win32/Release and ./bin/x64/Release
+The final EXEs will be in `./bin/Win32/Release` and `./bin/x64/Release`
 
 ### How to build with WDK 6001
 1. Clone the repository `https://github.com/ladislav-zezula/WDK_6001`
@@ -39,7 +39,7 @@ set WDKDIR=C:\Projects\WDK
 cd FileTest
 make.bat
 ```
-The final EXEs will be in .\objfre_w2k_x86\i386 and .\objfre_wlh_amd64\amd64
+The final EXEs will be in `.\objfre_w2k_x86\i386` and `.\objfre_wlh_amd64\amd64`
 
 ### How to build with CMake
 ```
@@ -52,4 +52,4 @@ cmake .. -G "Visual Studio 17 2022"                    :: For 64-bit build
 cmake .. -G "Visual Studio 17 2022" -A Win32           :: For 32-bit build
 cmake --build . --config Release
 ```
-The final EXE fill be in .\build\Release
+The final EXE fill be in `.\build\Release`
