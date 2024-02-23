@@ -28,8 +28,9 @@ The final EXEs will be in `./bin/Win32/Release` and `./bin/x64/Release`
 ### How to build with WDK 6001
 1. Clone the repository `https://github.com/ladislav-zezula/WDK_6001`
 2. Clone the repository `https://github.com/ladislav-zezula/FileTest`
-3. Set the environment variable `WDKDIR` to the folder where you cloned the WDK
-4. Run the build script
+3. Clone the repository `https://github.com/ladislav-zezula/Aaa`
+4. Set the environment variable `WDKDIR` to the folder where you cloned the WDK
+5. Run the build script
 ```
 :: Assume C:\Projects as the current folder
 git clone https://github.com/ladislav-zezula/WDK_6001.git
