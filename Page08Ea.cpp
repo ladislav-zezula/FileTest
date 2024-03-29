@@ -137,6 +137,11 @@ static int OnQueryEa(HWND hDlg)
                 break;
         }
     }
+    else if(Status == STATUS_SUCCESS && FileEaInfo.EaSize == 0)
+    {
+        // There are no extended attributes to query; clear the list
+        ExtendedAttributesToListView(hDlg, NULL);
+    }
 
     // Set the result to the dialog
     SetResultInfo(hDlg, RSI_NTSTATUS | RSI_INFORMATION, Status, &IoStatus);
