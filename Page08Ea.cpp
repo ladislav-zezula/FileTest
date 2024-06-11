@@ -63,52 +63,22 @@ static int OnSetActive(HWND hDlg)
 
 static int OnQueryEa(HWND hDlg)
 {
-    PFILE_FULL_EA_INFORMATION NewEaBuffer;
+    PFILE_FULL_EA_INFORMATION NewEaBuffer = NULL;
     PFILE_FULL_EA_INFORMATION EaBuffer = NULL;
-    FILE_EA_INFORMATION FileEaInfo;
     TFileTestData * pData = GetDialogData(hDlg);
     IO_STATUS_BLOCK IoStatus = {0};
     NTSTATUS Status = STATUS_SUCCESS;
-    ULONG EaBufferSize = 0;
+    ULONG EaBufferSize = 0x400;
 
-    //
-    // Although it is possible to get the size of the extended attributes,
-    // I've tried and the size is usually not enough for receiving EAs.
-    // I don't know what the QueryFileInfo for FileEaInformation is good for then :-(
-    //
-
-    Status = NtQueryInformationFile(pData->hFile,
-                                   &IoStatus, 
-                                   &FileEaInfo,
-                                    sizeof(FILE_EA_INFORMATION),
-                                    FileEaInformation);
-    
-    // Allocate the buffer large enough to hold the EAs.
-    if(Status == STATUS_SUCCESS && FileEaInfo.EaSize > 0)
-    {
-        EaBufferSize = FileEaInfo.EaSize;
-        EaBuffer = (PFILE_FULL_EA_INFORMATION)HeapAlloc(g_hHeap, 0, EaBufferSize);
-        if(EaBuffer == NULL)
-            Status = STATUS_INSUFFICIENT_RESOURCES;
-    }
-
-    // Query the EAs, if any. If the buffer is not large enough,
-    // double its size and try again
-    if(Status == STATUS_SUCCESS && EaBufferSize > 0)
+    // Allocate the buffer for extended attributes
+    EaBuffer = (PFILE_FULL_EA_INFORMATION)HeapAlloc(g_hHeap, 0, EaBufferSize);
+    if(EaBuffer != NULL)
     {
         __TryQueryEA:
 
-        // Retrieve the extended attributes
-        Status = NtQueryEaFile(pData->hFile,
-                                &IoStatus,
-                                EaBuffer,
-                                EaBufferSize,
-                                FALSE,
-                                NULL,
-                                0,
-                                NULL,
-                                TRUE);
-
+        // Try to query the extended attributes
+        memset(EaBuffer, 0, EaBufferSize);
+        Status = NtQueryEaFile(pData->hFile, &IoStatus, EaBuffer, EaBufferSize, FALSE, NULL, 0, NULL, TRUE);
         switch(Status)
         {
             // If not enough memory, then reallocate buffer
@@ -125,17 +95,21 @@ static int OnQueryEa(HWND hDlg)
                 }
 
                 // Failed to reallocate - free the buffer and stop
-                HeapFree(g_hHeap, 0, EaBuffer);
                 Status = STATUS_INSUFFICIENT_RESOURCES;
-                EaBuffer = NULL;
                 break;
 
             // If OK, format the list view with extended attributes
             case STATUS_SUCCESS:
                 ExtendedAttributesToListView(hDlg, EaBuffer);
-                HeapFree(g_hHeap, 0, EaBuffer);
                 break;
         }
+
+        // Free the buffer for extended attributes
+        HeapFree(g_hHeap, 0, EaBuffer);
+    }
+    else
+    {
+        Status = STATUS_INSUFFICIENT_RESOURCES;
     }
 
     // Set the result to the dialog

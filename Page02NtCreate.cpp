@@ -763,7 +763,10 @@ static int OnNtCreateFileClick(HWND hDlg)
         {
             // Convert object ID to binary value
             if(StringToFileID(szFileName, NULL, ObjectID, &cbObjectID) != ERROR_SUCCESS)
+            {
+                SetResultInfo(hDlg, RSI_NTSTATUS, STATUS_INVALID_DATA_FORMAT);
                 return TRUE;
+            }
 
             // Set the object ID to the UNICODE_STRING
             FileName.MaximumLength = 
