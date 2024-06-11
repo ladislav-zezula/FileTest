@@ -110,8 +110,8 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 2,8,0,643
- PRODUCTVERSION 2,8,0,643
+ FILEVERSION 2,8,0,644
+ PRODUCTVERSION 2,8,0,644
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -128,13 +128,13 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Ladislav Zezula"
             VALUE "FileDescription", "Interactive File System API Test"
-            VALUE "FileVersion", "2, 8, 0, 643\0"
+            VALUE "FileVersion", "2, 8, 0, 644\0"
             VALUE "InternalName", "FileTest"
             VALUE "LegalCopyright", "Copyright (c) 2004 - 2024 Ladislav Zezula"
             VALUE "LegalTrademarks", "http://www.zezula.net"
             VALUE "OriginalFilename", "FileTest.exe"
             VALUE "ProductName", "FileTest"
-            VALUE "ProductVersion", "2, 8, 0, 643\0"
+            VALUE "ProductVersion", "2, 8, 0, 644\0"
         END
     END
     BLOCK "VarFileInfo"

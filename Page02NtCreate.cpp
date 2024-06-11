@@ -517,7 +517,9 @@ static int OnBrowseFileClick(HWND hDlg)
     ofn.lpstrFile = MAKEINTRESOURCE(IDC_FILE_NAME);
     ofn.lpstrTitle = MAKEINTRESOURCE(IDS_SELECT_FILE);
     ofn.lpstrFilter = MAKEINTRESOURCE(IDS_FILTER_ALL);
-     
+
+    // GetOpenFileName dialog doesn't like native names
+    ConvertToWin32Name(hDlg, IDC_FILE_NAME);
     if(GetOpenFileNameRc(hDlg, &ofn))
     {
         SetDlgItemText(hDlg, IDC_DIRECTORY_NAME, _T(""));
