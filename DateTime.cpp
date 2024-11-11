@@ -620,7 +620,7 @@ static int FileTimeToHumanReadableText(
 
 LPTSTR FileTimeToText(
     LPTSTR szBuffer,
-    LPTSTR szEndChar,
+    LPTSTR szBufferEnd,
     PFILETIME pFt,
     BOOL bTextForEdit)
 {
@@ -629,15 +629,15 @@ LPTSTR FileTimeToText(
     if(bTextForEdit == FALSE)
     {
         // First part: date as LARGE_INTEGER
-        szBuffer = FileTimeToLargeInteger(szBuffer, szEndChar, pFt);
+        szBuffer = FileTimeToLargeInteger(szBuffer, szBufferEnd, pFt);
 
         // Add one space
-        if(szEndChar > szBuffer)
+        if(szBuffer < szBufferEnd)
             *szBuffer++ = _T(' ');
 
         // Append the filetime in human-readable form
         nLength = FileTimeToHumanReadableText(szBuffer,
-                                              szEndChar,
+                                              szBufferEnd,
                                               pFt,
                                               TRUE);
         szBuffer += nLength;
@@ -646,14 +646,14 @@ LPTSTR FileTimeToText(
     {
         // Attempt to convert the filetime to human-readable form
         nLength = FileTimeToHumanReadableText(szBuffer,
-                                              szEndChar,
+                                              szBufferEnd,
                                               pFt,
                                               FALSE);
 
         // If failed, just convert it to LARGE_INTEGER
         if(nLength == 0)
         {
-            szBuffer = FileTimeToLargeInteger(szBuffer, szEndChar, pFt);
+            szBuffer = FileTimeToLargeInteger(szBuffer, szBufferEnd, pFt);
         }
         else
         {
@@ -661,6 +661,9 @@ LPTSTR FileTimeToText(
         }
     }
 
+    // Terminate the buffer with zero
+    if(szBuffer < szBufferEnd)
+        szBuffer[0] = 0;
     return szBuffer;
 }
 

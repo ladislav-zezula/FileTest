@@ -40,7 +40,7 @@ static void SetWindowTextModuleVersion(HWND hWndChild, HMODULE hMod)
 
 static void SetWindowTextFileTime(HWND hWndChild, LARGE_INTEGER & FileTime)
 {
-    TCHAR szText[0x80];
+    TCHAR szText[0x80] = {0};
 
     if(FileTimeToText(szText, &szText[_countof(szText) - 1], (PFILETIME)(&FileTime), FALSE))
     {

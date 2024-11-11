@@ -2025,7 +2025,7 @@ static int InsertTreeItemFlags32(
     LPBYTE pbDataEnd)
 {
     TStructMember * pMemberInfo;
-    TCHAR szItemText[128] = _T("");
+    TCHAR szItemText[128] = {0};
 
     // Sanity check
     assert((UINT)(pbDataEnd - pbData) >= pMember->nMemberSize);
