@@ -162,7 +162,7 @@ static void UpdateDialog(HWND hDlg, TFileTestData * pData)
     EnableDlgItems(hDlg, bEnable, IDC_NTCLOSE, IDC_MAP_VIEW, 0);
 
     // The map accessing is only allowed if we have valid mapping
-    EnableDlgItems(hDlg, pData->bSectionViewMapped, IDC_DATA_EDITOR, IDC_UNMAP_VIEW, 0);
+    EnableDlgItems(hDlg, pData->bSectionViewMapped, IDC_DATA_EDITOR, IDC_QUERY_MAPPED_NAME, IDC_UNMAP_VIEW, 0);
 }
 
 static int SaveDialog1(HWND hDlg)
@@ -229,7 +229,6 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
         pAnchors->AddAnchor(hDlg, IDC_PAGE_PROTECTION, akLeft | akTop | akRight);
         pAnchors->AddAnchor(hDlg, IDC_ALLOCATION_ATTRIBUTES, akLeft | akTop | akRight);
         pAnchors->AddAnchor(hDlg, IDC_ALLOCATION_ATTRIBUTES_BROWSE, akTop | akRight);
-        pAnchors->AddAnchor(hDlg, IDC_FILE_HANDLE, akLeft | akTop | akRight);
 
         pAnchors->AddAnchor(hDlg, IDC_NTCREATE_SECTION, akLeft | akTop);
         pAnchors->AddAnchor(hDlg, IDC_NTOPEN_SECTION, akLeftCenter | akTop);
@@ -247,9 +246,11 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
         pAnchors->AddAnchor(hDlg, IDC_ALLOCATION_TYPE, akLeft | akTop | akRight);
         pAnchors->AddAnchor(hDlg, IDC_ALLOCATION_TYPE_BROWSE, akTop | akRight);
         pAnchors->AddAnchor(hDlg, IDC_WIN32_PROTECTION, akLeft | akTop | akRight);
+        pAnchors->AddAnchor(hDlg, IDC_MAPPED_NAME, akLeft | akTop | akRight);
 
         pAnchors->AddAnchor(hDlg, IDC_MAP_VIEW, akLeft | akTop);
         pAnchors->AddAnchor(hDlg, IDC_DATA_EDITOR, akLeftCenter | akTop);
+        pAnchors->AddAnchor(hDlg, IDC_QUERY_MAPPED_NAME, akRightCenter | akTop);
         pAnchors->AddAnchor(hDlg, IDC_UNMAP_VIEW, akRight | akTop);
 
         pAnchors->AddAnchor(hDlg, IDC_RESULT_FRAME, akLeft | akRight | akBottom);
@@ -288,14 +289,6 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
 static int OnSetActive(HWND hDlg)
 {
     TFileTestData * pData = GetDialogData(hDlg);
-    HANDLE FileHandle = IsHandleValid(pData->hFile) ? pData->hFile : NULL;
-
-    // Either set NULL or the handle value
-    if(FileHandle == NULL)
-        SetDlgItemText(hDlg, IDC_FILE_HANDLE, _T("NULL"));
-    else
-        Hex2DlgTextPtr(hDlg, IDC_FILE_HANDLE, (DWORD_PTR)FileHandle);
-
     UpdateDialog(hDlg, pData);
     return TRUE;
 }
@@ -456,6 +449,53 @@ static int OnDataEditor(HWND hDlg)
     return TRUE;
 }
 
+static int OnQueryMappedNameClick(HWND hDlg)
+{
+    TFileTestData * pData = GetDialogData(hDlg);
+    NTSTATUS Status;
+    PUNICODE_STRING Buffer;
+    SIZE_T BufferSize;
+
+    if(SaveDialog2(hDlg) == ERROR_SUCCESS)
+    {
+        BufferSize = sizeof(UNICODE_STRING);
+
+        do
+        {
+            // Allocate memory for the string plus zero termination
+            if(!(Buffer = (PUNICODE_STRING)LocalAlloc(LPTR, BufferSize + sizeof(UNICODE_NULL))))
+            {
+                Status = STATUS_NO_MEMORY;
+                break;
+            }
+
+            // Query the mapped file name
+            Status = NtQueryVirtualMemory(NtCurrentProcess(), 
+                                          pData->pvSectionMappedView, 
+                                          MemorySectionName,
+                                          Buffer,
+                                          BufferSize,
+                                         &BufferSize);
+
+            if(!NT_SUCCESS(Status))
+                LocalFree(Buffer);
+
+            // Retry with the new suggested buffer size
+        } while(Status == STATUS_BUFFER_OVERFLOW);
+        
+        // Report the mapped file name
+        SetDlgItemText(hDlg, IDC_MAPPED_NAME, NT_SUCCESS(Status) ? Buffer->Buffer : L"");
+
+        if(NT_SUCCESS(Status))
+            LocalFree(Buffer);
+
+        // Show the result
+        SetResultInfo(hDlg, RSI_NTSTATUS, Status);
+        UpdateDialog(hDlg, pData);
+    }
+    return TRUE;
+}
+
 static int OnUnmapViewClick(HWND hDlg)
 {
     TFileTestData * pData = GetDialogData(hDlg);
@@ -570,6 +610,9 @@ static int OnCommand(HWND hDlg, UINT nNotify, UINT nIDCtrl)
 
             case IDC_DATA_EDITOR:
                 return OnDataEditor(hDlg);
+
+            case IDC_QUERY_MAPPED_NAME:
+                return OnQueryMappedNameClick(hDlg);
 
             case IDC_UNMAP_VIEW:
                 return OnUnmapViewClick(hDlg);

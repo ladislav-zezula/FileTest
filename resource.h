@@ -263,7 +263,7 @@
 #define IDC_NTCREATE_SECTION            1192
 #define IDC_NTOPEN_SECTION              1193
 #define IDC_NTCLOSE                     1194
-#define IDC_FILE_HANDLE                 1195
+#define IDC_MAPPED_NAME                 1195
 #define IDC_SECTION_FRAME               1196
 #define IDC_SECTION_VIEW_FRAME          1197
 #define IDC_WIN32_PROTECTION            1198
@@ -332,6 +332,7 @@
 #define IDC_DECRYPT_FILE                1260
 #define IDC_BUTTON2                     1261
 #define IDC_MORE_SECURITY_INFORMATION   1261
+#define IDC_QUERY_MAPPED_NAME           1262
 #define IDS_TIP_FLUSH_FILE_BUFFERS      4000
 #define IDS_FLAGS_AND_ATTRIBUTES        4001
 #define IDS_OPLOCK_BROKE                4002
@@ -503,7 +504,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        153
 #define _APS_NEXT_COMMAND_VALUE         40070
-#define _APS_NEXT_CONTROL_VALUE         1262
+#define _APS_NEXT_CONTROL_VALUE         1263
 #define _APS_NEXT_SYMED_VALUE           101
 #endif
 #endif
