@@ -41,7 +41,7 @@ static void OnInitDialog(HWND hDlg, LPARAM lParam)
     CenterWindowToParent(hDlg);
 
     // Configure the anchors
-    pData->pAnchors = pAnchors = new TAnchors();
+    pData->pAnchors = pAnchors = new TAnchors(hDlg);
     if(pAnchors != NULL)
     {
         pAnchors->AddAnchor(hDlg, IDC_FILE_DATA, akAll);
@@ -56,22 +56,6 @@ static void OnInitDialog(HWND hDlg, LPARAM lParam)
         DataEditor_SetDataFormat(hWndChild, PtrPlatformSpecific, 0x10);
         DataEditor_SetData(hWndChild, (ULONGLONG)pData->BaseAddress, pData->pbFileData, pData->cbFileData);
     }
-}
-
-static void OnSize(HWND hDlg)
-{
-    TDialogData * pData = ((TDialogData *)GetWindowLongPtr(hDlg, DWLP_USER));
-
-    if(pData != NULL && pData->pAnchors != NULL)
-        pData->pAnchors->OnSize();
-}
-
-static void OnGetMinMaxInfo(HWND hDlg, LPARAM lParam)
-{
-    TDialogData * pData = ((TDialogData *)GetWindowLongPtr(hDlg, DWLP_USER));
-
-    if(pData != NULL && pData->pAnchors != NULL)
-        pData->pAnchors->OnGetMinMaxInfo(lParam);
 }
 
 static void OnNotify(HWND hDlg, NMHDR * pNMHDR)
@@ -113,6 +97,7 @@ static int OnFlushViewOfFileClick(HWND hDlg)
 
 static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
+    TDialogData * pData;
     UINT nIDCtrl;
     UINT nIDNotify;
 
@@ -124,11 +109,9 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM l
             return TRUE;
 
         case WM_SIZE:
-            OnSize(hDlg);
-            break;
-
         case WM_GETMINMAXINFO:
-            OnGetMinMaxInfo(hDlg, lParam);
+            if((pData = ((TDialogData *)GetWindowLongPtr(hDlg, DWLP_USER))) != NULL)
+                pData->pAnchors->OnMessage(uMsg, wParam, lParam);
             break;
 
         case WM_NOTIFY:

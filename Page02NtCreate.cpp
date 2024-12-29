@@ -116,6 +116,8 @@ static TFlagInfo ObjAttrFlagsValues[] =
     FLAGINFO_END()
 };
 
+static TAnchors * pAnchors = NULL;
+
 //-----------------------------------------------------------------------------
 // Local functions
 
@@ -133,30 +135,6 @@ static TFileTestData * IsPropSheetPageDialog(HWND hDlg)
         return (pData->pOP == &pData->OpenFile) ? pData : NULL;
     }
     return NULL;
-}
-
-static TAnchors * GetDialogAnchors(HWND hDlg)
-{
-    TFileTestData * pData;
-
-    if((pData = GetDialogData(hDlg)) != NULL)
-    {
-        return pData->pAnchors;
-    }
-    return NULL;
-}
-
-static void SetDialogAnchors(HWND hDlg, TAnchors * pAnchors)
-{
-    TFileTestData * pData;
-
-    if((pData = GetDialogData(hDlg)) != NULL)
-    {
-        // Free old anchors, if any
-        if(pData->pAnchors != NULL)
-            delete pData->pAnchors;
-        pData->pAnchors = pAnchors;
-    }
 }
 
 static NTSTATUS MyCreateDirectory(TFileTestData * pData, POBJECT_ATTRIBUTES pObjAttr, PIO_STATUS_BLOCK pIoStatus)
@@ -339,7 +317,6 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
 {
     PROPSHEETPAGE * pPage = (PROPSHEETPAGE *)lParam;
     TFileTestData * pData = (TFileTestData *)pPage->lParam;
-    TAnchors * pAnchors;
 
     // Save the data pointer to the dialog
     assert(pData->MagicHeader == FILETEST_DATA_MAGIC);
@@ -354,7 +331,7 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
     // Configure dialog resizing
     if(pData->bEnableResizing)
     {
-        if((pAnchors = new TAnchors()) != NULL)
+        if((pAnchors = new TAnchors(hDlg)) != NULL)
         {
             pAnchors->AddAnchor(hDlg, IDC_MAIN_FRAME, akAll);
             pAnchors->AddAnchor(hDlg, IDC_DIRECTORY_NAME, akLeft | akTop | akRight);
@@ -393,8 +370,6 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
             pAnchors->AddAnchor(hDlg, IDC_INFORMATION, akLeft | akRight | akBottom);
             pAnchors->AddAnchor(hDlg, IDOK, akRightBottom);
             pAnchors->AddAnchor(hDlg, IDCANCEL, akRightBottom);
-            assert(pData->pAnchors == NULL);
-            SetDialogAnchors(hDlg, pAnchors);
         }
     }
 
@@ -421,24 +396,6 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
     // If we already have handle, put it to the dialog
     if(IsHandleValid(pData->hFile))
         SetResultInfo(hDlg, RSI_HANDLE, pData->hFile);
-    return TRUE;
-}
-
-static BOOL OnSize(HWND hDlg)
-{
-    TAnchors * pAnchors;
-
-    if((pAnchors = GetDialogAnchors(hDlg)) != NULL)
-        pAnchors->OnSize();
-    return TRUE;
-}
-
-static BOOL OnGetMinMaxInfo(HWND hDlg, LPARAM lParam)
-{
-    TAnchors * pAnchors;
-
-    if((pAnchors = GetDialogAnchors(hDlg)) != NULL)
-        pAnchors->OnGetMinMaxInfo(lParam);
     return TRUE;
 }
 
@@ -478,14 +435,17 @@ static int OnRelativeFileClick(HWND hDlg)
     TFileTestData * pData = GetDialogData(hDlg);
     PROPSHEETPAGE Page = {0};
     TOpenPacket * pSaveOP = pData->pOP;
-    TAnchors * pSaveAnchors = pData->pAnchors;
+    TAnchors * pSaveAnchors;
+
+    // Save the current anchor set
+    pSaveAnchors = pAnchors;
+    pAnchors = NULL;
 
     // Only invoke the sub-dialog if it's not invoked already
     if(IsPropSheetPageDialog(hDlg))
     {
         // Switch to the relative file open packet
         GetDlgItemText(hDlg, IDC_DIRECTORY_NAME, pData->szDirName, MAX_NT_PATH);
-        pData->pAnchors = NULL;
         pData->pOP = &pData->RelaFile;
         pData->UseRelativeFile = TRUE;
 
@@ -494,11 +454,13 @@ static int OnRelativeFileClick(HWND hDlg)
         DialogBoxParam(g_hInst, MAKEINTRESOURCE(IDD_PAGE02_NTCREATE_RELFILE), hDlg, PageProc02, (LPARAM)(&Page));
 
         // Restore the original open packet
-        pData->pAnchors = pSaveAnchors;
         pData->pOP = pSaveOP;
         SetDlgItemText(hDlg, IDC_DIRECTORY_NAME, pData->szDirName);
         UpdateRelativeFileHint(hDlg);
     }
+
+    // Restore anchors for the dialog
+    pAnchors = pSaveAnchors;
     return TRUE;
 }
 
@@ -986,10 +948,8 @@ INT_PTR CALLBACK PageProc02(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
             return OnInitDialog(hDlg, lParam);
 
         case WM_SIZE:
-            return OnSize(hDlg);
-
         case WM_GETMINMAXINFO:
-            return OnGetMinMaxInfo(hDlg, lParam);
+            return pAnchors->OnMessage(uMsg, wParam, lParam);
 
         case WM_DRAWITEM:
             if(wParam == IDC_RELATIVE_FILE)
@@ -1006,7 +966,9 @@ INT_PTR CALLBACK PageProc02(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
             return OnNotify(hDlg, (NMHDR *)lParam);
 
         case WM_DESTROY:
-            SetDialogAnchors(hDlg, NULL);
+            if(pAnchors != NULL)
+                delete pAnchors;
+            pAnchors = NULL;
             return FALSE;
     }
     return FALSE;

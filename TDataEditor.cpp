@@ -54,8 +54,8 @@ struct TEditorData
     int      nEndHexaValues;                // End of the hexa values in the line
     int      nBeginTextValues;              // Start of the text values in the line
     int      nEndTextValues;                // End of the hexa values in the line
-    int      nHeight;                       // Height of the client area
-    int      nWidth;                        // Width of the client area
+    int      nClientCY;                     // Height of the client area
+    int      nClientCX;                     // Width of the client area
     int      nLeftOrg;                      // Origin of the left border (0 = default) in pixels
     int      nCharHeight;                   // Height of one character, in screen pixels
     int      nAveCharWidth;                 // Average width of one character, in screen pixels
@@ -478,8 +478,8 @@ static void RecalculateView(TEditorData * pData)
 
     // Update the client size
     GetClientRect(pData->hWnd, &rect);
-    pData->nHeight = rect.bottom;
-    pData->nWidth = rect.right;
+    pData->nClientCX = rect.right;
+    pData->nClientCY = rect.bottom;
     pData->nLines = 0;
 
     // Update the total number of lines
@@ -488,8 +488,8 @@ static void RecalculateView(TEditorData * pData)
         pData->nLines = ((cbEditorData - 1) / pData->cbBytesPerLine) + 1;
 
     // Update the number of lines, based on new size
-    pData->nFullVisibleLines = (pData->nHeight / pData->nCharHeight);
-    pData->nVisibleLines = ((pData->nHeight - 1) / pData->nCharHeight) + 1;
+    pData->nFullVisibleLines = (pData->nClientCY / pData->nCharHeight);
+    pData->nVisibleLines = ((pData->nClientCY - 1) / pData->nCharHeight) + 1;
 
     // Now check if we need to show or remove vertical scroll bar
     dwAddStyles = ((pData->dwStyles & DES_VSCROLL) && (pData->nLines > (size_t)pData->nFullVisibleLines)) ? WS_VSCROLL : 0;
@@ -600,9 +600,9 @@ static bool RecalcCaretXY(TEditorData * pData, bool * bNeedRedraw)
     }
 
     // If the X position od the caret got out of the screen, we have to move the org
-    if(pData->nCaretX > (pData->nLeftOrg + pData->nWidth))
+    if(pData->nCaretX > (pData->nLeftOrg + pData->nClientCX))
     {
-        pData->nLeftOrg = pData->nCaretX - (pData->nWidth - 10);
+        pData->nLeftOrg = pData->nCaretX - (pData->nClientCX - 10);
         *bNeedRedraw = true;
     }
 
@@ -904,8 +904,8 @@ static void OnSize(HWND hWnd, LPARAM lParam)
 {
     TEditorData * pData = GetEditorData(hWnd);
 
-    pData->nHeight = GET_Y_LPARAM(lParam);
-    pData->nWidth = GET_X_LPARAM(lParam);
+    pData->nClientCX = GET_X_LPARAM(lParam);
+    pData->nClientCY = GET_Y_LPARAM(lParam);
 }
 
 static void OnSetFocus(HWND hWnd)
@@ -1404,7 +1404,7 @@ static void OnPaint(HWND hWnd)
     // Prepare rectagle for top line
     LineRect.left   = 0;
     LineRect.top    = 0;
-    LineRect.right  = pData->nWidth;
+    LineRect.right  = pData->nClientCX;
     LineRect.bottom = pData->nCharHeight;
 
     // Start painting
@@ -1414,7 +1414,7 @@ static void OnPaint(HWND hWnd)
     uOldAlign = SetTextAlign(hPaintDC, TA_LEFT | TA_TOP);
 
     // Draw all lines
-    while(LineRect.top < pData->nHeight)
+    while(LineRect.top < pData->nClientCY)
     {
         LPTSTR szLineText;
         LONG TextSize = 0;
@@ -1452,7 +1452,7 @@ static void OnPaint(HWND hWnd)
                     LineRect.right = DATAEDIT_TEXT_INDENT;
                     SetBkColor(hPaintDC, DATAEDIT_COLOR_NORMAL_BG);
                     ExtTextOut(hPaintDC, 0, 0, ETO_OPAQUE, &LineRect, NULL, 0, NULL);
-                    LineRect.right = pData->nWidth;
+                    LineRect.right = pData->nClientCX;
                 }
 
                 // Calculate the text position
@@ -1501,7 +1501,7 @@ static void OnPaint(HWND hWnd)
                 {
                     // Get the current pen position
                     LineRect.left = x;
-                    LineRect.right = pData->nWidth;
+                    LineRect.right = pData->nClientCX;
                     SetBkColor(hPaintDC, DATAEDIT_COLOR_NORMAL_BG);
                     ExtTextOut(hPaintDC, 0, 0, ETO_OPAQUE, &LineRect, NULL, 0, NULL);
                 }

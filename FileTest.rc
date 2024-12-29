@@ -128,13 +128,13 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Ladislav Zezula"
             VALUE "FileDescription", "Interactive File System API Test"
-            VALUE "FileVersion", "2, 8, 0, 647\0"
+            VALUE "FileVersion", "2, 8, 0, 647"
             VALUE "InternalName", "FileTest"
             VALUE "LegalCopyright", "Copyright (c) 2004 - 2024 Ladislav Zezula"
             VALUE "LegalTrademarks", "http://www.zezula.net"
             VALUE "OriginalFilename", "FileTest.exe"
             VALUE "ProductName", "FileTest"
-            VALUE "ProductVersion", "2, 8, 0, 647\0"
+            VALUE "ProductVersion", "2, 8, 0, 647"
         END
     END
     BLOCK "VarFileInfo"
@@ -238,7 +238,7 @@ STYLE DS_SETFONT | DS_FIXEDSYS | DS_CENTER | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | W
 CAPTION "FileTest"
 FONT 8, "MS Shell Dlg", 0, 0, 0x1
 BEGIN
-    CONTROL         "",IDC_TAB,"SysTabControl32",TCS_MULTILINE | WS_GROUP,7,7,317,373
+    CONTROL         "",IDC_TAB,"SysTabControl32",TCS_MULTILINE,7,7,317,373
     PUSHBUTTON      "Exit",IDC_EXIT,274,384,50,14
 END
 
@@ -1290,6 +1290,11 @@ BEGIN
 END
 
 IDD_HELP_ABOUT AFX_DIALOG_LAYOUT
+BEGIN
+    0
+END
+
+IDD_FILE_TEST AFX_DIALOG_LAYOUT
 BEGIN
     0
 END

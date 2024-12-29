@@ -2699,13 +2699,13 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
     {
         if(GetDlgItem(hDlg, IDC_QUERY_INFO) != NULL)
         {
-            pAnchors1 = new TAnchors();
+            pAnchors1 = new TAnchors(hDlg);
             pAnchors = pAnchors1;
         }
 
         if(GetDlgItem(hDlg, IDC_QUERY_VOL_INFO) != NULL)
         {
-            pAnchors2 = new TAnchors();
+            pAnchors2 = new TAnchors(hDlg);
             pAnchors = pAnchors2;
         }
 
@@ -3539,6 +3539,31 @@ static int OnNotify(HWND hDlg, NMHDR * pNMHDR)
     return FALSE;
 }
 
+static int OnDestroy(HWND hDlg)
+{
+    TimerTooltipProc(hDlg, WM_TIMER, 0, 0);
+
+    // Free the first anchors, if exist
+    if(pAnchors1 != NULL && pAnchors1->GetParentWindow() == hDlg)
+    {
+        delete pAnchors1;
+        pAnchors1 = NULL;
+    }
+
+    // Free the second anchors, if exist
+    if(pAnchors2 != NULL && pAnchors2->GetParentWindow() == hDlg)
+    {
+        delete pAnchors2;
+        pAnchors2 = NULL;
+    }
+
+    // Close the target directory handle
+    if(IsHandleValid(hDirTarget))
+        NtClose(hDirTarget);
+    hDirTarget = NULL;
+    return FALSE;
+}
+
 //-----------------------------------------------------------------------------
 // Public functions
 
@@ -3551,9 +3576,9 @@ INT_PTR CALLBACK PageProc06(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
 
         case WM_SIZE:
             if(pAnchors1 != NULL && pAnchors1->GetParentWindow() == hDlg)
-                pAnchors1->OnSize();
+                pAnchors1->OnMessage(uMsg, wParam, lParam);
             if(pAnchors2 != NULL && pAnchors2->GetParentWindow() == hDlg)
-                pAnchors2->OnSize();
+                pAnchors2->OnMessage(uMsg, wParam, lParam);
             return FALSE;
 
         case WM_ACTIVATE:
@@ -3574,17 +3599,7 @@ INT_PTR CALLBACK PageProc06(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
             return OnNotify(hDlg, (NMHDR *)lParam);
 
         case WM_DESTROY:
-            TimerTooltipProc(hDlg, WM_TIMER, 0, 0);
-
-            if(IsHandleValid(hDirTarget))
-                NtClose(hDirTarget);
-            if(pAnchors2 != NULL)
-                delete pAnchors2;
-            if(pAnchors1 != NULL)
-                delete pAnchors1;
-            pAnchors2 = pAnchors1 = NULL;
-            hDirTarget = NULL;
-            return FALSE;
+            return OnDestroy(hDlg);
     }
     return FALSE;
 }

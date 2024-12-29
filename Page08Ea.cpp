@@ -30,7 +30,7 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
     // Configure dialog resizing
     if(pData->bEnableResizing)
     {
-        pAnchors = new TAnchors();
+        pAnchors = new TAnchors(hDlg);
         pAnchors->AddAnchor(hDlg, IDC_EA_TITLE, akLeft | akTop | akRight);
         pAnchors->AddAnchor(hDlg, IDC_EA_LIST, akAll);
         pAnchors->AddAnchor(hDlg, IDC_MOVE_UP, akLeft | akBottom);
@@ -188,9 +188,8 @@ INT_PTR CALLBACK PageProc08(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
     switch(uMsg)
     {
         case WM_SIZE:
-            if(pAnchors != NULL)
-                pAnchors->OnSize();
-            return FALSE;
+        case WM_GETMINMAXINFO:
+            return pAnchors->OnMessage(uMsg, wParam, lParam);
 
         case WM_COMMAND:
             return OnCommand(hDlg, HIWORD(wParam), LOWORD(wParam));

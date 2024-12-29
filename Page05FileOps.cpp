@@ -610,7 +610,7 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
     // Configure dialog resizing
     if(pData->bEnableResizing)
     {
-        pAnchors = new TAnchors();
+        pAnchors = new TAnchors(hDlg);
         pAnchors->AddAnchor(hDlg, IDC_MAIN_FRAME, akLeft | akTop | akRight);
         pAnchors->AddAnchor(hDlg, IDC_FILE_NAME1, akLeft | akTop | akRight);
         pAnchors->AddAnchor(hDlg, IDC_FILE_NAME1_BROWSE, akTop | akRight);
@@ -1538,9 +1538,7 @@ INT_PTR CALLBACK PageProc05(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
             return OnInitDialog(hDlg, lParam);
 
         case WM_SIZE:
-            if(pAnchors != NULL)
-                pAnchors->OnSize();
-            return FALSE;
+            return pAnchors->OnMessage(uMsg, wParam, lParam);
 
         case WM_APC:
             return OnApc(hDlg, lParam);

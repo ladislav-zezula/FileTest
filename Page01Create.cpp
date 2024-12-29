@@ -59,6 +59,8 @@ TFlagInfo ShareAccessValues[] =
     FLAGINFO_END()
 };
 
+static TAnchors * pAnchors = NULL;
+
 //-----------------------------------------------------------------------------
 // Helper functions
 
@@ -118,8 +120,6 @@ static DWORD MyCreateDirectory(TFileTestData * pData, LPCTSTR szDirectory, size_
 //-----------------------------------------------------------------------------
 // Message handlers
 
-static TAnchors * pAnchors = NULL;
-
 static int OnCloseHandleClick(HWND hDlg);
 
 static int OnInitDialog(HWND hDlg, LPARAM lParam)
@@ -134,33 +134,35 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
     // Configure dialog resizing
     if(pData->bEnableResizing)
     {
-        pAnchors = new TAnchors();
-        pAnchors->AddAnchor(hDlg, IDC_MAIN_FRAME, akAll);
-        pAnchors->AddAnchor(hDlg, IDC_DIRECTORY_NAME, akLeft | akTop | akRight);
-        pAnchors->AddAnchor(hDlg, IDC_DIRECTORY_NAME_BROWSE, akTop | akRight);
-        pAnchors->AddAnchor(hDlg, IDC_FILE_NAME, akLeft | akTop | akRight);
-        pAnchors->AddAnchor(hDlg, IDC_FILE_NAME_BROWSE, akTop | akRight);
-        pAnchors->AddAnchor(hDlg, IDC_DESIRED_ACCESS, akLeft | akTop | akRight);
-        pAnchors->AddAnchor(hDlg, IDC_DESIRED_ACCESS_BROWSE, akTop | akRight);
-        pAnchors->AddAnchor(hDlg, IDC_SHARE_ACCESS, akLeft | akTop | akRight);
-        pAnchors->AddAnchor(hDlg, IDC_SHARE_ACCESS_BROWSE, akTop | akRight);
-        pAnchors->AddAnchor(hDlg, IDC_CREATE_DISPOSITION, akLeft | akTop | akRight);
-        pAnchors->AddAnchor(hDlg, IDC_FILE_ATTRIBUTES, akLeft | akTop | akRight);
-        pAnchors->AddAnchor(hDlg, IDC_FILE_ATTRIBUTES_BROWSE, akTop | akRight);
-        pAnchors->AddAnchor(hDlg, IDC_TEMPLATE_FILE, akLeft | akTop | akRight);
-        pAnchors->AddAnchor(hDlg, IDC_TEMPLATE_FILE_BROWSE, akTop | akRight);
-        pAnchors->AddAnchor(hDlg, IDC_TRANSACTED, akLeft | akRight | akBottom);
-        pAnchors->AddAnchor(hDlg, IDC_VIRTUALIZATION, akLeft | akRight | akBottom);
-        pAnchors->AddAnchor(hDlg, IDC_BREAKPOINT, akLeft | akRight | akBottom);
-        pAnchors->AddAnchor(hDlg, IDC_PRIVILEGES, akLeft | akBottom);
-        pAnchors->AddAnchor(hDlg, IDC_MAKE_DIRECTORY, akLeft | akBottom);
-        pAnchors->AddAnchor(hDlg, IDC_CREATE_FILE, akRight | akBottom);
-        pAnchors->AddAnchor(hDlg, IDC_CLOSE_HANDLE, akRight | akBottom);
-        pAnchors->AddAnchor(hDlg, IDC_RESULT_FRAME, akLeft | akRight | akBottom);
-        pAnchors->AddAnchor(hDlg, IDC_ERROR_CODE_TITLE, akLeft | akBottom);
-        pAnchors->AddAnchor(hDlg, IDC_ERROR_CODE, akLeft | akRight | akBottom);
-        pAnchors->AddAnchor(hDlg, IDC_HANDLE_TITLE, akLeft | akBottom);
-        pAnchors->AddAnchor(hDlg, IDC_HANDLE, akLeft | akRight | akBottom);
+        if((pAnchors = new TAnchors(hDlg)) != NULL)
+        {
+            pAnchors->AddAnchor(hDlg, IDC_MAIN_FRAME, akAll);
+            pAnchors->AddAnchor(hDlg, IDC_DIRECTORY_NAME, akLeft | akTop | akRight);
+            pAnchors->AddAnchor(hDlg, IDC_DIRECTORY_NAME_BROWSE, akTop | akRight);
+            pAnchors->AddAnchor(hDlg, IDC_FILE_NAME, akLeft | akTop | akRight);
+            pAnchors->AddAnchor(hDlg, IDC_FILE_NAME_BROWSE, akTop | akRight);
+            pAnchors->AddAnchor(hDlg, IDC_DESIRED_ACCESS, akLeft | akTop | akRight);
+            pAnchors->AddAnchor(hDlg, IDC_DESIRED_ACCESS_BROWSE, akTop | akRight);
+            pAnchors->AddAnchor(hDlg, IDC_SHARE_ACCESS, akLeft | akTop | akRight);
+            pAnchors->AddAnchor(hDlg, IDC_SHARE_ACCESS_BROWSE, akTop | akRight);
+            pAnchors->AddAnchor(hDlg, IDC_CREATE_DISPOSITION, akLeft | akTop | akRight);
+            pAnchors->AddAnchor(hDlg, IDC_FILE_ATTRIBUTES, akLeft | akTop | akRight);
+            pAnchors->AddAnchor(hDlg, IDC_FILE_ATTRIBUTES_BROWSE, akTop | akRight);
+            pAnchors->AddAnchor(hDlg, IDC_TEMPLATE_FILE, akLeft | akTop | akRight);
+            pAnchors->AddAnchor(hDlg, IDC_TEMPLATE_FILE_BROWSE, akTop | akRight);
+            pAnchors->AddAnchor(hDlg, IDC_TRANSACTED, akLeft | akRight | akBottom);
+            pAnchors->AddAnchor(hDlg, IDC_VIRTUALIZATION, akLeft | akRight | akBottom);
+            pAnchors->AddAnchor(hDlg, IDC_BREAKPOINT, akLeft | akRight | akBottom);
+            pAnchors->AddAnchor(hDlg, IDC_PRIVILEGES, akLeft | akBottom);
+            pAnchors->AddAnchor(hDlg, IDC_MAKE_DIRECTORY, akLeft | akBottom);
+            pAnchors->AddAnchor(hDlg, IDC_CREATE_FILE, akRight | akBottom);
+            pAnchors->AddAnchor(hDlg, IDC_CLOSE_HANDLE, akRight | akBottom);
+            pAnchors->AddAnchor(hDlg, IDC_RESULT_FRAME, akLeft | akRight | akBottom);
+            pAnchors->AddAnchor(hDlg, IDC_ERROR_CODE_TITLE, akLeft | akBottom);
+            pAnchors->AddAnchor(hDlg, IDC_ERROR_CODE, akLeft | akRight | akBottom);
+            pAnchors->AddAnchor(hDlg, IDC_HANDLE_TITLE, akLeft | akBottom);
+            pAnchors->AddAnchor(hDlg, IDC_HANDLE, akLeft | akRight | akBottom);
+        }
     }
 
     // Initialize the combo box with operations
@@ -527,9 +529,7 @@ INT_PTR CALLBACK PageProc01(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
             return OnInitDialog(hDlg, lParam);
 
         case WM_SIZE:
-            if(pAnchors != NULL)
-                pAnchors->OnSize();
-            return FALSE;
+            return pAnchors->OnMessage(uMsg, wParam, lParam);
 
         case WM_COMMAND:
             return OnCommand(hDlg, HIWORD(wParam), LOWORD(wParam));

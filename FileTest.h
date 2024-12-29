@@ -190,7 +190,6 @@ struct TOpenPacket
 // Structure used by main dialog to hold all its data
 struct TWindowData
 {
-    TAnchors * pAnchors;                    // Set of anchors
     HWND hDlg;                              // Handle to ourself
     HWND hWndPage;                          // HWND of the current page
 
@@ -201,17 +200,9 @@ struct TWindowData
     DWORD dwAlertReason;                    // A reason why the watcher was stopped
     int nApcCount;                          // Number of queued APCs
 
-    int  nTabInnerLeft;                     // Inner space tab control <==> dialog client edge
-    int  nTabInnerTop;
-    int  nTabInnerRight;
-    int  nTabInnerBottom;
-    int  nButtonInnerRight;                 // Button distance from right-bottom corner
-    int  nButtonInnerBottom;
-
     UINT_PTR CheckMouseTimer;               // Timer for checking mouse
     RECT ScreenRect;                        // Size of the screen
     RECT DialogRect;                        // Size of the dialog
-    bool bInitialResizeDone;                // If TRUE, the first resize has already completed
     bool bDialogBiggerThanScreen;           // true = the main dialog is bigger than the screen
 
     HANDLE hThread;                         // Thread that moves the dialog

@@ -295,7 +295,7 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
     // Configure dialog resizing
     if(pData->bEnableResizing)
     {
-        if((pAnchors = new TAnchors()) != NULL)
+        if((pAnchors = new TAnchors(hDlg)) != NULL)
         {
             pAnchors->AddAnchor(hDlg, IDC_IOCTL_REQUEST_FRAME, akAll);
             pAnchors->AddAnchor(hDlg, IDC_IOCTL_CODE, akLeft | akTop | akRight);
@@ -567,9 +567,8 @@ INT_PTR CALLBACK PageProc12(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
             return TRUE;
 
         case WM_SIZE:
-            if(pAnchors != NULL)
-                pAnchors->OnSize();
-            return FALSE;
+        case WM_GETMINMAXINFO:
+            return pAnchors->OnMessage(uMsg, wParam, lParam);
 
         case WM_COMBO_CHANGED:
             OnComboBoxSelChanged(hDlg);

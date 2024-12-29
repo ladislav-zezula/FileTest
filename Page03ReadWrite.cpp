@@ -113,7 +113,7 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
     // Configure dialog resizing
     if(pData->bEnableResizing)
     {
-        pAnchors = new TAnchors();
+        pAnchors = new TAnchors(hDlg);
         pAnchors->AddAnchor(hDlg, IDC_BYTE_OFFSET_TITLE, akLeft | akTop | akRightCenter);
         pAnchors->AddAnchor(hDlg, IDC_BYTE_OFFSET, akLeft | akTop | akRightCenter);
         pAnchors->AddAnchor(hDlg, IDC_BYTE_OFFSET_SPIN, akTop | akRightCenter);
@@ -164,7 +164,7 @@ static int OnSetActive(HWND hDlg)
                                   IDC_WRITE_FILE,
                                   IDC_NTREAD_FILE,
                                   IDC_NTWRITE_FILE,
-                                  IDC_LOCK_FILE,
+IDC_LOCK_FILE,
                                   IDC_UNLOCK_FILE,
                                   IDC_NTLOCK_FILE,
                                   IDC_NTUNLOCK_FILE,
@@ -624,9 +624,7 @@ INT_PTR CALLBACK PageProc03(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
             return OnInitDialog(hDlg, lParam);
 
         case WM_SIZE:
-            if(pAnchors != NULL)
-                pAnchors->OnSize();
-            return FALSE;
+            return pAnchors->OnMessage(uMsg, wParam, lParam);
 
         case WM_APC:
             CompleteAsynchronousOperation(hDlg, (TApcEntry *)lParam, 0, 0);

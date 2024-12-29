@@ -226,9 +226,8 @@ static void ArrangeDialogButton(TFlagDialogData * pData, UINT nIDButton, int y, 
     // Retrieve handle to the child window
     if((hWndChild = GetDlgItem(hDlg, nIDButton)) != NULL)
     {
-        // Retrieve the child rect of the button
-        GetWindowRect(hWndChild, &rect);
-        ScreenRectToClientRect(hDlg, &rect);
+        // Retrieve the rect of the button (parent-relative)
+        GetWindowRectParentRelative(hWndChild, &rect);
         x = rect.left;
 
         // OK button is always visible and on the right side of the dialog

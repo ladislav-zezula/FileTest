@@ -667,7 +667,7 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
     // Configure dialog resizing
     if(pData->bEnableResizing)
     {
-        pAnchors = new TAnchors();
+        pAnchors = new TAnchors(hDlg);
         pAnchors->AddAnchor(hDlg, IDC_SYMLINK_FRAME, akLeft | akTop | akRight);
         pAnchors->AddAnchor(hDlg, IDC_SYMLINK_TARGET, akLeft | akTop | akRight);
         pAnchors->AddAnchor(hDlg, IDC_SYMLINK_QUERY, akLeft | akTop);
@@ -1558,9 +1558,8 @@ INT_PTR CALLBACK PageProc10(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM lParam)
             return OnInitDialog(hDlg, lParam);
 
         case WM_SIZE:
-            if(pAnchors != NULL)
-                pAnchors->OnSize();
-            return FALSE;
+        case WM_GETMINMAXINFO:
+            return pAnchors->OnMessage(uMsg, wParam, lParam);
 
         case WM_SHOW_HARDLINKS:
             OnShowHardlinks(hDlg);

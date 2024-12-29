@@ -16,6 +16,7 @@
 
 #define SC_HELP_ABOUT (SC_CLOSE + 0x800)
 
+static TAnchors * pAnchors;
 static SIZE InitialDialogSize = {0, 0};
 static BOOL bDisableCloseDialog = FALSE;
 
@@ -202,7 +203,7 @@ static void InitializeTabControl(HWND hDlg, LPARAM lParam)
 {
     TFileTestData * pData = (TFileTestData *)(lParam);
     PROPSHEETHEADER psh = {sizeof(PROPSHEETHEADER)};
-    PROPSHEETPAGE psp[13];
+    PROPSHEETPAGE psp[13] = {0};
     TCHAR szAppTitle[256];
     HWND hTabCtrl = GetDlgItem(hDlg, IDC_TAB);
     int nPageNtOpenFile = 0;
@@ -223,7 +224,6 @@ static void InitializeTabControl(HWND hDlg, LPARAM lParam)
     // Fill the "Transaction" page (Vista only)
     if(pfnCreateTransaction != NULL)
     {
-        ZeroMemory(&psp[nPages], sizeof(PROPSHEETPAGE));
         psp[nPages].dwSize      = sizeof(PROPSHEETPAGE);
         psp[nPages].dwFlags     = PSP_DEFAULT;
         psp[nPages].hInstance   = g_hInst;
@@ -234,19 +234,17 @@ static void InitializeTabControl(HWND hDlg, LPARAM lParam)
     }
 
     // Fill the "CreateFile" page
-    ZeroMemory(&psp[nPages], sizeof(PROPSHEETPAGE));
     psp[nPages].dwSize      = sizeof(PROPSHEETPAGE);
     psp[nPages].dwFlags     = PSP_DEFAULT;
     psp[nPages].hInstance   = g_hInst;
     psp[nPages].pszTemplate = MAKEINTRESOURCE(IDD_PAGE01_CREATE);
     psp[nPages].pfnDlgProc  = PageProc01;
     psp[nPages].lParam      = lParam;
-    nPageOpenFile = nPages;
-    psh.nStartPage = nPages++;
+    psh.nStartPage = nPages;
+    nPageOpenFile = nPages++;
 
     // Fill the "NtCreateFile"
     // Note: If the file name looks like an NT name, go to NtCreateFile page
-    ZeroMemory(&psp[nPages], sizeof(PROPSHEETPAGE));
     psp[nPages].dwSize      = sizeof(PROPSHEETPAGE);
     psp[nPages].dwFlags     = PSP_DEFAULT;
     psp[nPages].hInstance   = g_hInst;
@@ -257,7 +255,6 @@ static void InitializeTabControl(HWND hDlg, LPARAM lParam)
     nPages++;
 
     // Fill the "ReadWrite"
-    ZeroMemory(&psp[nPages], sizeof(PROPSHEETPAGE));
     psp[nPages].dwSize      = sizeof(PROPSHEETPAGE);
     psp[nPages].dwFlags     = PSP_DEFAULT;
     psp[nPages].hInstance   = g_hInst;
@@ -267,7 +264,6 @@ static void InitializeTabControl(HWND hDlg, LPARAM lParam)
     nPages++;
 
     // Fill the "Mapping"
-    ZeroMemory(&psp[nPages], sizeof(PROPSHEETPAGE));
     psp[nPages].dwSize      = sizeof(PROPSHEETPAGE);
     psp[nPages].dwFlags     = PSP_DEFAULT;
     psp[nPages].hInstance   = g_hInst;
@@ -277,7 +273,6 @@ static void InitializeTabControl(HWND hDlg, LPARAM lParam)
     nPages++;
 
     // Fill the "File Ops".
-    ZeroMemory(&psp[nPages], sizeof(PROPSHEETPAGE));
     psp[nPages].dwSize      = sizeof(PROPSHEETPAGE);
     psp[nPages].dwFlags     = PSP_DEFAULT;
     psp[nPages].hInstance   = g_hInst;
@@ -287,7 +282,6 @@ static void InitializeTabControl(HWND hDlg, LPARAM lParam)
     nPages++;
 
     // Fill the "NtFileInfo" page
-    ZeroMemory(&psp[nPages], sizeof(PROPSHEETPAGE));
     psp[nPages].dwSize      = sizeof(PROPSHEETPAGE);
     psp[nPages].dwFlags     = PSP_DEFAULT;
     psp[nPages].hInstance   = g_hInst;
@@ -297,7 +291,6 @@ static void InitializeTabControl(HWND hDlg, LPARAM lParam)
     nPages++;
 
     // Fill the "NtFsInfo" page.
-    ZeroMemory(&psp[nPages], sizeof(PROPSHEETPAGE));
     psp[nPages].dwSize      = sizeof(PROPSHEETPAGE);
     psp[nPages].dwFlags     = PSP_DEFAULT;
     psp[nPages].hInstance   = g_hInst;
@@ -307,7 +300,6 @@ static void InitializeTabControl(HWND hDlg, LPARAM lParam)
     nPages++;
 
     // Fill the "EA" page.
-    ZeroMemory(&psp[nPages], sizeof(PROPSHEETPAGE));
     psp[nPages].dwSize      = sizeof(PROPSHEETPAGE);
     psp[nPages].dwFlags     = PSP_DEFAULT;
     psp[nPages].hInstance   = g_hInst;
@@ -317,7 +309,6 @@ static void InitializeTabControl(HWND hDlg, LPARAM lParam)
     nPages++;
 
     // Fill the "Security".
-    ZeroMemory(&psp[nPages], sizeof(PROPSHEETPAGE));
     psp[nPages].dwSize      = sizeof(PROPSHEETPAGE);
     psp[nPages].dwFlags     = PSP_DEFAULT;
     psp[nPages].hInstance   = g_hInst;
@@ -327,7 +318,6 @@ static void InitializeTabControl(HWND hDlg, LPARAM lParam)
     nPages++;
 
     // Fill the "Links".
-    ZeroMemory(&psp[nPages], sizeof(PROPSHEETPAGE));
     psp[nPages].dwSize      = sizeof(PROPSHEETPAGE);
     psp[nPages].dwFlags     = PSP_DEFAULT;
     psp[nPages].hInstance   = g_hInst;
@@ -337,7 +327,6 @@ static void InitializeTabControl(HWND hDlg, LPARAM lParam)
     nPages++;
 
     // Fill the "Streams" page.
-    ZeroMemory(&psp[nPages], sizeof(PROPSHEETPAGE));
     psp[nPages].dwSize      = sizeof(PROPSHEETPAGE);
     psp[nPages].dwFlags     = PSP_DEFAULT;
     psp[nPages].hInstance   = g_hInst;
@@ -347,7 +336,6 @@ static void InitializeTabControl(HWND hDlg, LPARAM lParam)
     nPages++;
 
     // Fill the "Ioctl" page.
-    ZeroMemory(&psp[nPages], sizeof(PROPSHEETPAGE));
     psp[nPages].dwSize      = sizeof(PROPSHEETPAGE);
     psp[nPages].dwFlags     = PSP_DEFAULT;
     psp[nPages].hInstance   = g_hInst;
@@ -530,7 +518,21 @@ static void AddAboutToSystemMenu(HWND hDlg)
         }
     }
 }
+/*
+static void ArrangeTabControlAndExitButton(TWindowData * pData, HWND hTabCtrl, HWND hExitBtn, int nClientCX, int nClientCY)
+{
+    int x, y, cx, cy;
 
+    cx = nClientCY - (pData->nTabInnerLeft + pData->nTabInnerRight);
+    cy = nClientCX - (pData->nTabInnerTop + pData->nTabInnerBottom);
+    TabCtrl_Resize(hTabCtrl, pData->nTabInnerLeft, pData->nTabInnerTop, cx, cy);
+
+    // Move the Exit button
+    x = nClientCY - pData->nButtonInnerRight;
+    y = nClientCX - pData->nButtonInnerBottom;
+    SetWindowPos(hExitBtn, NULL, x, y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
+}
+*/
 //-----------------------------------------------------------------------------
 // Dialog handlers
 
@@ -559,6 +561,13 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
     InitialDialogSize.cx = (rectDialog.right - rectDialog.left);
     InitialDialogSize.cy = (rectDialog.bottom - rectDialog.top);
 
+    // Create anchors for the tab control and Exit button
+    if((pAnchors = new TAnchors(hDlg)) != NULL)
+    {
+        pAnchors->AddAnchor(hDlg, IDC_TAB, akAll);
+        pAnchors->AddAnchor(hDlg, IDC_EXIT, akRightBottom);
+    }
+
     // Create the tooltip window
     g_Tooltip.Initialize(g_hInst, hDlg);
 
@@ -572,62 +581,6 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
     pData->hAlertEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
     pData->hApcThread = CreateThread(NULL, 0, ApcThread, pData, 0, &dwThreadId);
     return TRUE;
-}
-
-static void OnSize(HWND hDlg, LPARAM lParam)
-{
-    TWindowData * pData = GetDialogData(hDlg);
-    HWND hTabCtrl = GetDlgItem(hDlg, IDC_TAB);
-    HWND hButton = GetDlgItem(hDlg, IDC_EXIT);
-    RECT rect;
-    int nHeight = HIWORD(lParam);
-    int nWidth = LOWORD(lParam);
-    int x, y, cx, cy;
-
-    // Sanity check for zero size
-    if(pData != NULL && nWidth != 0 && nHeight != 0)
-    {
-        // If the dialog hasn't done the initial resize,
-        // we have to remember the relative sizes of the tab control
-        // and the exit button
-        if(!pData->bInitialResizeDone)
-        {
-            // Save the relative position of the tab control
-            GetWindowRect(hTabCtrl, &rect);
-            ScreenRectToClientRect(hDlg, &rect);
-            pData->nTabInnerTop = rect.top;
-            pData->nTabInnerLeft = rect.left;
-            pData->nTabInnerRight = pData->nTabInnerTop;
-            pData->nTabInnerBottom = pData->nTabInnerTop;
-
-            // Save position of the "Exit" button
-            GetWindowRect(hButton, &rect);
-            pData->nButtonInnerRight = pData->nTabInnerRight + (rect.right - rect.left);
-            pData->nButtonInnerBottom = pData->nTabInnerBottom + (rect.bottom - rect.top);
-
-            // Update the inner bottom margin of the tab cobtrol
-            pData->nTabInnerBottom = pData->nButtonInnerBottom + 8;
-            pData->bInitialResizeDone = true;
-        }
-
-        // Resize the tab control
-        cx = nWidth - (pData->nTabInnerLeft + pData->nTabInnerRight);
-        cy = nHeight - (pData->nTabInnerTop + pData->nTabInnerBottom);
-        TabCtrl_Resize(hTabCtrl, pData->nTabInnerLeft, pData->nTabInnerTop, cx, cy);
-
-        // Move the Exit button
-        x = nWidth - pData->nButtonInnerRight;
-        y = nHeight - pData->nButtonInnerBottom;
-        SetWindowPos(hButton, NULL, x, y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
-    }
-}
-
-static void OnGetMinMaxInfo(HWND /* hDlg */, LPARAM lParam)
-{
-    LPMINMAXINFO pmmi = (LPMINMAXINFO)lParam;
-
-    pmmi->ptMinTrackSize.x = InitialDialogSize.cx;
-    pmmi->ptMinTrackSize.y = InitialDialogSize.cy;
 }
 
 static void OnTimerCheckMouse(HWND hDlg)
@@ -745,12 +698,9 @@ static INT_PTR CALLBACK DialogProc(HWND hDlg, UINT uMsg, WPARAM wParam, LPARAM l
             return TRUE;
 
         case WM_SIZE:
-            OnSize(hDlg, lParam);
-            return FALSE;
-
         case WM_GETMINMAXINFO:
-            OnGetMinMaxInfo(hDlg, lParam);
-            return FALSE;
+            pAnchors->OnMessage(uMsg, wParam, lParam);
+            break;
 
         case WM_WINDOWPOSCHANGED:
         case WM_DISPLAYCHANGE:
