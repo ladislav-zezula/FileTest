@@ -61,6 +61,8 @@
 #define IDC_OBJ_ATTR_FLAGS_BROWSE       1006
 #define IDC_ALLOCATION_TYPE_BROWSE      1006
 #define IDC_EXTENDED_ATTRIBUTES_EDIT    1007
+#define IDC_MAPPED_FILE_NAME_QUERY      1007
+#define IDC_MAPPED_NAME_QUERY           1007
 #define IDC_VERSION                     1009
 #define IDC_READ_FILE                   1032
 #define IDC_QUERY_INFO                  1032
@@ -265,6 +267,7 @@
 #define IDC_NTCLOSE                     1194
 #define IDC_FILE_HANDLE                 1195
 #define IDC_SECTION_FRAME               1196
+#define IDS_SECTION_FRAME               1196
 #define IDC_SECTION_VIEW_FRAME          1197
 #define IDC_WIN32_PROTECTION            1198
 #define IDC_BASE_ADDRESS_UPDOWN         1199
@@ -280,6 +283,7 @@
 #define IDC_DATA_EDITOR                 1207
 #define IDC_MEM_COPY_READ2              1208
 #define IDC_MEM_COPY_WRITE              1208
+#define IDC_MAPPED_NAME                 1208
 #define IDC_ALLOCATION_ATTRIBUTES_BROWSE 1209
 #define IDC_SECTION_NAME                1210
 #define IDC_SECTION_OFFSET              1211
@@ -467,6 +471,7 @@
 #define IDS_FORMAT_VALUE                4127
 #define IDS_FORMAT_VALINDEX             4128
 #define IDS_FORMAT_POLICY_ID            4129
+#define IDS_MAPPED_NAME_HINT            4130
 #define ID_EDIT_LABEL                   40001
 #define ID_NEW_ACE_BEFORE               40008
 #define ID_NEW_ACE_AFTER                40009

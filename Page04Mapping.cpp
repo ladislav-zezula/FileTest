@@ -229,7 +229,6 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
         pAnchors->AddAnchor(hDlg, IDC_PAGE_PROTECTION, akLeft | akTop | akRight);
         pAnchors->AddAnchor(hDlg, IDC_ALLOCATION_ATTRIBUTES, akLeft | akTop | akRight);
         pAnchors->AddAnchor(hDlg, IDC_ALLOCATION_ATTRIBUTES_BROWSE, akTop | akRight);
-        pAnchors->AddAnchor(hDlg, IDC_FILE_HANDLE, akLeft | akTop | akRight);
 
         pAnchors->AddAnchor(hDlg, IDC_NTCREATE_SECTION, akLeft | akTop);
         pAnchors->AddAnchor(hDlg, IDC_NTOPEN_SECTION, akLeftCenter | akTop);
@@ -247,6 +246,8 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
         pAnchors->AddAnchor(hDlg, IDC_ALLOCATION_TYPE, akLeft | akTop | akRight);
         pAnchors->AddAnchor(hDlg, IDC_ALLOCATION_TYPE_BROWSE, akTop | akRight);
         pAnchors->AddAnchor(hDlg, IDC_WIN32_PROTECTION, akLeft | akTop | akRight);
+        pAnchors->AddAnchor(hDlg, IDC_MAPPED_NAME, akLeft | akTop | akRight);
+        pAnchors->AddAnchor(hDlg, IDC_MAPPED_NAME_QUERY, akTop | akRight);
 
         pAnchors->AddAnchor(hDlg, IDC_MAP_VIEW, akLeft | akTop);
         pAnchors->AddAnchor(hDlg, IDC_DATA_EDITOR, akLeftCenter | akTop);
@@ -263,6 +264,7 @@ static int OnInitDialog(HWND hDlg, LPARAM lParam)
     g_Tooltip.AddToolTip(hDlg, IDC_DESIRED_ACCESS, SectionAccessValues);
     g_Tooltip.AddToolTip(hDlg, IDC_ALLOCATION_ATTRIBUTES, AllocationAttributesValues);
     g_Tooltip.AddToolTip(hDlg, IDC_ALLOCATION_TYPE, AllocationTypeValues);
+    g_Tooltip.AddToolTip(hDlg, IDC_MAPPED_NAME, IDS_MAPPED_NAME_HINT);
 
     // Initialize the combo box
     InitPageProtections(hDlg, IDC_PAGE_PROTECTION, PageProtectionValues);
@@ -289,12 +291,16 @@ static int OnSetActive(HWND hDlg)
 {
     TFileTestData * pData = GetDialogData(hDlg);
     HANDLE FileHandle = IsHandleValid(pData->hFile) ? pData->hFile : NULL;
+    TCHAR szHandle[48] = _T("NULL");
+    HWND hWndChild;
 
-    // Either set NULL or the handle value
-    if(FileHandle == NULL)
-        SetDlgItemText(hDlg, IDC_FILE_HANDLE, _T("NULL"));
-    else
-        Hex2DlgTextPtr(hDlg, IDC_FILE_HANDLE, (DWORD_PTR)FileHandle);
+    // Set the file handle into the section frame title
+    if((hWndChild = GetDlgItem(hDlg, IDC_SECTION_FRAME)) != NULL)
+    {
+        if(FileHandle != NULL)
+            StringCchPrintf(szHandle, _countof(szHandle), _T("0x%x"), FileHandle);
+        SetWindowTextRc(hWndChild, IDC_SECTION_FRAME, szHandle);
+    }
 
     UpdateDialog(hDlg, pData);
     return TRUE;
@@ -390,6 +396,51 @@ static int OnNtCloseClick(HWND hDlg)
     // Set the result info
     SetResultInfo(hDlg, RSI_NTSTATUS | RSI_HANDLE, Status, pData->hSection);
     UpdateDialog(hDlg, pData);
+    return TRUE;
+}
+
+static int OnQueryMappedFileName(HWND hDlg)
+{
+    TFileTestData * pData = GetDialogData(hDlg);
+    NTSTATUS Status;
+    PUNICODE_STRING Buffer;
+    SIZE_T BufferSize = sizeof(UNICODE_STRING) + (MAX_PATH * sizeof(WCHAR));
+
+    if(SaveDialog2(hDlg) == ERROR_SUCCESS)
+    {
+        __RetryBiggerBuffer:
+
+        // Allocate memory for the string plus zero termination
+        if((Buffer = (PUNICODE_STRING)LocalAlloc(LPTR, BufferSize)) != NULL)
+        {
+            // Query the mapped file name
+            Status = NtQueryVirtualMemory(NtCurrentProcess(),
+                                          pData->pvSectionMappedView,
+                                          MemorySectionName,
+                                          Buffer,
+                                          BufferSize,
+                                         &BufferSize);
+
+            // If failed because of not enough memory
+            if(Status == STATUS_BUFFER_OVERFLOW)
+            {
+                LocalFree(Buffer);
+                goto __RetryBiggerBuffer;
+            }
+
+            // Report the mapped file name
+            SetDlgItemText(hDlg, IDC_MAPPED_NAME, NT_SUCCESS(Status) ? Buffer->Buffer : L"");
+            SetResultInfo(hDlg, RSI_NTSTATUS, Status);
+            UpdateDialog(hDlg, pData);
+
+            // Free the allocated buffer
+            LocalFree(Buffer);
+        }
+        else
+        {
+            Status = STATUS_NO_MEMORY;
+        }
+    }
     return TRUE;
 }
 
@@ -564,7 +615,10 @@ static int OnCommand(HWND hDlg, UINT nNotify, UINT nIDCtrl)
 
             case IDC_NTCLOSE:
                 return OnNtCloseClick(hDlg);
-            
+
+            case IDC_MAPPED_FILE_NAME_QUERY:
+                return OnQueryMappedFileName(hDlg);
+
             case IDC_MAP_VIEW:
                 return OnMapViewClick(hDlg);
 
