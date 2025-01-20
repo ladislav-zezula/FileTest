@@ -490,7 +490,6 @@ BOOL SetTokenVirtualizationEnabled(BOOL bEnabled);
 HWND AttachIconToEdit(HWND hDlg, HWND hWndChild, LPTSTR szIDIcon);
 
 void ResolveDynamicLoadedAPIs();
-void UnloadDynamicLoadedAPIs();
 
 BOOLEAN  IsNativeName(LPCWSTR szFileName);
 

@@ -518,21 +518,7 @@ static void AddAboutToSystemMenu(HWND hDlg)
         }
     }
 }
-/*
-static void ArrangeTabControlAndExitButton(TWindowData * pData, HWND hTabCtrl, HWND hExitBtn, int nClientCX, int nClientCY)
-{
-    int x, y, cx, cy;
 
-    cx = nClientCY - (pData->nTabInnerLeft + pData->nTabInnerRight);
-    cy = nClientCX - (pData->nTabInnerTop + pData->nTabInnerBottom);
-    TabCtrl_Resize(hTabCtrl, pData->nTabInnerLeft, pData->nTabInnerTop, cx, cy);
-
-    // Move the Exit button
-    x = nClientCY - pData->nButtonInnerRight;
-    y = nClientCX - pData->nButtonInnerBottom;
-    SetWindowPos(hExitBtn, NULL, x, y, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
-}
-*/
 //-----------------------------------------------------------------------------
 // Dialog handlers
 

@@ -1179,114 +1179,37 @@ CREATEFILETRANSACTED     pfnCreateFileTransacted  = NULL;
 CREATEHARDLINK           pfnCreateHardLink = NULL;
 ADDMANDATORYACE          pfnAddMandatoryAce = NULL;
 
-static HINSTANCE hNtdll = NULL;
-static HINSTANCE hKernel32 = NULL;
-static HINSTANCE hAdvapi32 = NULL;
 static HINSTANCE hKtmw32 = NULL;
-
-DWORD GetBuildNumber(HMODULE hMod)
-{
-    ULARGE_INTEGER Version;
-    TCHAR szFileName[MAX_PATH];
-
-    GetModuleFileName(hMod, szFileName, _countof(szFileName));
-    GetModuleVersion(szFileName, &Version);
-    return HIWORD(Version.LowPart);
-}
 
 void ResolveDynamicLoadedAPIs()
 {
     // Get imports from Ntdll.dll
-    if(hNtdll == NULL)
-    {
-        hNtdll = GetModuleHandle(_T("Ntdll.dll"));
-        if(hNtdll != NULL)
-        {
-            pfnRtlGetCurrentTransaction = (RTLGETCURRENTTRANSACTION)
-                                          GetProcAddress(hNtdll, "RtlGetCurrentTransaction");
-            pfnRtlSetCurrentTransaction = (RTLSETCURRENTTRANSACTION)
-                                          GetProcAddress(hNtdll, "RtlSetCurrentTransaction");
-            g_dwWinBuild = GetBuildNumber(hNtdll);
-        }
-    }
+    ResolveAPIs(g_szNtdllDll, "RtlGetCurrentTransaction", (FARPROC *)(&pfnRtlGetCurrentTransaction),
+                              "RtlSetCurrentTransaction", (FARPROC *)(&pfnRtlSetCurrentTransaction), NULL);
+    g_dwWinBuild = GetWindowsBuildNumber();
 
     // Get imports from Kernel32.dll
-    if(hKernel32 == NULL)
-    {
-        hKernel32 = GetModuleHandle(_T("Kernel32.dll"));
-        if(hKernel32 != NULL)
-        {
+    ResolveAPIs(g_szKernel32Dll,
 #ifdef _UNICODE
-            pfnCreateDirectoryTransacted = (CREATEDIRTRANSACTED)GetProcAddress(hKernel32, "CreateDirectoryTransactedW");
-            pfnCreateFileTransacted = (CREATEFILETRANSACTED)GetProcAddress(hKernel32, "CreateFileTransactedW");
-            pfnCreateHardLink = (CREATEHARDLINK)GetProcAddress(hKernel32, "CreateHardLinkW");
+                "CreateDirectoryTransactedW", (FARPROC *)(&pfnCreateDirectoryTransacted),
+                "CreateFileTransactedW", (FARPROC *)(&pfnCreateFileTransacted),
+                "CreateHardLinkW", (FARPROC *)(&pfnCreateHardLink),
 #else
-            pfnCreateDirectoryTransacted = (CREATEDIRTRANSACTED)GetProcAddress(hKernel32, "CreateDirectoryTransactedA");
-            pfnCreateFileTransacted = (CREATEFILETRANSACTED)GetProcAddress(hKernel32, "CreateFileTransactedA");
-            pfnCreateHardLink = (CREATEHARDLINK)GetProcAddress(hKernel32, "CreateHardLinkA");
+                "CreateDirectoryTransactedA", (FARPROC *)(&pfnCreateDirectoryTransacted),
+                "CreateFileTransactedA", (FARPROC *)(&pfnCreateFileTransacted),
+                "CreateHardLinkA", (FARPROC *)(&pfnCreateHardLink),
 #endif
-        }
-    }
+                NULL);
 
     // Get imports from Advapi32.dll
-    if(hAdvapi32 == NULL)
-    {
-        hAdvapi32 = LoadLibrary(_T("Advapi32.dll"));
-        if(hAdvapi32 != NULL)
-        {
-            pfnAddMandatoryAce = (ADDMANDATORYACE)GetProcAddress(hAdvapi32, "AddMandatoryAce");
-        }
-    }
+    ResolveAPI(g_szAdvapi32Dll, "AddMandatoryAce", (FARPROC *)(pfnAddMandatoryAce));
 
     // Get imports from Ktmw32.dll
-    if(hKtmw32 == NULL)
-    {
-        hKtmw32 = LoadLibrary(_T("Ktmw32.dll"));
-        if(hKtmw32 != NULL)
-        {
-            pfnCreateTransaction   = (CREATETRANSACTION)GetProcAddress(hKtmw32, "CreateTransaction");
-            pfnCommitTransaction   = (COMMITTRANSACTION)GetProcAddress(hKtmw32, "CommitTransaction");
-            pfnRollbackTransaction = (ROLLBACKTRANSACTION)GetProcAddress(hKtmw32, "RollbackTransaction");
-        }
-    }
-}
-
-void UnloadDynamicLoadedAPIs()
-{
-    if(hKtmw32 != NULL)
-    {
-        pfnCreateTransaction   = NULL;
-        pfnCommitTransaction   = NULL;
-        pfnRollbackTransaction = NULL;
-
-        FreeLibrary(hKtmw32);
-        hKtmw32 = NULL;
-    }
-
-    if(hAdvapi32 == NULL)
-    {
-        pfnAddMandatoryAce = NULL;
-        
-        FreeLibrary(hAdvapi32);
-        hAdvapi32 = NULL;
-    }
-
-    if(hKernel32 != NULL)
-    {
-        pfnCreateFileTransacted = NULL;
-
-        FreeLibrary(hKernel32);
-        hKernel32 = NULL;
-    }
-
-    if(hNtdll != NULL)
-    {
-        pfnRtlGetCurrentTransaction = NULL;
-        pfnRtlSetCurrentTransaction = NULL;
-
-        FreeLibrary(hNtdll);
-        hNtdll = NULL;
-    }
+    ResolveAPIs(_T("Ktmw32.dll"),
+                "CreateTransaction", (FARPROC *)(&pfnCreateTransaction),
+                "CommitTransaction", (FARPROC *)(&pfnCommitTransaction),
+                "RollbackTransaction", (FARPROC *)(&pfnRollbackTransaction),
+                NULL);
 }
 
 //-----------------------------------------------------------------------------

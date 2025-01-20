@@ -673,14 +673,13 @@ static DWORD WINAPI CopyFileWorker(LPVOID lpParameter)
 static INT_PTR OnInitDialog(HWND hDlg, LPARAM lParam)
 {
     TDialogData * pData = (TDialogData *)lParam;
-    HMODULE hKernel32 = GetModuleHandle(_T("Kernel32.dll"));
 
     // Set the dialog icon
     SetDialogIcon(hDlg, IDI_FILE_TEST);
 
     // Set the copy options
-    pData->pfnCopyFileEx = (COPYFILEEX)GetProcAddress(hKernel32, "CopyFileExW");
-    pData->pfnCopyFile   = (COPYFILE)GetProcAddress(hKernel32, "CopyFileW");
+    ResolveAPIs(g_szKernel32Dll, "CopyFileExW", (FARPROC *)(&pData->pfnCopyFileEx),
+                                 "CopyFileW", (FARPROC *)(&pData->pfnCopyFile), NULL);
     pData->hDlg          = hDlg;
     pData->hCopyMethod   = GetDlgItem(hDlg, IDC_COPY_METHOD);
     pData->hProgress     = GetDlgItem(hDlg, IDC_COPY_PROGRESS);

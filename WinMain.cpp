@@ -396,7 +396,6 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE, LPTSTR, int)
         delete pData;
     }
 
-    UnloadDynamicLoadedAPIs();
     return 0;
 }
 
