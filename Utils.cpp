@@ -1202,7 +1202,7 @@ void ResolveDynamicLoadedAPIs()
                 NULL);
 
     // Get imports from Advapi32.dll
-    ResolveAPI(g_szAdvapi32Dll, "AddMandatoryAce", (FARPROC *)(pfnAddMandatoryAce));
+    ResolveAPI(g_szAdvapi32Dll, "AddMandatoryAce", (FARPROC *)(&pfnAddMandatoryAce));
 
     // Get imports from Ktmw32.dll
     ResolveAPIs(_T("Ktmw32.dll"),
