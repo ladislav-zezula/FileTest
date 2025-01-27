@@ -1402,11 +1402,11 @@ static int OnReparseQuery(HWND hDlg)
     {
         // Open the reparse point
         Status = NtOpenFile(&hFile,
-                             FILE_READ_ATTRIBUTES,
+                             FILE_READ_ATTRIBUTES | SYNCHRONIZE,
                             &ObjAttr,
                             &IoStatus,
                              FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-                             FILE_OPEN_REPARSE_POINT);
+                             FILE_OPEN_REPARSE_POINT | FILE_SYNCHRONOUS_IO_ALERT);
         if(NT_SUCCESS(Status))
         {
             // Reset the data of the reparse point, so we don't have any artifacts from the past
@@ -1414,7 +1414,7 @@ static int OnReparseQuery(HWND hDlg)
             pData->ReparseDataValid = 0;
 
             // Query the reparse point
-            Status = NtFsControlFile(hFile, 
+            Status = NtFsControlFile(hFile,
                                      NULL,
                                      NULL,
                                      NULL,
