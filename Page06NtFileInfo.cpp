@@ -1044,7 +1044,6 @@ TStructMember FileFsVolumeInformationMembers[] =
     {NULL, TYPE_NONE, 0}
 };
 
-
 TStructMember FileFsLabelInformationMembers[] =
 {   
     {_T("VolumeLabelLength"),  TYPE_UINT32,  sizeof(ULONG)},
@@ -1246,7 +1245,7 @@ static HWND hToolTip = NULL;
 //-----------------------------------------------------------------------------
 // Forward definitions
 
-static int FillChainedStructMembers(
+static int FillStructMembersChained(
     HWND hTreeView,
     HTREEITEM hParentItem,
     TStructMember * pMembers,
@@ -1256,6 +1255,38 @@ static int FillChainedStructMembers(
 
 //-----------------------------------------------------------------------------
 // Conversion functions
+
+#define NEXT_ENTRY_OFFSET_ATRIFICIAL    0x80000000
+
+typedef struct _CHAINED_ENTRY
+{
+    ULONG NextEntryOffset;
+} CHAINED_ENTRY, *PCHAINED_ENTRY;
+
+static PCHAINED_ENTRY DirEntry_Find(LPBYTE PtrEntry, ULONG_PTR DataLength)
+{
+    PCHAINED_ENTRY DirEntry = (PCHAINED_ENTRY)PtrEntry;
+    LPBYTE EndEntry = PtrEntry + DataLength;
+
+    while(DirEntry->NextEntryOffset != 0 && PtrEntry < EndEntry)
+    {
+        PtrEntry = PtrEntry + DirEntry->NextEntryOffset;
+        DirEntry = (PCHAINED_ENTRY)PtrEntry;
+    }
+    return DirEntry;
+}
+
+static void DirEntry_Mark(PCHAINED_ENTRY LastEntry, LPBYTE pbDataPtr)
+{
+    LPBYTE pbLastEntry = (LPBYTE)LastEntry;
+
+    // At this point, the last entry's "next" offset should be zero
+    assert(LastEntry->NextEntryOffset == 0);
+    assert(pbDataPtr > pbLastEntry);
+
+    // Set the last entry's offset to the next item.
+    LastEntry->NextEntryOffset = NEXT_ENTRY_OFFSET_ATRIFICIAL | (ULONG)(pbDataPtr - pbLastEntry);
+}
 
 static int GetAlignedDataLength(LPBYTE pbStructPtr, LPBYTE pbData, int nTypeSize, int nAlignmentSize)
 {
@@ -2371,7 +2402,7 @@ static size_t FillStructureMembers(
             case TYPE_CHAINED_STRUCT:
 
                 hSubItem = InsertTreeItem(hTreeView, hParentItem, pMembers->szMemberName);
-                nDataLength = FillChainedStructMembers(hTreeView, 
+                nDataLength = FillStructMembersChained(hTreeView,
                                                        hSubItem,
                                                        pMembers->pSubItems,
                                                        pbData,
@@ -2445,7 +2476,7 @@ static size_t FillStructureMembers(
 // This function fills a variable length structure
 // The data structure must contain "ULONG NextEntryOffset"
 // as its very first member
-static int FillChainedStructMembers(
+static int FillStructMembersChained(
     HWND hTreeView,
     HTREEITEM hParentItem,
     TStructMember * pMembers,
@@ -2453,33 +2484,37 @@ static int FillChainedStructMembers(
     LPBYTE pbDataEnd)
 {
     HTREEITEM hItem;
+    LPBYTE pbDataBegin = pbData;
     TCHAR szItemName[128];
-    ULONG NextEntryOffset;
-    int nDataLength = 0;
     int nIndex = 0;
 
     // Insert infos about the streams
     while(pbData < pbDataEnd)
     {
+        PCHAINED_ENTRY ChainedEntry = (PCHAINED_ENTRY)(pbData);
+        ULONG NextEntryOffset = ChainedEntry->NextEntryOffset;
+
+        // Fixup entries with artificial NextEntryOffset
+        if(ChainedEntry->NextEntryOffset & NEXT_ENTRY_OFFSET_ATRIFICIAL)
+        {
+            NextEntryOffset &= ~NEXT_ENTRY_OFFSET_ATRIFICIAL;
+            ChainedEntry->NextEntryOffset = 0;
+        }
+
         StringCchPrintf(szItemName, _countof(szItemName), _T("[%u]"), nIndex++);
         hItem = InsertTreeItem(hTreeView, hParentItem, szItemName, pbData);
         FillStructureMembers(hTreeView, hItem, pMembers, pbData, pbDataEnd);
 
         // If the "NextEntryOffset" is zero, we stop searching
-        NextEntryOffset = *(PULONG)pbData;
         if(NextEntryOffset == 0)
             break;
-
-        // Move to the next structure by simply adding the NextEntryOffset
-        // to the current pointer. Also add NextEntryOffset to data size 
-        nDataLength += NextEntryOffset;
         pbData += NextEntryOffset;
     }
 
     // At the end, we have to round the structure size up to 8-byte boundary
     // Return the total length of the stream info
     TreeView_Expand(hTreeView, hParentItem, TVE_EXPAND);
-    return nDataLength;
+    return (ULONG)(pbData - pbDataBegin);
 }
 
 static size_t FillDialogWithFileInfo(HWND hDlg, TInfoData * pInfoData, int nInfoClass)
@@ -2521,7 +2556,7 @@ static size_t FillDialogWithFileInfo(HWND hDlg, TInfoData * pInfoData, int nInfo
             }
             else
             {
-                nInputLength = FillChainedStructMembers(hTreeView, 
+                nInputLength = FillStructMembersChained(hTreeView,
                                                         hRootItem,
                                                         pInfoData->pStructMembers,
                                                         pData->NtInfoData.pbData,
@@ -3259,7 +3294,9 @@ static int OnQueryDirClick(HWND hDlg)
     IO_STATUS_BLOCK IoStatus = {0};
     PUNICODE_STRING FileMask = NULL;
     TInfoData * pInfoData;
+    ULONG_PTR TotalLength = 0;
     NTSTATUS Status = STATUS_SUCCESS;
+    BOOLEAN RestartScan = TRUE;
     HANDLE hEvent = NULL;
     ULONG Length = 0;
 
@@ -3284,7 +3321,7 @@ static int OnQueryDirClick(HWND hDlg)
     // If the required length is bigger than the current one, reallocate the buffer
     pData->NtInfoData.SetLength(Length);
 
-    // Perform the call
+    // Create event for asynchronous calls
     if(NT_SUCCESS(Status))
     {
         hEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
@@ -3292,38 +3329,73 @@ static int OnQueryDirClick(HWND hDlg)
             Status = STATUS_UNSUCCESSFUL;
     }
 
+    // Perform the directory query. Note that we need to keep enumerating
+    // until we get out of memory or until STATUS_NO_MORE_FILES is returned.
+    // https://github.com/ladislav-zezula/FileTest/issues/32
     if(NT_SUCCESS(Status))
     {
-        Status = NtQueryDirectoryFile(pData->hFile,
-                                      hEvent,
-                                      NULL,
-                                      NULL,
-                                     &IoStatus,
-                                      pData->NtInfoData.pbData,
-                                      Length, 
-                                      FileInfoClass,
-                                      FALSE,
-                                      FileMask,
-                                      TRUE);
+        PCHAINED_ENTRY LastEntry = NULL;
+        LPBYTE pbDataEnd = pData->NtInfoData.pbData + pData->NtInfoData.cbData;
+        LPBYTE pbDataPtr = pData->NtInfoData.pbData;
 
-        // If the operation is pending, we have to wait until it's complete
-        if(Status == STATUS_PENDING)
+        // Do not allow buffer overflow
+        while(pbDataPtr < pbDataEnd)
         {
-            WaitForSingleObject(hEvent, INFINITE);
-            Status = IoStatus.Status;
+            // Perform the single directory query
+            Status = NtQueryDirectoryFile(pData->hFile,
+                                          hEvent,
+                                          NULL,
+                                          NULL,
+                                         &IoStatus,
+                                          pbDataPtr,
+                                  (ULONG)(pbDataEnd - pbDataPtr),
+                                          FileInfoClass,
+                                          FALSE,
+                                          FileMask,
+                                          RestartScan);
+
+            // If the operation is pending, we have to wait until it's complete
+            if(Status == STATUS_PENDING)
+            {
+                WaitForSingleObject(hEvent, INFINITE);
+                Status = IoStatus.Status;
+            }
+
+            // Calculate the total length returned
+            TotalLength = (pbDataPtr + IoStatus.Information) - pData->NtInfoData.pbData;
+
+            // Anything else than STATUS_SUCCESS will break the loop.
+            // At the end of the search, we expect STATUS_NO_MORE_FILES
+            if(Status != STATUS_SUCCESS)
+                break;
+
+            // If we have a last dir entry from the previous search,
+            // mark the last entry so we can later process the whole buffer
+            // as if it was result of a single search
+            if(LastEntry != NULL)
+                DirEntry_Mark(LastEntry, pbDataPtr);
+            LastEntry = DirEntry_Find(pbDataPtr, IoStatus.Information);
+
+            // Prepare the pointer to the next directory query.
+            // Don't forget that it needs to be aligned to 8-byte boundary.
+            pbDataPtr += ALIGN_TO_SIZE(IoStatus.Information, 0x08);
+            RestartScan = FALSE;
         }
-    }                                        
+    }
 
     // If succeeded, we have to fill the dialog with file info
-    if(NT_SUCCESS(Status) || Status == STATUS_BUFFER_OVERFLOW)
+    if(NT_SUCCESS(Status) || Status == STATUS_NO_MORE_FILES || Status == STATUS_BUFFER_OVERFLOW)
+    {
+        pData->NtInfoData.SetLength(TotalLength);
         FillDialogWithFileInfo(hDlg, FileInfoData, (int)FileInfoClass);
-    SetResultInfo(hDlg, RSI_NTSTATUS | RSI_INFORMATION, Status, &IoStatus);
+    }
 
     // Set the result status and return
     if(hEvent != NULL)
         CloseHandle(hEvent);
     if(FileMask != NULL)
         HeapFree(g_hHeap, 0, FileMask);
+    SetResultInfo(hDlg, RSI_NTSTATUS | RSI_INFORMATION, Status, &IoStatus);
     return TRUE;
 }
 

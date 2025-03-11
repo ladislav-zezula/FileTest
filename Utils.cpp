@@ -2016,7 +2016,9 @@ DWORD TDataBlob::SetLength(SIZE_T cbNewData)
         cbDataMax = cbNewDataAligned;
     }
 
-    // Set the new length and exit
+    // Set the new length. Zero the space behind, if any
+    if(cbNewData < cbDataMax)
+        memset(pbData + cbNewData, 0, (cbDataMax - cbNewData));
     cbData = cbNewData;
     return ERROR_SUCCESS;
 }
