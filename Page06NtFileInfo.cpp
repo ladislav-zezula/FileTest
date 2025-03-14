@@ -3369,15 +3369,13 @@ static int OnQueryDirClick(HWND hDlg)
             if(Status != STATUS_SUCCESS)
                 break;
 
-            // If we have a last dir entry from the previous search,
-            // mark the last entry so we can later process the whole buffer
-            // as if it was result of a single search
+            // If we have data from the previous search, mark the last entry
+            // so we can later process the whole buffer as if it was result of a single search
             if(LastEntry != NULL)
                 DirEntry_Mark(LastEntry, pbDataPtr);
             LastEntry = DirEntry_Find(pbDataPtr, IoStatus.Information);
 
-            // Prepare the pointer to the next directory query.
-            // Don't forget that it needs to be aligned to 8-byte boundary.
+            // Prepare the 8-byte-aligned pointer to the next directory query
             pbDataPtr += ALIGN_TO_SIZE(IoStatus.Information, 0x08);
             RestartScan = FALSE;
         }
