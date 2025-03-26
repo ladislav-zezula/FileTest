@@ -607,33 +607,36 @@ HGLOBAL TreeView_CopyToClipboard(HWND hWndTree, HTREEITEM hItem, HGLOBAL hGlobal
 {
     HTREEITEM hChild;
     TVITEMEX tvi;
+    LPTSTR szText;
+    LPTSTR szEnd;
     TCHAR szBuffer[0x400] = _T("");
-    TCHAR szIndent[0x400];
     size_t i;
 
     // Prepare the item
     ZeroMemory(&tvi, sizeof(TVITEM));
     tvi.mask = TVIF_TEXT;
 
+    // Create the indent string
+    for(i = 0; i < nLevel * 4; i++)
+        szBuffer[i] = ' ';
+    szBuffer[i] = 0;
+
+    // Set the range for text
+    szText = szBuffer + (nLevel * 4);
+    szEnd = szBuffer + _countof(szBuffer);
+
     // Get all siblings
     while(hItem != NULL)
     {
         // Get the item text
-        memset(szBuffer, 0, sizeof(szBuffer));
+        memset(szText, 0, (szEnd - szText) * sizeof(TCHAR));
         tvi.hItem = hItem;
-        tvi.pszText = szBuffer;
-        tvi.cchTextMax = _countof(szBuffer);
-        tvi.cchTextMax = _countof(szBuffer);
+        tvi.pszText = szText;
+        tvi.cchTextMax = (int)(szEnd - szText);
         TreeView_GetItem(hWndTree, &tvi);
         StringCchCat(szBuffer, _countof(szBuffer), _T("\r\n"));
 
-        // Put the text to clipboard
-        for(i = 0; i < nLevel * 4; i++)
-            szIndent[i] = ' ';
-        szIndent[i] = 0;
-
         // Insert the indent
-        hGlobal = Clipboard_AddText(hGlobal, szIndent);
         hGlobal = Clipboard_AddText(hGlobal, szBuffer);
 
         // Are there any children?
@@ -643,6 +646,8 @@ HGLOBAL TreeView_CopyToClipboard(HWND hWndTree, HTREEITEM hItem, HGLOBAL hGlobal
         }
 
         // Get the next sibling
+        if(nLevel == 0)
+            break;
         hItem = TreeView_GetNextSibling(hWndTree, hItem);
     }
 
@@ -653,7 +658,7 @@ void TreeView_CopyToClipboard(HWND hWndTree)
 {
     HGLOBAL hGlobal = NULL;
 
-    hGlobal = TreeView_CopyToClipboard(hWndTree, TreeView_GetRoot(hWndTree), hGlobal, 0);
+    hGlobal = TreeView_CopyToClipboard(hWndTree, TreeView_GetSelection(hWndTree), hGlobal, 0);
     Clipboard_Finish(hWndTree, hGlobal);
 }
 
