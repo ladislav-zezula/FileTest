@@ -1141,7 +1141,7 @@ TInfoData FileInfoData[] =
     FILE_INFO_EDITABLE(FileStorageReserveIdInformation,         FILE_SET_STORAGE_RESERVE_ID_INFORMATION,     FALSE),
     FILE_INFO_EDITABLE(FileCaseSensitiveInformationForceAccessCheck, FILE_CASE_SENSITIVE_INFORMATION,        FALSE),
     FILE_INFO_EDITABLE(FileKnownFolderInformation,              FILE_KNOWN_FOLDER_INFORMATION,               FALSE),
-    FILE_INFO_EDITABLE(FileStatBasicInformation,                FILE_KNOWN_FOLDER_INFORMATION,               FALSE),
+    FILE_INFO_EDITABLE(FileStatBasicInformation,                FILE_STAT_BASIC_INFORMATION,               FALSE),
 
 	FILE_INFO_READONLY(FileId64ExtdDirectoryInformation,        FILE_ID_64_EXTD_DIR_INFORMATION,             TRUE),
     FILE_INFO_READONLY(FileId64ExtdBothDirectoryInformation,    FILE_ID_64_EXTD_BOTH_DIR_INFORMATION,        TRUE),
