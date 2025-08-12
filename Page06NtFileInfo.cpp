@@ -34,10 +34,31 @@ static TFlagInfo CaseSensitiveFlags[] =
 
 enum NewWDK22600DirectoryListingClasses
 {
-    FileId64ExtdDirectoryInformation = 78,
-    FileId64ExtdBothDirectoryInformation,  // 79
-    FileIdAllExtdDirectoryInformation,     // 80
-    FileIdAllExtdBothDirectoryInformation  // 81
+    FileStatBasicInformation                = 77,
+    FileId64ExtdDirectoryInformation,       // 78
+    FileId64ExtdBothDirectoryInformation,   // 79
+    FileIdAllExtdDirectoryInformation,      // 80
+    FileIdAllExtdBothDirectoryInformation   // 81
+};
+
+TStructMember FileStatBasicInformationMembers[] =
+{
+    {_T("FileId"),                  TYPE_FILEID64,  sizeof(LARGE_INTEGER)},
+    {_T("CreationTime"),            TYPE_FILETIME,  sizeof(LARGE_INTEGER)},
+    {_T("LastAccessTime"),          TYPE_FILETIME,  sizeof(LARGE_INTEGER)},
+    {_T("LastWriteTime"),           TYPE_FILETIME,  sizeof(LARGE_INTEGER)},
+    {_T("ChangeTime"),              TYPE_FILETIME,  sizeof(LARGE_INTEGER)},
+    {_T("AllocationSize"),          TYPE_UINT64,    sizeof(LARGE_INTEGER)},
+    {_T("EndOfFile"),               TYPE_UINT64,    sizeof(LARGE_INTEGER)},
+    {_T("FileAttributes"),          TYPE_FLAG32,    sizeof(ULONG), NULL, {(TStructMember*)FileAttributesValues}},
+    {_T("ReparseTag"),              TYPE_UINT32,    sizeof(ULONG)},
+    {_T("NumberOfLinks"),           TYPE_UINT32,    sizeof(ULONG)},
+    {_T("DeviceType"),              TYPE_UINT32,    sizeof(ULONG)},
+    {_T("DeviceCharacteristics"),   TYPE_UINT32,    sizeof(ULONG)},
+    {_T("Reserved"),                TYPE_UINT32,    sizeof(ULONG)},
+    {_T("VolumeSerialNumber"),      TYPE_UINT64,    sizeof(LARGE_INTEGER)},
+    {_T("FileId"),                  TYPE_FILEID128, sizeof(FILE_ID_128)},
+    {NULL}
 };
 
 TStructMember FileId64ExtdDirectoryInformationMembers[] =
@@ -54,72 +75,72 @@ TStructMember FileId64ExtdDirectoryInformationMembers[] =
     {_T("FileNameLength"),  TYPE_UINT32,   sizeof(ULONG)},
     {_T("EaSize"),          TYPE_UINT32,   sizeof(ULONG)},
     {_T("ReparsePointTag"), TYPE_UINT32,   sizeof(ULONG)},
-    {_T("FileId"),          TYPE_FILEID64,   sizeof(LARGE_INTEGER)},
+    {_T("FileId"),          TYPE_FILEID64, sizeof(LARGE_INTEGER)},
     {_T("FileName"),        TYPE_WNAME_L32B, FIELD_OFFSET(FILE_ID_EXTD_DIR_INFORMATION, FileNameLength)},
     {NULL}
 };
 
 TStructMember FileId64ExtdBothDirectoryInformationMembers[] =
 {
-    {_T("NextEntryOffset"), TYPE_UINT32,   sizeof(ULONG)},
-    {_T("FileIndex"),       TYPE_UINT32,   sizeof(ULONG)},
-    {_T("CreationTime"),    TYPE_FILETIME, sizeof(LARGE_INTEGER)},
-    {_T("LastAccessTime"),  TYPE_FILETIME, sizeof(LARGE_INTEGER)},
-    {_T("LastWriteTime"),   TYPE_FILETIME, sizeof(LARGE_INTEGER)},
-    {_T("ChangeTime"),      TYPE_FILETIME, sizeof(LARGE_INTEGER)},
-    {_T("EndOfFile"),       TYPE_UINT64,   sizeof(LARGE_INTEGER)},
-    {_T("AllocationSize"),  TYPE_UINT64,   sizeof(LARGE_INTEGER)},
-    {_T("FileAttributes"),  TYPE_FLAG32,   sizeof(ULONG), NULL, {(TStructMember*)FileAttributesValues}},
-    {_T("FileNameLength"),  TYPE_UINT32,   sizeof(ULONG)},
-    {_T("EaSize"),          TYPE_UINT32,   sizeof(ULONG)},
-    {_T("ReparsePointTag"), TYPE_UINT32,   sizeof(ULONG)},
-    {_T("FileId"),          TYPE_FILEID64,   sizeof(LARGE_INTEGER)},
-    {_T("ShortNameLength"), TYPE_UINT8,    sizeof(CCHAR)},
-    {_T("<padding>"),       TYPE_PADDING,    sizeof(WCHAR)},
-    {_T("ShortName"),       TYPE_VNAME_FIEBD, sizeof(WCHAR[12])},
+    {_T("NextEntryOffset"), TYPE_UINT32,        sizeof(ULONG)},
+    {_T("FileIndex"),       TYPE_UINT32,        sizeof(ULONG)},
+    {_T("CreationTime"),    TYPE_FILETIME,      sizeof(LARGE_INTEGER)},
+    {_T("LastAccessTime"),  TYPE_FILETIME,      sizeof(LARGE_INTEGER)},
+    {_T("LastWriteTime"),   TYPE_FILETIME,      sizeof(LARGE_INTEGER)},
+    {_T("ChangeTime"),      TYPE_FILETIME,      sizeof(LARGE_INTEGER)},
+    {_T("EndOfFile"),       TYPE_UINT64,        sizeof(LARGE_INTEGER)},
+    {_T("AllocationSize"),  TYPE_UINT64,        sizeof(LARGE_INTEGER)},
+    {_T("FileAttributes"),  TYPE_FLAG32,        sizeof(ULONG), NULL, {(TStructMember*)FileAttributesValues}},
+    {_T("FileNameLength"),  TYPE_UINT32,        sizeof(ULONG)},
+    {_T("EaSize"),          TYPE_UINT32,        sizeof(ULONG)},
+    {_T("ReparsePointTag"), TYPE_UINT32,        sizeof(ULONG)},
+    {_T("FileId"),          TYPE_FILEID64,      sizeof(LARGE_INTEGER)},
+    {_T("ShortNameLength"), TYPE_UINT8,         sizeof(CCHAR)},
+    {_T("<padding>"),       TYPE_PADDING,       sizeof(WCHAR)},
+    {_T("ShortName"),       TYPE_VNAME_FIEBD,   sizeof(WCHAR[12])},
     {_T("FileName"),        TYPE_WNAME_L32B, FIELD_OFFSET(FILE_ID_EXTD_DIR_INFORMATION, FileNameLength)},
     {NULL}
 };
 
 TStructMember FileIdAllExtdDirectoryInformationMembers[] =
 {
-    {_T("NextEntryOffset"), TYPE_UINT32,   sizeof(ULONG)},
-    {_T("FileIndex"),       TYPE_UINT32,   sizeof(ULONG)},
-    {_T("CreationTime"),    TYPE_FILETIME, sizeof(LARGE_INTEGER)},
-    {_T("LastAccessTime"),  TYPE_FILETIME, sizeof(LARGE_INTEGER)},
-    {_T("LastWriteTime"),   TYPE_FILETIME, sizeof(LARGE_INTEGER)},
-    {_T("ChangeTime"),      TYPE_FILETIME, sizeof(LARGE_INTEGER)},
-    {_T("EndOfFile"),       TYPE_UINT64,   sizeof(LARGE_INTEGER)},
-    {_T("AllocationSize"),  TYPE_UINT64,   sizeof(LARGE_INTEGER)},
-    {_T("FileAttributes"),  TYPE_FLAG32,   sizeof(ULONG), NULL, {(TStructMember*)FileAttributesValues}},
-    {_T("FileNameLength"),  TYPE_UINT32,   sizeof(ULONG)},
-    {_T("EaSize"),          TYPE_UINT32,   sizeof(ULONG)},
-    {_T("ReparsePointTag"), TYPE_UINT32,   sizeof(ULONG)},
-    {_T("FileId"),          TYPE_FILEID64,   sizeof(LARGE_INTEGER)},
-    {_T("FileId128"),       TYPE_FILEID128,   sizeof(FILE_ID_128)},
+    {_T("NextEntryOffset"), TYPE_UINT32,    sizeof(ULONG)},
+    {_T("FileIndex"),       TYPE_UINT32,    sizeof(ULONG)},
+    {_T("CreationTime"),    TYPE_FILETIME,  sizeof(LARGE_INTEGER)},
+    {_T("LastAccessTime"),  TYPE_FILETIME,  sizeof(LARGE_INTEGER)},
+    {_T("LastWriteTime"),   TYPE_FILETIME,  sizeof(LARGE_INTEGER)},
+    {_T("ChangeTime"),      TYPE_FILETIME,  sizeof(LARGE_INTEGER)},
+    {_T("EndOfFile"),       TYPE_UINT64,    sizeof(LARGE_INTEGER)},
+    {_T("AllocationSize"),  TYPE_UINT64,    sizeof(LARGE_INTEGER)},
+    {_T("FileAttributes"),  TYPE_FLAG32,    sizeof(ULONG), NULL, {(TStructMember*)FileAttributesValues}},
+    {_T("FileNameLength"),  TYPE_UINT32,    sizeof(ULONG)},
+    {_T("EaSize"),          TYPE_UINT32,    sizeof(ULONG)},
+    {_T("ReparsePointTag"), TYPE_UINT32,    sizeof(ULONG)},
+    {_T("FileId"),          TYPE_FILEID64,  sizeof(LARGE_INTEGER)},
+    {_T("FileId128"),       TYPE_FILEID128, sizeof(FILE_ID_128)},
     {_T("FileName"),        TYPE_WNAME_L32B, FIELD_OFFSET(FILE_ID_EXTD_DIR_INFORMATION, FileNameLength)},
     {NULL}
 };
 
 TStructMember FileIdAllExtdBothDirectoryInformationMembers[] =
 {
-    {_T("NextEntryOffset"), TYPE_UINT32,   sizeof(ULONG)},
-    {_T("FileIndex"),       TYPE_UINT32,   sizeof(ULONG)},
-    {_T("CreationTime"),    TYPE_FILETIME, sizeof(LARGE_INTEGER)},
-    {_T("LastAccessTime"),  TYPE_FILETIME, sizeof(LARGE_INTEGER)},
-    {_T("LastWriteTime"),   TYPE_FILETIME, sizeof(LARGE_INTEGER)},
-    {_T("ChangeTime"),      TYPE_FILETIME, sizeof(LARGE_INTEGER)},
-    {_T("EndOfFile"),       TYPE_UINT64,   sizeof(LARGE_INTEGER)},
-    {_T("AllocationSize"),  TYPE_UINT64,   sizeof(LARGE_INTEGER)},
-    {_T("FileAttributes"),  TYPE_FLAG32,   sizeof(ULONG), NULL, {(TStructMember*)FileAttributesValues}},
-    {_T("FileNameLength"),  TYPE_UINT32,   sizeof(ULONG)},
-    {_T("EaSize"),          TYPE_UINT32,   sizeof(ULONG)},
-    {_T("ReparsePointTag"), TYPE_UINT32,   sizeof(ULONG)},
-    {_T("FileId"),          TYPE_FILEID64,   sizeof(LARGE_INTEGER)},
-    {_T("FileId128"),       TYPE_FILEID128,   sizeof(FILE_ID_128)},
-    {_T("ShortNameLength"), TYPE_UINT8,    sizeof(CCHAR)},
-    {_T("<padding>"),       TYPE_PADDING,    sizeof(WCHAR)},
-    {_T("ShortName"),       TYPE_VNAME_FIEBD, sizeof(WCHAR[12])},
+    {_T("NextEntryOffset"), TYPE_UINT32,        sizeof(ULONG)},
+    {_T("FileIndex"),       TYPE_UINT32,        sizeof(ULONG)},
+    {_T("CreationTime"),    TYPE_FILETIME,      sizeof(LARGE_INTEGER)},
+    {_T("LastAccessTime"),  TYPE_FILETIME,      sizeof(LARGE_INTEGER)},
+    {_T("LastWriteTime"),   TYPE_FILETIME,      sizeof(LARGE_INTEGER)},
+    {_T("ChangeTime"),      TYPE_FILETIME,      sizeof(LARGE_INTEGER)},
+    {_T("EndOfFile"),       TYPE_UINT64,        sizeof(LARGE_INTEGER)},
+    {_T("AllocationSize"),  TYPE_UINT64,        sizeof(LARGE_INTEGER)},
+    {_T("FileAttributes"),  TYPE_FLAG32,        sizeof(ULONG), NULL, {(TStructMember*)FileAttributesValues}},
+    {_T("FileNameLength"),  TYPE_UINT32,        sizeof(ULONG)},
+    {_T("EaSize"),          TYPE_UINT32,        sizeof(ULONG)},
+    {_T("ReparsePointTag"), TYPE_UINT32,        sizeof(ULONG)},
+    {_T("FileId"),          TYPE_FILEID64,      sizeof(LARGE_INTEGER)},
+    {_T("FileId128"),       TYPE_FILEID128,     sizeof(FILE_ID_128)},
+    {_T("ShortNameLength"), TYPE_UINT8,         sizeof(CCHAR)},
+    {_T("<padding>"),       TYPE_PADDING,       sizeof(WCHAR)},
+    {_T("ShortName"),       TYPE_VNAME_FIEBD,   sizeof(WCHAR[12])},
     {_T("FileName"),        TYPE_WNAME_L32B, FIELD_OFFSET(FILE_ID_EXTD_DIR_INFORMATION, FileNameLength)},
     {NULL}
 };
@@ -1120,12 +1141,12 @@ TInfoData FileInfoData[] =
     FILE_INFO_EDITABLE(FileStorageReserveIdInformation,         FILE_SET_STORAGE_RESERVE_ID_INFORMATION,     FALSE),
     FILE_INFO_EDITABLE(FileCaseSensitiveInformationForceAccessCheck, FILE_CASE_SENSITIVE_INFORMATION,        FALSE),
     FILE_INFO_EDITABLE(FileKnownFolderInformation,              FILE_KNOWN_FOLDER_INFORMATION,               FALSE),
-    FILE_INFO_EDITABLE(FileKnownFolderInformation,              FILE_KNOWN_FOLDER_INFORMATION,               FALSE),
+    FILE_INFO_EDITABLE(FileStatBasicInformation,                FILE_KNOWN_FOLDER_INFORMATION,               FALSE),
 
 	FILE_INFO_READONLY(FileId64ExtdDirectoryInformation,        FILE_ID_64_EXTD_DIR_INFORMATION,             TRUE),
-    FILE_INFO_READONLY(FileId64ExtdBothDirectoryInformation,    FILE_ID_64_EXTD_BOTH_DIR_INFORMATION,             TRUE),
-    FILE_INFO_READONLY(FileIdAllExtdDirectoryInformation,       FILE_ID_ALL_EXTD_DIR_INFORMATION,             TRUE),
-    FILE_INFO_READONLY(FileIdAllExtdBothDirectoryInformation,   FILE_ID_ALL_EXTD_BOTH_DIR_INFORMATION,             TRUE),
+    FILE_INFO_READONLY(FileId64ExtdBothDirectoryInformation,    FILE_ID_64_EXTD_BOTH_DIR_INFORMATION,        TRUE),
+    FILE_INFO_READONLY(FileIdAllExtdDirectoryInformation,       FILE_ID_ALL_EXTD_DIR_INFORMATION,            TRUE),
+    FILE_INFO_READONLY(FileIdAllExtdBothDirectoryInformation,   FILE_ID_ALL_EXTD_BOTH_DIR_INFORMATION,       TRUE),
 
     {FileMaximumInformation}                                                                                 
 };
