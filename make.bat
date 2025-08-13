@@ -11,28 +11,29 @@ set PROJECT_DIR=%~dp0
 set SAVE_PATH=%PATH%
 set BINARY_NAME=FileTest
 set LANGUAGE=En
+set BUILD_TYPE=fre
 
 :BUILD_BINARY_64
 echo Building %BINARY_NAME%.exe (64-bit) ...
 set DDKBUILDENV=
-call %WDKDIR%\bin\setenv.bat %WDKDIR%\ fre x64 wlh
-cd %PROJECT_DIR%
+call %WDKDIR%\bin\setenv.bat %WDKDIR%\ %BUILD_TYPE% x64 wnet
+cd /d %PROJECT_DIR%
 build.exe -czgw
-del buildfre_wlh_amd64.log
+del build%BUILD_TYPE%_wnet_amd64.log
 echo.
 
 :BUILD_BINARY_32
 echo Building %BINARY_NAME%.exe (32-bit) ...
 set DDKBUILDENV=
-call %WDKDIR%\bin\setenv.bat %WDKDIR%\ fre w2k
-cd %PROJECT_DIR%
+call %WDKDIR%\bin\setenv.bat %WDKDIR%\ %BUILD_TYPE% w2k
+cd /d %PROJECT_DIR%
 build.exe -czgw
-del buildfre_w2k_x86.log
+del build%BUILD_TYPE%_w2k_x86.log
 echo.
 
 :POST_BUILD_STEPS
-PostBuild.exe .\objfre_wlh_amd64\amd64\%BINARY_NAME%.exe /tools /subsystem4
-PostBuild.exe .\objfre_w2k_x86\i386\%BINARY_NAME%.exe /tools /subsystem4
+PostBuild.exe .\obj%BUILD_TYPE%_wnet_amd64\amd64\%BINARY_NAME%.exe /tools /subsystem4
+PostBuild.exe .\obj%BUILD_TYPE%_w2k_x86\i386\%BINARY_NAME%.exe /tools /subsystem4
 
 :CLEANUP
 if exist %BINARY_NAME%_WDK.rc del %BINARY_NAME%_WDK.rc
