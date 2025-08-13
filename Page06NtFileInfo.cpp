@@ -1138,7 +1138,7 @@ TInfoData FileInfoData[] =
     FILE_INFO_READONLY(FileIdAllExtdDirectoryInformation,       FILE_ID_ALL_EXTD_DIR_INFORMATION,            TRUE),
     FILE_INFO_READONLY(FileIdAllExtdBothDirectoryInformation,   FILE_ID_ALL_EXTD_BOTH_DIR_INFORMATION,       TRUE),
 
-    {FileMaximumInformation}                                                                                 
+    {FileMaximumInformation}
 };
 
 //-----------------------------------------------------------------------------
@@ -3314,7 +3314,7 @@ static int OnComboBoxItemSelected(HWND hDlg, UINT nID, TInfoData * pInfoData)
     {
         ZeroMemory(pData->NtInfoData.pbData, pData->NtInfoData.cbData);
         FillDialogWithFileInfo(hDlg, pInfoData, 1);
-        Hex2DlgText32(hDlg, IDC_INPUT_LENGTH, (DWORD)(pData->NtInfoData.cbData));
+        Hex2DlgText32(hDlg, IDC_INPUT_LENGTH, (DWORD)(pData->NtInfoData.cbDataMax));
     }
 
     return TRUE;
