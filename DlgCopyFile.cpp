@@ -599,7 +599,7 @@ static void CopyFileWorker_ByHand(TDialogData * pData, LPCTSTR szFileName1, LPCT
 
     // Free resources
     if(pbCopyBuffer != NULL)
-        VirtualFree(pbCopyBuffer, cbCopyBuffer, MEM_RELEASE);
+        VirtualFree(pbCopyBuffer, 0, MEM_RELEASE);
     if(IsHandleValid(pData->hLogFile))
         CloseHandle(pData->hLogFile);
 

@@ -131,7 +131,7 @@ static LPCTSTR GetIoctlDeviceType(DWORD dwIoctlCode)
     static TCHAR szDeviceType[128];
     DWORD dwDeviceType = DEVICE_TYPE_FROM_CTL_CODE(dwIoctlCode);
 
-    if(dwDeviceType <= _countof(IoctlDeviceTypeNames))
+    if(dwDeviceType < _countof(IoctlDeviceTypeNames))
         return IoctlDeviceTypeNames[dwDeviceType];
 
     StringCchPrintf(szDeviceType, _countof(szDeviceType), _T("0x%X"), dwDeviceType);

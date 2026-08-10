@@ -318,7 +318,7 @@ static int OnDeleteItem(HWND /* hDlg */, LPNMLISTVIEW pNMListView)
     PFILE_FULL_EA_INFORMATION pEaItem = (PFILE_FULL_EA_INFORMATION)pNMListView->lParam;
 
     if(pEaItem != NULL)
-        delete [] pEaItem;
+        HeapFree(g_hHeap, 0, pEaItem);
     return TRUE;
 }
 
