@@ -451,8 +451,6 @@ class TFastString
                 // Failed - the old buffer is still allocated
                 if(pNewBuffer == NULL)
                 {
-                    HeapFree(g_hHeap, 0, m_pBuffer);
-                    m_pBuffer = NULL;
                     SetLastError(ERROR_NOT_ENOUGH_MEMORY);
                     return false;
                 }

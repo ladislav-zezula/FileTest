@@ -62,46 +62,64 @@ static DWORD WINAPI MoveDialogThread(PVOID pParam)
 #define ALERT_REASON_STOP_WORKER    0               // The worker needs to stop
 #define ALERT_REASON_UPDATE_WAIT    1               // The wait list needs to be updated
 
+static DWORD WaitForAllApcs(TWindowData * pData, TApcEntry ** ApcList, LPDWORD PtrWaitCount, BOOL bWaitAll)
+{
+    PLIST_ENTRY pHeadEntry;
+    PLIST_ENTRY pListEntry;
+    TApcEntry * pApc;
+    HANDLE WaitHandles[MAXIMUM_WAIT_OBJECTS];
+    DWORD dwWaitCount = 0;
+
+    // 0-th wait object is is always the alert event
+    WaitHandles[dwWaitCount++] = pData->hAlertEvent;
+    assert(pData->hAlertEvent != NULL);
+
+    // Prepare the list of handles to wait
+    EnterCriticalSection(&pData->ApcLock);
+    {
+        pHeadEntry = &pData->ApcList;
+        for(pListEntry = pHeadEntry->Flink; pListEntry != pHeadEntry; pListEntry = pListEntry->Flink)
+        {
+            // Check overflow
+            if(dwWaitCount >= _countof(WaitHandles))
+                return WAIT_FAILED;
+
+            // Retrieve the APC entry from the list entry
+            pApc = CONTAINING_RECORD(pListEntry, TApcEntry, Entry);
+
+            // Insert the APC entry to the wait list
+            if(ApcList != NULL)
+                ApcList[dwWaitCount] = pApc;
+            WaitHandles[dwWaitCount++] = pApc->hEvent;
+        }
+    }
+    LeaveCriticalSection(&pData->ApcLock);
+
+    // Give the wait count to the caller
+    if(PtrWaitCount != NULL)
+        PtrWaitCount[0] = dwWaitCount;
+
+    // Now when the list if prepared, we can perform wait on all
+    assert(dwWaitCount < MAXIMUM_WAIT_OBJECTS);
+    return WaitForMultipleObjects(dwWaitCount, WaitHandles, bWaitAll, INFINITE);
+}
+
 static DWORD WINAPI ApcThread(LPVOID pvParameter)
 {
     TFileTestData * pData = (TFileTestData *)pvParameter;
     PLIST_ENTRY pHeadEntry;
     PLIST_ENTRY pListEntry;
     TApcEntry * ApcList[MAXIMUM_WAIT_OBJECTS];
-    HANDLE WaitHandles[MAXIMUM_WAIT_OBJECTS];
     TApcEntry * pApc;
-
-    // The first event is always the alert event
-    WaitHandles[0] = pData->hAlertEvent;
-    assert(pData->hAlertEvent != NULL);
+    DWORD dwWaitResult;
+    DWORD dwWaitCount = 0;
 
     // Perform a loop until the process does not end
     while(pData->hAlertEvent != NULL)
     {
-        DWORD dwWaitCount = 1;
-        DWORD dwWaitResult;
-
-        // Prepare the list of handles to wait
-        EnterCriticalSection(&pData->ApcLock);
-        {
-            pHeadEntry = &pData->ApcList;
-            for(pListEntry = pHeadEntry->Flink; pListEntry != pHeadEntry; pListEntry = pListEntry->Flink)
-            {
-                // Retrieve the APC entry
-                pApc = CONTAINING_RECORD(pListEntry, TApcEntry, Entry);
-
-                // Insert the APC entry to the wait list
-                WaitHandles[dwWaitCount] = pApc->hEvent;
-                ApcList[dwWaitCount++] = pApc;
-            }
-        }
-        LeaveCriticalSection(&pData->ApcLock);
-
-        // Now when the list if prepared, we can perform wait on all
-        assert(dwWaitCount < MAXIMUM_WAIT_OBJECTS);
-        dwWaitResult = WaitForMultipleObjects(dwWaitCount, WaitHandles, FALSE, INFINITE);
-
-        // If the wait ended on the first handle, it means an APC alert
+        // Perform waiting on any of the APCs 
+        // If the wait ended on the first handle, it's APC alert
+        dwWaitResult = WaitForAllApcs(pData, ApcList, &dwWaitCount, FALSE);
         if(dwWaitResult == WAIT_OBJECT_0 || dwWaitResult == WAIT_ABANDONED_0)
         {
             // If we need just to update wait list, do it
@@ -136,8 +154,9 @@ static DWORD WINAPI ApcThread(LPVOID pvParameter)
     // Now we need to free all the APCs
     EnterCriticalSection(&pData->ApcLock);
     {
-        // Cancel all pending IO's
+        // Cancel all pending IO's and wait for them to complete
         NtCancelIoFile(pData->hFile, NULL);
+        WaitForAllApcs(pData, NULL, NULL, TRUE);
 
         // Free all APC entries
         pHeadEntry = &pData->ApcList;
