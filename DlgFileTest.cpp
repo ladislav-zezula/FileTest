@@ -154,8 +154,10 @@ static DWORD WINAPI ApcThread(LPVOID pvParameter)
     // Now we need to free all the APCs
     EnterCriticalSection(&pData->ApcLock);
     {
+        IO_STATUS_BLOCK IoStatus;
+
         // Cancel all pending IO's and wait for them to complete
-        NtCancelIoFile(pData->hFile, NULL);
+        NtCancelIoFile(pData->hFile, &IoStatus);
         WaitForAllApcs(pData, NULL, NULL, TRUE);
 
         // Free all APC entries
