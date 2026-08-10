@@ -64,7 +64,7 @@ static DWORD WINAPI MoveDialogThread(PVOID pParam)
 
 static DWORD WINAPI ApcThread(LPVOID pvParameter)
 {
-    TWindowData * pData = (TWindowData *)pvParameter;
+    TFileTestData * pData = (TFileTestData *)pvParameter;
     PLIST_ENTRY pHeadEntry;
     PLIST_ENTRY pListEntry;
     TApcEntry * ApcList[MAXIMUM_WAIT_OBJECTS];
@@ -101,7 +101,7 @@ static DWORD WINAPI ApcThread(LPVOID pvParameter)
         assert(dwWaitCount < MAXIMUM_WAIT_OBJECTS);
         dwWaitResult = WaitForMultipleObjects(dwWaitCount, WaitHandles, FALSE, INFINITE);
 
-        // If the first wait broke, it means that we need to exit
+        // If the wait ended on the first handle, it means an APC alert
         if(dwWaitResult == WAIT_OBJECT_0 || dwWaitResult == WAIT_ABANDONED_0)
         {
             // If we need just to update wait list, do it
@@ -136,6 +136,10 @@ static DWORD WINAPI ApcThread(LPVOID pvParameter)
     // Now we need to free all the APCs
     EnterCriticalSection(&pData->ApcLock);
     {
+        // Cancel all pending IO's
+        NtCancelIoFile(pData->hFile, NULL);
+
+        // Free all APC entries
         pHeadEntry = &pData->ApcList;
         for(pListEntry = pHeadEntry->Flink; pListEntry != pHeadEntry; )
         {

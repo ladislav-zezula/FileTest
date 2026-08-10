@@ -668,7 +668,7 @@ LPTSTR GetFullHardLinkName(PFILE_LINK_ENTRY_INFORMATION pLinkInfo, LPTSTR szFile
                 {
                     NameLength = (ULONG)_tcslen(szVolumeName) * sizeof(WCHAR) +
                                  pNameInfo->FileNameLength +
-                                 (pLinkInfo->FileNameLength + 1) * sizeof(WCHAR);
+                                 pLinkInfo->FileNameLength + sizeof(WCHAR);
                     szHardLinkName = szTemp = (LPTSTR)HeapAlloc(g_hHeap, HEAP_ZERO_MEMORY, NameLength);
                     if(szHardLinkName != NULL)
                     {
@@ -685,8 +685,7 @@ LPTSTR GetFullHardLinkName(PFILE_LINK_ENTRY_INFORMATION pLinkInfo, LPTSTR szFile
                             *szTemp++ = _T('\\');
 
                         // Copy the link name
-                        memcpy(szTemp, pLinkInfo->FileName, (pLinkInfo->FileNameLength * sizeof(WCHAR)));
-                        szTemp[pLinkInfo->FileNameLength] = 0;
+                        memcpy(szTemp, pLinkInfo->FileName, pLinkInfo->FileNameLength);
                     }
                 }
 

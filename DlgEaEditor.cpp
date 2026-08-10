@@ -334,36 +334,37 @@ static BOOL OnSaveDialog(HWND hDlg)
 
     // Create new EA entry
     nTotalLength = sizeof(FILE_FULL_EA_INFORMATION) + nNameLength + nValueLength + 2;
-    szBinBuffer = new TCHAR[nValueLength + 1];
-    NewEaItem = (PFILE_FULL_EA_INFORMATION)(new char[nTotalLength]);
-
-    // Initialize the EA entry
-    ZeroMemory(NewEaItem, nTotalLength);
-
-    // Fill the name and value
-    if(hWndName != NULL)
-        GetWindowTextA(hWndName, NewEaItem->EaName, nNameLength + 1);
-    NewEaItem->EaNameLength = (UCHAR)nNameLength;
-
-    GetWindowText(hWndValue, szBinBuffer, nValueLength + 1);
-    NewEaItem->EaValueLength = (USHORT)BinTextToBinArray(szBinBuffer,
-                                                 (LPBYTE)NewEaItem->EaName + NewEaItem->EaNameLength + 1);
-    if(NewEaItem->EaValueLength == (USHORT)-1)
+    if((szBinBuffer = new TCHAR[nValueLength + 1]) != NULL)
     {
-        MessageBoxRc(hDlg, IDS_ERROR, IDS_CONVERSION_ERROR_MSG);
+        NewEaItem = (PFILE_FULL_EA_INFORMATION)HeapAlloc(g_hHeap, HEAP_ZERO_MEMORY, nTotalLength);
+        if(NewEaItem != NULL)
+        {
+            // Fill the name and value
+            if(hWndName != NULL)
+                GetWindowTextA(hWndName, NewEaItem->EaName, nNameLength + 1);
+            NewEaItem->EaNameLength = (UCHAR)nNameLength;
+
+            GetWindowText(hWndValue, szBinBuffer, nValueLength + 1);
+            NewEaItem->EaValueLength = (USHORT)BinTextToBinArray(szBinBuffer,
+                                                         (LPBYTE)NewEaItem->EaName + NewEaItem->EaNameLength + 1);
+            if(NewEaItem->EaValueLength == (USHORT)-1)
+            {
+                MessageBoxRc(hDlg, IDS_ERROR, IDS_CONVERSION_ERROR_MSG);
+                HeapFree(g_hHeap, 0, NewEaItem);
+                delete [] szBinBuffer;
+                return FALSE;
+            }
+
+            // Set the correct length of the EA item
+            NewEaItem->NextEntryOffset = GetEaEntrySize(NewEaItem);
+
+            // Replace the item
+            if(OldEaItem != NULL)
+                HeapFree(g_hHeap, 0, OldEaItem);
+            PtrReturnEa[0] = NewEaItem;
+        }
         delete [] szBinBuffer;
-        delete [] NewEaItem;
-        return FALSE;
     }
-
-    // Set the correct length of the EA item
-    NewEaItem->NextEntryOffset = GetEaEntrySize(NewEaItem);
-
-    // Replace the item
-    if(OldEaItem != NULL)
-        delete OldEaItem;
-    PtrReturnEa[0] = NewEaItem;
-    delete [] szBinBuffer;
     return TRUE;
 }
 
