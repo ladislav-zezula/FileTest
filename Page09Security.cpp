@@ -1151,7 +1151,7 @@ static NTSTATUS ToString_Guid(PTREE_ITEM_INFO pItemInfo, LPTSTR szBuffer, size_t
     {
         if((pbPtr + sizeof(GUID)) <= pbEnd)
         {
-            GuidToString((LPGUID)(pbPtr), szBuffer, ccBuffer);
+            StringCchGuid(szBuffer, ccBuffer, (LPGUID)(pbPtr));
             cbMoveBy = sizeof(GUID);
             Status = STATUS_SUCCESS;
         }

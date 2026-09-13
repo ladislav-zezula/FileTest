@@ -1688,7 +1688,7 @@ LPTSTR GuidValueToString(LPTSTR szBuffer, size_t cchBuffer, LPCTSTR szFormat, LP
     LPTSTR szSaveBuffer = szBuffer;
     TCHAR szGuidText[0x40];
 
-    GuidToString(PtrGuid, szGuidText, _countof(szGuidText));
+    StringCchGuid(szGuidText, _countof(szGuidText), PtrGuid);
     StringCchPrintf(szBuffer, cchBuffer, szFormat, szGuidText);
     return szSaveBuffer;
 }

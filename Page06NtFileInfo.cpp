@@ -1963,7 +1963,7 @@ static int DataToItemText(TStructMember * pMember, LPTSTR szBuffer, size_t nMaxC
             LPGUID pGuid = (LPGUID)pMember->pbDataPtr;
             TCHAR szGuidText[0x40];
 
-            GuidToString(pGuid, szGuidText, _countof(szGuidText));
+            StringCchGuid(szGuidText, _countof(szGuidText), pGuid);
             StringCchPrintfEx(szBuffer, (szEndChar - szBuffer), &szBuffer, NULL, 0, _T("%s"), szGuidText);
             break;
         }

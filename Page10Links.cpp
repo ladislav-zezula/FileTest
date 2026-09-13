@@ -470,7 +470,7 @@ static HTREEITEM TreeView_InsertGuid(
     TCHAR szValueText[0x40];
 
     // Format the value
-    GuidToString(&Guid, szValueText, _countof(szValueText));
+    StringCchGuid(szValueText, _countof(szValueText), &Guid);
     return TreeView_InsertNameAndValue(hWndTree, hParent, szValueName, szValueText, lParam);
 }
 
@@ -496,7 +496,7 @@ static HTREEITEM TreeView_InsertBinary(
     if(szValueText != NULL)
     {
         // Format the value
-        BinaryToString((LPBYTE)pvData, cbData, szValueText, cchLength);
+        StringCchBinary(szValueText, cchLength, pvData, cbData);
 
         // Apply to the tree item
         hNewItem = TreeView_InsertNameAndValue(hWndTree, hParent, szValueName, szValueText, lParam);
